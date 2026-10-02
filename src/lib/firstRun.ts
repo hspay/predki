@@ -13,7 +13,7 @@ const TXT = {
     s3: ['Как вас зовут?', 'С вас начнётся древо. Остальных родных добавим постепенно.', 'Имя', 'Ваше имя'],
     s4: ['Расскажите немного о себе', 'По этим данным мы подберём образ для вашей карточки, пока нет фото.', 'Пол', ['Женский', 'Мужской', 'Не указывать'], 'Дата рождения', 'ДД.ММ.ГГГГ', 'Город', 'Где вы родились', 'Если точной даты нет под рукой, достаточно года.'],
     s5: ['Как зовут ваших родителей?', 'Добавим их в древо над вами. Если кого-то не знаете, оставьте поле пустым.', 'Мама', 'Папа', 'Имя', 'Фамилия'],
-    calm: ['Всё, что вы вводите, видно только вам и хранится на этом устройстве.', 'Девичью фамилию и другие варианты можно будет добавить позже в анкете.', 'Видно только вам. Делиться древом с родными вы решите сами.', '', 'Родителей можно добавить и позже, прямо из своей карточки.'],
+    calm: ['Всё, что вы вводите, видно только вам и хранится на этом устройстве.', 'Девичью фамилию и другие варианты можно будет добавить позже в анкете.', 'Видно только вам. Делиться древом с родными вы решите сами.', '', ''],
     mom: 'мама', dad: 'папа', fam: 'семейное древо', people: n => `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'человек' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'человека' : 'человек'}`,
   },
   en: {
@@ -23,7 +23,7 @@ const TXT = {
     s3: ['What is your name?', 'The tree starts with you. We will add the rest of the family step by step.', 'First name', 'Your name'],
     s4: ['Tell us a little about yourself', 'We use this to pick a portrait for your card until there is a photo.', 'Gender', ['Female', 'Male', 'Prefer not to say'], 'Date of birth', 'DD.MM.YYYY', 'City', 'Where you were born', 'If you don’t have the exact date, the year is enough.'],
     s5: ['What are your parents’ names?', 'We will add them above you. Leave a field empty if you don’t know.', 'Mother', 'Father', 'First name', 'Surname'],
-    calm: ['Everything you enter is visible only to you and stays on this device.', 'A maiden name and other spellings can be added later in the profile.', 'Only you can see this. You decide whether to share the tree.', '', 'Parents can also be added later, right from your card.'],
+    calm: ['Everything you enter is visible only to you and stays on this device.', 'A maiden name and other spellings can be added later in the profile.', 'Only you can see this. You decide whether to share the tree.', '', ''],
     mom: 'mother', dad: 'father', fam: 'family tree', people: n => `${n} ${n === 1 ? 'person' : 'people'}`,
   },
 }
@@ -71,7 +71,7 @@ export function mount(root, opts) {
       <div class="fr-calm">${ico.lock}<span></span></div>
       <div class="fr-foot"><button type="button" class="btn ghost fr-back">${ico.back}${T.back}</button><span class="grow"></span><span class="kbd">Enter ↵</span><button type="submit" class="btn primary fr-next">${T.next}</button></div>
     </form>
-    <div class="fr-preview"><div class="fr-scene th-night"><canvas class="fog"></canvas><div class="stage"></div><span class="cap">${T.preview}</span></div></div>
+    <div class="fr-preview"><div class="fr-scene th-night"><canvas class="fog"></canvas><div class="stage"></div></div></div>
   </div></div><datalist id="frCities">${(opts.cities || []).map(c => `<option value="${esc(c)}"></option>`).join('')}</datalist>`
 
   // ---- preview tree

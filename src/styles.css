@@ -647,3 +647,24 @@ main{position:relative;min-width:0;overflow:hidden;border-radius:var(--r-card);b
   .map-side .legend button.off{opacity:.45}
   .map-side .legend button span[style]{flex:none!important}
 }
+
+/* phones: compact first-run dialog */
+@media (max-width:640px){
+  #firstRun .fr-dlg{grid-template-rows:210px minmax(0,1fr)}
+  #firstRun .fr-scene .stage{gap:6px;padding:10px 0}
+  #firstRun .fam-title small{font-size:9.5px}
+  #firstRun .fam-title h1{font-size:24px;margin-top:3px}
+  #firstRun svg.tree{width:auto;height:min(66%,150px);max-width:94%}
+  #firstRun .fr-form{padding:14px 16px 12px}
+  #firstRun .fr-head{gap:9px}
+  #firstRun h1{font-size:22px}
+  #firstRun .fr-steps{margin-top:12px}
+  #firstRun .fr-step{gap:11px}
+  #firstRun .fr-step h2{font-size:19px}
+  #firstRun .hint{font-size:13px;line-height:1.45}
+  #firstRun .fr-swatches{gap:8px;flex-wrap:nowrap}
+  #firstRun .fr-sw{width:44px;font-size:10.5px;gap:5px}
+  #firstRun .fr-sw .chip{width:44px;height:52px;border-radius:11px}
+  #firstRun .fr-calm{margin-top:8px;padding:9px 12px;font-size:12px}
+  #firstRun .fr-foot{margin-top:10px;padding-top:10px}
+}
