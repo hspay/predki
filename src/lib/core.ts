@@ -243,7 +243,7 @@ export function completeFirstRun(d: { theme: string; familyName: string; me: Par
 export async function boot() {
   const saved = await loadState()
   if (saved && Array.isArray(saved.people)) S = migrateDates(Object.assign({ people: [], rels: [], achievements: [], settings: {} }, saved))
-  const nav = (navigator.language || 'ru').slice(0, 2); const l = S.settings.lang || (nav === 'en' ? 'en' : 'ru')
+  const l = S.settings.lang || 'ru' // Russian by default; English only when chosen in the switcher
   setLangValue(l); document.documentElement.lang = l
   Progress.check(true)
   if (assignPresets()) persist()
