@@ -715,3 +715,20 @@ main{position:relative;min-width:0;overflow:hidden;border-radius:var(--r-card);b
 .settings .account .state{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-2)}
 .settings .account .state i{width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 3px rgba(121,217,166,.15)}
 .settings .account .state.off i{background:var(--danger);box-shadow:0 0 0 3px var(--danger-soft)}
+
+/* Settings → «История изменений» */
+.settings .changelog{gap:14px}
+.settings .release{display:flex;flex-direction:column;gap:6px}
+.settings .release-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.settings .release-h b{font-weight:600;font-size:14px}
+.settings .release-h time{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.settings .release ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.settings .release li{font-size:13.5px;color:var(--ink-2);line-height:1.5}
+.settings .release li::marker{color:var(--accent)}
+.settings .older{border-top:1px solid var(--edge);padding-top:12px}
+.settings .older[open]{display:flex;flex-direction:column;gap:14px}
+.settings .older summary{cursor:pointer;font-size:13px;color:var(--ink-2);list-style:none;display:inline-flex;align-items:center;gap:6px;width:max-content}
+.settings .older summary::-webkit-details-marker{display:none}
+.settings .older summary::after{content:"";width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .2s var(--ease)}
+.settings .older[open] summary::after{transform:rotate(-135deg) translateY(-1px)}
+.settings .older summary:hover{color:var(--ink)}

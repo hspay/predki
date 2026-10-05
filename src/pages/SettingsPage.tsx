@@ -1,4 +1,12 @@
 import { S, ui, t, LANG, toast, importData, clearData, bump, cloud, signOut, askToSignIn } from '../lib/core'
+import { CHANGELOG, type Release } from '../lib/changelog'
+
+const MONTHS = { ru: ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'], en: ['January','February','March','April','May','June','July','August','September','October','November','December'] }
+function relDate(iso: string) { const [y, m, d] = iso.split('-').map(Number); return LANG === 'en' ? `${MONTHS.en[m - 1]} ${d}, ${y}` : `${d} ${MONTHS.ru[m - 1]} ${y}` }
+function ReleaseNote({ r }: { r: Release }) {
+  const L = LANG === 'en' ? 'en' : 'ru'
+  return <div className="release"><div className="release-h"><b>{r.title[L]}</b><time dateTime={r.date}>{relDate(r.date)}</time></div><ul>{r.items.map((it, i) => <li key={i}>{it[L]}</li>)}</ul></div>
+}
 
 export default function SettingsPage() {
   const exportJson = () => {
@@ -36,6 +44,13 @@ export default function SettingsPage() {
           <p>{t('set.author')} — {LANG === 'en' ? 'Andrey Bryzgalin' : 'Андрей Брызгалин'} · <a href="https://t.me/HSpay" target="_blank" rel="noopener noreferrer">Telegram</a> · <a href="https://www.instagram.com/hspay/" target="_blank" rel="noopener noreferrer">Instagram</a></p>
           <p>{t('set.coffee.q')} <a href="https://t.tb.ru/pm_short/2A9fc8Oh3Xe" target="_blank" rel="noopener noreferrer">{t('set.coffee')}</a></p>
           <p><a href="privacy.html" target="_blank" rel="noopener">{t('set.privacy')}</a></p>
+        </div>
+        <div className="card changelog"><h3>{t('set.changes')}</h3>
+          <ReleaseNote r={CHANGELOG[0]} />
+          {CHANGELOG.length > 1 && <details className="older">
+            <summary>{t('set.changes.older')}</summary>
+            {CHANGELOG.slice(1).map(r => <ReleaseNote key={r.date} r={r} />)}
+          </details>}
         </div>
         <div><button className="btn" onClick={() => { ui.onboarding = true; bump() }}>{t('set.onboard')}</button></div>
       </div></div>
