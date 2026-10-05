@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { ui, boot, useStore, bump } from './lib/core'
+import { ui, boot, useStore, bump, cloud } from './lib/core'
+import AuthScreen from './components/AuthScreen'
 import Sidebar from './components/Sidebar'
 import Toasts from './components/Toasts'
 import SkyBackground from './components/SkyBackground'
@@ -22,6 +23,10 @@ export default function App() {
   useEffect(() => { document.fonts?.ready.then(() => bump()) }, [])
   if (!ui.loaded) return null
   const p = ui.page
+  // after the welcome landing nobody enters the tree without an account (unless they chose «without an account»)
+  const signIn = !ui.onboarding && ((!cloud.session && !cloud.skipped) || cloud.recovery)
+  const loading = !ui.onboarding && !signIn && !!cloud.session && cloud.busy
+  if (signIn || loading) return <><SkyBackground /><AuthScreen key={cloud.recovery ? 'r' : 'a'} loading={loading} /><Toasts /></>
   return (
     <>
       {ui.onboarding && <Onboarding />}

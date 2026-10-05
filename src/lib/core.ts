@@ -1,11 +1,12 @@
 // Predki data layer: one mutable family document (S), saved to IndexedDB, plus the UI state.
 // Components read S directly and re-render on bump(); every data change goes through commit().
 import { useSyncExternalStore } from 'react'
-import { get as idbGet, set as idbSet } from 'idb-keyval'
+import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
 import { t, setLangValue, LANG } from './i18n'
 import { findCity } from './world'
 import { sampleData } from './sample'
 import { Progress } from './progress'
+import { sb, cloud, initSession, pullTree, pushTree, signOutCloud, setSkipped } from './cloud'
 import { PRESET_SRC, presetType, typeOfPreset, pickPreset, previewPreset } from './avatars'
 
 // ---------- types ----------
@@ -44,7 +45,56 @@ const KEY = 'predki:tree'
 export async function loadState(): Promise<Data | null> {
   try { return (await idbGet<Data>(KEY)) || null } catch { try { return JSON.parse(localStorage.getItem('predki') || 'null') } catch { return null } }
 }
-export const persist = debounce(async () => { try { await idbSet(KEY, S) } catch { try { localStorage.setItem('predki', JSON.stringify(S)) } catch { /* storage unavailable */ } } }, 300)
+const KEY_AT = 'predki:savedAt', KEY_OWNER = 'predki:owner'
+export const persist = debounce(async () => {
+  try { await idbSet(KEY, S); await idbSet(KEY_AT, Date.now()) } catch { try { localStorage.setItem('predki', JSON.stringify(S)) } catch { /* storage unavailable */ } }
+  pushSoon()
+}, 300)
+
+// ---------- cloud sync: the browser copy is a cache, the account copy is the source of truth ----------
+const blank = (): Data => ({ people: [], rels: [], achievements: [], settings: {} })
+let cloudAt = 0, pushWarned = false, syncing: Promise<void> | null = null
+const pushSoon = debounce(async () => {
+  if (!cloud.session || !cloud.synced) return
+  try { cloudAt = await pushTree(S); if (cloud.offline || pushWarned) { cloud.offline = false; pushWarned = false; bump() } }
+  catch { cloud.offline = true; if (!pushWarned) { pushWarned = true; toast(t('cloud.saveFail')) } bump() }
+}, 1200)
+/** Pull the account's tree and reconcile it with this browser. soft = a quiet re-check when the tab comes back. */
+export function syncFromCloud(soft = false) {
+  if (!syncing) { if (!soft && !cloud.synced) { cloud.busy = true; bump() } syncing = doSync(soft).finally(() => { syncing = null; if (cloud.busy) { cloud.busy = false; bump() } }) }
+  return syncing
+}
+async function doSync(soft: boolean) {
+  const uid = cloud.session?.user.id; if (!uid) return
+  try {
+    const row = await pullTree()
+    if (soft && (!row || row.at <= cloudAt + 500)) return
+    const owner = await idbGet<string>(KEY_OWNER).catch(() => undefined)
+    const localAt = (await idbGet<number>(KEY_AT).catch(() => 0)) || 0
+    const cloudHas = !!row && Array.isArray(row.data?.people) && row.data.people.length > 0
+    if (owner && owner !== uid && S.people.length) { // someone else's tree left in this browser: keep a copy, never upload it
+      await idbSet(KEY + ':backup', S).catch(() => {}); S = { ...blank(), settings: { lang: S.settings.lang, onboarded: true } }
+    }
+    const localNewer = owner === uid && localAt > (row?.at || 0)
+    if (cloudHas && !localNewer) {
+      if (S.people.length && !owner) await idbSet(KEY + ':backup', S).catch(() => {}) // a tree made before signing in
+      S = migrateDates(Object.assign(blank(), row!.data)); S.settings.onboarded = true; cloudAt = row!.at
+      await idbSet(KEY, S).catch(() => {}); await idbSet(KEY_AT, row!.at).catch(() => {})
+    } else if (S.people.length || cloudHas) { cloudAt = await pushTree(S) }
+    await idbSet(KEY_OWNER, uid).catch(() => {})
+    cloud.synced = true; cloud.offline = false
+  } catch { cloud.offline = true; if (!soft) toast(t('cloud.loadFail')) }
+  if (!soft || cloud.synced) afterLoad()
+}
+export async function signOut() {
+  try { await signOutCloud() } catch { /* offline: the local session is dropped anyway */ }
+  cloud.session = null; cloud.synced = false; cloudAt = 0
+  S = { ...blank(), settings: { lang: S.settings.lang, onboarded: true } }
+  try { await idbDel(KEY); await idbDel(KEY_AT); await idbDel(KEY_OWNER) } catch { /* storage unavailable */ }
+  ui.page = 'tree'; ui.panel = null; afterLoad()
+}
+export function askToSignIn() { setSkipped(false); bump() }
+export function continueWithoutAccount() { setSkipped(true); bump() }
 
 // ---------- UI state ----------
 export type Page = 'tree' | 'map' | 'progress' | 'people' | 'ai' | 'settings'
@@ -240,9 +290,7 @@ export function completeFirstRun(d: { theme: string; familyName: string; me: Par
 }
 
 // ---------- boot ----------
-export async function boot() {
-  const saved = await loadState()
-  if (saved && Array.isArray(saved.people)) S = migrateDates(Object.assign({ people: [], rels: [], achievements: [], settings: {} }, saved))
+function afterLoad() {
   const l = S.settings.lang || 'ru' // Russian by default; English only when chosen in the switcher
   setLangValue(l); document.documentElement.lang = l
   Progress.check(true)
@@ -251,6 +299,23 @@ export async function boot() {
     const ds = Object.values(S.achDates || {}).map(v => new Date(v)).filter(d => !isNaN(+d)); const d = ds.length ? new Date(Math.min(...ds.map(Number))) : new Date()
     S.settings.since = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`; persist()
   }
-  ui.onboarding = !S.settings.onboarded; ui.firstRun = !!S.settings.onboarded && !S.people.length; ui.loaded = true; bump()
+  ui.onboarding = !S.settings.onboarded; ui.firstRun = !!S.settings.onboarded && !S.people.length
+  ui.treeRefit++; ui.mapRefit++; bump()
 }
-export { t, LANG }
+export async function boot() {
+  const saved = await loadState()
+  if (saved && Array.isArray(saved.people)) S = migrateDates(Object.assign(blank(), saved))
+  setLangValue(S.settings.lang || 'ru')
+  await initSession()
+  sb.auth.onAuthStateChange((ev, session) => {
+    const was = cloud.session?.user.id; cloud.session = session
+    if (ev === 'PASSWORD_RECOVERY') cloud.recovery = true
+    if (ev === 'SIGNED_IN' && session && session.user.id !== was) { setSkipped(false); cloud.busy = true; setTimeout(() => syncFromCloud(), 0) } // never await Supabase inside this callback
+    if (ev === 'SIGNED_OUT') cloud.synced = false
+    bump()
+  })
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && cloud.session) syncFromCloud(true) })
+  if (cloud.session) await syncFromCloud(); else afterLoad()
+  ui.loaded = true; bump()
+}
+export { t, LANG, cloud }
