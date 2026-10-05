@@ -9,7 +9,7 @@ const G = <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M4
 /** Sign in before the tree opens: Google or email + password. Also shows «loading your tree» and the new-password step after a reset link. */
 export default function AuthScreen({ loading = false }: { loading?: boolean }) {
   const logo = useMemo(() => predkiLogo(), [])
-  const [mode, setMode] = useState<Mode>(cloud.recovery ? 'newpass' : 'in')
+  const [mode, setMode] = useState<Mode>(cloud.recovery ? 'newpass' : 'up')
   const [email, setEmail] = useState(''); const [pass, setPass] = useState('')
   const [busy, setBusy] = useState(false); const [err, setErr] = useState('')
   const go = (m: Mode) => { setMode(m); setErr('') }
@@ -27,7 +27,11 @@ export default function AuthScreen({ loading = false }: { loading?: boolean }) {
       else if (mode === 'up') { const { data, error } = await signUpEmail(em, pass); if (error) throw error; if (!data.session) go('sent') }
       else if (mode === 'reset') { const { error } = await resetPassword(em); if (error) throw error; go('sent') }
       else if (mode === 'newpass') { const { error } = await setNewPassword(pass); if (error) throw error; cloud.recovery = false; bump() }
-    } catch (x) { fail(x) }
+    } catch (x) {
+      // already registered: switch to «Вход» with the email kept, so the person only has to press the button again
+      if (mode === 'up' && /already registered|already exists/i.test((x as { message?: string })?.message || '')) setMode('in')
+      fail(x)
+    }
     setBusy(false)
   }
 
@@ -48,8 +52,8 @@ export default function AuthScreen({ loading = false }: { loading?: boolean }) {
           <button type="button" className="au-google" onClick={google} disabled={busy}>{G}<span>{t('auth.google')}</span></button>
           <div className="au-or"><span>{t('auth.or')}</span></div>
           <div className="au-seg" role="tablist">
-            <button type="button" role="tab" aria-selected={mode === 'in'} onClick={() => go('in')}>{t('auth.in')}</button>
             <button type="button" role="tab" aria-selected={mode === 'up'} onClick={() => go('up')}>{t('auth.up')}</button>
+            <button type="button" role="tab" aria-selected={mode === 'in'} onClick={() => go('in')}>{t('auth.in')}</button>
           </div>
         </>}
 

@@ -63,7 +63,6 @@ const POOL = [
   {f:'Old Standard TT',i:1,s:1.08},{f:'Rubik Glitch',s:.84},{f:'Pacifico',s:.84},{f:'Comfortaa',w:700,s:.9},{f:'Kelly Slab',s:1},{f:'Stalinist One',s:.6},
   {f:'Playfair Display',w:800,i:1,s:1,hl:1},{f:'Unbounded',w:700,s:.8,ol:1},{f:'Russo One',s:.92,hl:1},{f:'Ruslan Display',s:.92},
 ];
-const FONT_HREF='https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700;800&family=Amatic+SC:wght@700&family=Caveat:wght@500;700&family=Comfortaa:wght@700&family=Kelly+Slab&family=Lobster&family=Marck+Script&family=Old+Standard+TT:ital@0;1&family=Oswald:wght@600&family=Pacifico&family=Playfair+Display:ital,wght@0,800;1,800&family=Press+Start+2P&family=Rubik+Glitch&family=Rubik+Mono+One&family=Ruslan+Display&family=Russo+One&family=Stalinist+One&family=Unbounded:wght@700&family=Yeseva+One&display=swap';
 
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const icoCheck='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7"/></svg>';
@@ -443,7 +442,6 @@ function mount(root, opts) {
   const gsap = opts.gsap, ST = opts.ScrollTrigger; if (ST) gsap.registerPlugin(ST);
   let lang = opts.lang === 'en' ? 'en' : 'ru';
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!document.querySelector('link[data-ld-fonts]')) { const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = FONT_HREF; l.dataset.ldFonts = '1'; document.head.appendChild(l); }
   let cleanup = [], ctxGsap = null, lenis = null, tab = 0;
   const on = (el, ev, fn, o) => { el.addEventListener(ev, fn, o); cleanup.push(() => el.removeEventListener(ev, fn, o)); };
   const $ = s => root.querySelector(s), $$ = s => [...root.querySelectorAll(s)];

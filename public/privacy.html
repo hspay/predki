@@ -7,30 +7,44 @@
 <meta name="theme-color" content="#07090F">
 <title>Политика конфиденциальности — Predki</title>
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="fonts/fonts.css">
 <style>
-  :root{--bg:#07090F;--card:#0C1019;--ink:#EEF1F7;--ink-2:#B7BFCF;--muted:#7C8698;--edge:rgba(255,255,255,.10);--accent:#F2C879;--accent-edge:rgba(242,200,121,.42)}
+  :root{--bg:#07090F;--card:#0C1019;--ink:#EEF1F7;--ink-2:#B7BFCF;--muted:#7C8698;--edge:rgba(255,255,255,.10);--accent:#F2C879;--accent-soft:rgba(242,200,121,.10);--accent-edge:rgba(242,200,121,.42)}
   *{box-sizing:border-box}
   html{scroll-behavior:smooth}
   body{margin:0;background:radial-gradient(120% 60% at 50% 0%,rgba(242,200,121,.05),transparent 60%),var(--bg);color:var(--ink);font:15px/1.65 "Onest",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
-  .wrap{max-width:720px;margin:0 auto;padding:28px 16px 64px}
+  .wrap{max-width:760px;margin:0 auto;padding:28px 16px 64px}
   nav{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:28px}
   nav a{color:var(--ink-2);text-decoration:none;font-size:14px;padding:8px 14px;border:1px solid var(--edge);border-radius:999px;transition:border-color .15s,color .15s}
   nav a:hover{color:var(--ink);border-color:var(--accent-edge)}
-  article{background:var(--card);border:1px solid var(--edge);border-radius:24px;padding:32px 32px 28px;box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 40px 90px -40px rgba(0,0,0,.9)}
+  article{background:var(--card);border:1px solid var(--edge);border-radius:24px;padding:34px 34px 28px;box-shadow:0 1px 0 rgba(255,255,255,.06) inset,0 40px 90px -40px rgba(0,0,0,.9)}
   article + article{margin-top:20px}
   .eyebrow{font:11px/1 "JetBrains Mono",ui-monospace,monospace;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
   h1{font-size:30px;line-height:1.1;letter-spacing:-.025em;margin:12px 0 8px}
-  .date{color:var(--muted);font-size:13px;margin:0 0 20px}
-  h2{font-size:17px;letter-spacing:-.01em;margin:28px 0 8px}
+  .date{color:var(--muted);font-size:13px;margin:0 0 18px}
+  .lead{color:var(--ink);font-size:16px;margin-bottom:22px}
+  h2{font-size:17px;letter-spacing:-.01em;margin:30px 0 8px}
   p,li{color:var(--ink-2)}
   p{margin:0 0 10px}
   ul{margin:0 0 10px;padding-left:20px}
-  li{margin:4px 0}
+  li{margin:5px 0}
   b{color:var(--ink);font-weight:600}
   a{color:var(--accent)}
-  @media (max-width:520px){article{padding:24px 20px 20px;border-radius:20px}h1{font-size:25px}}
+  .promises{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 8px;padding:0;list-style:none}
+  .promises li{margin:0;padding:16px 16px 14px;border-radius:16px;background:var(--accent-soft);border:1px solid rgba(242,200,121,.18);color:var(--ink-2);font-size:14px;line-height:1.5}
+  .promises li b{display:block;margin-bottom:4px;font-size:15px}
+  .note{padding:14px 16px;border-radius:14px;background:rgba(255,255,255,.035);border:1px solid var(--edge);font-size:14px}
+  .toc{margin:22px 0 0;padding:0;list-style:none;display:flex;flex-wrap:wrap;gap:6px}
+  .toc a{display:inline-block;font-size:13px;color:var(--ink-2);text-decoration:none;padding:5px 11px;border:1px solid var(--edge);border-radius:999px}
+  .toc a:hover{color:var(--ink);border-color:var(--accent-edge)}
+  h2[id]{scroll-margin-top:16px}
+  h3{font-size:15px;margin:18px 0 6px;color:var(--ink)}
+  h2 .n{font:12px/1 "JetBrains Mono",ui-monospace,monospace;color:var(--muted);margin-right:8px;letter-spacing:0}
+  table{width:100%;border-collapse:collapse;font-size:14px;margin:6px 0 10px}
+  td{padding:9px 10px 9px 0;border-top:1px solid var(--edge);color:var(--ink-2);vertical-align:top}
+  td:first-child{white-space:nowrap;color:var(--muted);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12.5px;padding-right:16px}
+  .note{margin:12px 0}
+  @media (max-width:560px){article{padding:24px 20px 20px;border-radius:20px}h1{font-size:25px}.promises{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -41,90 +55,234 @@
     <span class="eyebrow">Predki</span>
     <h1>Политика конфиденциальности</h1>
     <p class="date">Редакция от 5 октября 2026 года</p>
+    <p class="lead">История семьи — очень личные данные: в ней не только вы, но и ваши близкие. Поэтому сначала — главное, что мы обещаем, а ниже — подробно и без недомолвок.</p>
 
-    <p>Predki — веб-приложение для создания семейного древа и карты переездов семьи.</p>
-
-    <h2>Кто обрабатывает данные</h2>
-    <p>Оператор персональных данных — разработчик приложения Андрей Брызгалин (частное лицо). Связаться по любым вопросам о данных: <a href="mailto:spayhs@ya.ru">spayhs@ya.ru</a>.</p>
-
-    <h2>Какие данные мы получаем</h2>
-    <ul>
-      <li><b>Данные аккаунта:</b> адрес электронной почты и пароль, если вы входите по почте. При входе через Google — также имя и ссылка на фото профиля, которые передаёт Google.</li>
-      <li><b>Содержимое древа:</b> всё, что вы вносите сами. Мы получаем и храним его в формате JSON.</li>
-      <li><b>Технические данные:</b> обрабатываем их, чтобы ваш аккаунт и древо отображались на разных устройствах.</li>
-    </ul>
-    <p>Мы не используем рекламные и аналитические трекеры.</p>
-
-    <h2>Зачем</h2>
-    <ul>
-      <li>чтобы вы могли входить в аккаунт и видеть своё древо на любом устройстве;</li>
-      <li>чтобы сохранять и показывать внесённые вами данные;</li>
-      <li>для технического обслуживания, поддержки и улучшения работы приложения.</li>
+    <ul class="promises">
+      <li><b>Ваше древо принадлежит вам</b>Вы можете в любой момент выгрузить его целиком или удалить. Мы не получаем на него никаких прав.</li>
+      <li><b>Древо видите только вы</b>В Predki нет публичных древ, поиска по чужим семьям и автоматических «совпадений». Другие пользователи не могут открыть ваше древо — это ограничено правилами самой базы данных.</li>
+      <li><b>Мы не смотрим ваши древа</b>Разработчик обращается к содержимому древа только чтобы устранить сбой, по вашей просьбе или по требованию закона. Для развития приложения используем только обезличенные цифры.</li>
+      <li><b>Не продаём и не обучаем ИИ</b>Не продаём данные, не передаём их рекламодателям, страховым компаниям, работодателям и не используем для обучения моделей ИИ.</li>
+      <li><b>Защита на каждом шаге</b>Защищённое соединение, шифрование на серверах во Франкфурте, правила доступа в базе данных и двухфакторная защита аккаунтов администратора.</li>
+      <li><b>Честно об инцидентах</b>Если с вашими данными что-то случится, мы сообщим вам в течение 72 часов и расскажем, что делаем.</li>
     </ul>
 
-    <h2>Где хранятся данные и кто имеет к ним доступ</h2>
-    <p>Данные хранятся на стороне разработчиков приложения — в базе данных на серверах облачной платформы Supabase. Копия древа также сохраняется в памяти вашего браузера, чтобы приложение быстро открывалось.</p>
-    <p>Другие пользователи Predki не имеют доступа к вашему древу. Технический доступ к базе данных есть у разработчика приложения как администратора сервиса. Мы не продаём и не передаём ваши данные третьим лицам, кроме поставщиков инфраструктуры, без которых приложение не работает: Supabase (хранение данных и вход) и Google (вход через Google-аккаунт, загрузка шрифтов).</p>
+    <ul class="toc">
+      <li><a href="#who">Кто мы</a></li><li><a href="#data">Какие данные</a></li><li><a href="#not">Чего не собираем</a></li><li><a href="#why">Зачем</a></li>
+      <li><a href="#where">Где хранятся</a></li><li><a href="#access">Кто имеет доступ</a></li><li><a href="#security">Защита</a></li><li><a href="#browser">Копия в браузере</a></li>
+      <li><a href="#retention">Сроки и удаление</a></li><li><a href="#relatives">Родственники</a></li><li><a href="#rights">Ваши права</a></li><li><a href="#incidents">Инциденты</a></li><li><a href="#changes">Изменения</a></li>
+    </ul>
 
-    <h2>Данные о родственниках</h2>
-    <p>В древо вы можете добавлять сведения о других людях. Добавляя информацию о живых родственниках, убедитесь, что они не возражают. Если человек попросит удалить данные о нём, вы можете сделать это в его анкете.</p>
+    <h2 id="who"><span class="n">1</span>Кто мы</h2>
+    <p>Predki — веб-приложение для создания семейного древа и карты переездов семьи. Сейчас оно на этапе тестирования. Оператор персональных данных — разработчик приложения Андрей Брызгалин, частное лицо, Россия. Обработка данных ведётся в соответствии с Федеральным законом № 152-ФЗ «О персональных данных». По любым вопросам пишите на <a href="mailto:spayhs@ya.ru">spayhs@ya.ru</a>.</p>
 
-    <h2>Как долго хранятся и как удалить</h2>
-    <p>Данные хранятся, пока существует ваш аккаунт. Удалить древо можно в любой момент: Настройки → «Очистить всё». Чтобы удалить аккаунт целиком, напишите на <a href="mailto:spayhs@ya.ru">spayhs@ya.ru</a> с той почты, к которой он привязан. Мы удалим его в течение 30 дней.</p>
+    <h2 id="data"><span class="n">2</span>Какие данные мы обрабатываем</h2>
+    <h3>Аккаунт</h3>
+    <ul>
+      <li>адрес электронной почты и способ входа (почта или Google);</li>
+      <li>пароль — только в виде криптографического хэша, если вы входите по почте;</li>
+      <li>при входе через Google — имя, ссылка на фото профиля и идентификатор Google-аккаунта. Мы запрашиваем у Google только базовый доступ: имя и почту.</li>
+    </ul>
+    <h3>Семейное древо</h3>
+    <p>То, что вы вносите сами: имена, фамилии (в том числе девичьи) и отчества, пол, даты и места рождения и смерти, события и переезды, профессия, образование, биографии, родственные связи, фотографии и документы, а также оформление древа и достижения. Всё это хранится одним документом в формате JSON, привязанным к вашему аккаунту.</p>
+    <h3>Технические данные</h3>
+    <ul>
+      <li>IP-адрес и сведения о дате, времени входа и обновления сессии;</li>
+      <li>журнал событий входа: вход, выход, смена пароля;</li>
+      <li>служебные журналы запросов к серверу: время, адрес запроса, IP-адрес.</li>
+    </ul>
+    <p>Они нужны, чтобы вы оставались в аккаунте на разных устройствах и чтобы защищать аккаунт от взлома.</p>
 
-    <h2>Ваши права</h2>
-    <p>Вы можете узнать, какие ваши данные мы храним, исправить их, получить копию (Настройки → «Экспорт JSON»), удалить их или отозвать согласие на обработку. Для этого напишите на почту выше.</p>
+    <h2 id="not"><span class="n">3</span>Чего мы не собираем</h2>
+    <ul>
+      <li>геолокацию вашего устройства — места на карте вы указываете сами;</li>
+      <li>контакты, данные из соцсетей и других сервисов (кроме данных для входа через Google);</li>
+      <li>рекламные идентификаторы. В Predki нет рекламных и аналитических трекеров.</li>
+    </ul>
+    <p class="note">Пожалуйста, не вносите в древо паспортные данные, СНИЛС, медицинские и финансовые сведения, а также адреса и телефоны живых людей. Для семейной истории они не нужны, а риск при их хранении выше.</p>
 
-    <h2>Согласие</h2>
-    <p>Создавая аккаунт и пользуясь Predki, вы соглашаетесь с этой политикой и даёте согласие на обработку персональных данных, включая их хранение на серверах Supabase. Приложение не предназначено для детей младше 14 лет.</p>
+    <h2 id="why"><span class="n">4</span>Зачем мы используем данные</h2>
+    <ul>
+      <li>чтобы вы могли войти в аккаунт и видеть своё древо на любом устройстве;</li>
+      <li>чтобы сохранять и показывать то, что вы внесли;</li>
+      <li>чтобы поддерживать работу приложения, устранять ошибки и защищать аккаунты.</li>
+    </ul>
+    <p>Эта обработка необходима для работы сервиса. Чтобы понимать, как развивать Predki, мы можем считать обезличенную статистику — например, сколько человек и поколений в древах. Имена, даты, фотографии и тексты в неё не попадают.</p>
+    <p>Необязательных видов обработки — рассылок, рекламы, профилирования — нет. Если в будущем появятся функции, которым нужна дополнительная обработка (например, ИИ-архивариус, работающий с вашими текстами), мы попросим отдельное согласие и заранее опишем, куда и зачем передаются данные.</p>
 
-    <h2>Изменения</h2>
-    <p>Если политика изменится, мы обновим эту страницу и дату редакции вверху.</p>
+    <h2 id="where"><span class="n">5</span>Где хранятся данные</h2>
+    <p>Аккаунты и древа хранятся в базе данных облачной платформы Supabase в регионе Central EU — на серверах во Франкфурте (Германия). Сами страницы приложения размещены на GitHub Pages; данные древ там не хранятся.</p>
+
+    <h2 id="access"><span class="n">6</span>Кто имеет доступ</h2>
+    <ul>
+      <li><b>Вы</b> — полный доступ к своему древу.</li>
+      <li><b>Другие пользователи</b> — нет доступа. Правила базы данных разрешают читать и менять древо только владельцу аккаунта.</li>
+      <li><b>Разработчик</b> — технический доступ к базе данных как у администратора сервиса. Мы не открываем содержимое древ, кроме трёх случаев: устранить технический сбой, выполнить вашу просьбу или запрос человека, чьи данные внесены в древо, либо требование закона.</li>
+      <li><b>Supabase</b> — хранит базу данных и обслуживает вход как поставщик инфраструктуры.</li>
+      <li><b>Google</b> — только если вы входите через Google: получает информацию о том, что вы вошли в Predki.</li>
+      <li><b>GitHub</b> — размещает страницы приложения и при их открытии получает технические данные запроса (IP-адрес, браузер).</li>
+    </ul>
+    <p>Мы не передаём данные никому другому, кроме случаев, прямо предусмотренных законом.</p>
+    <p class="note">Важно: в Predki нет сквозного шифрования, при котором ключ есть только у вас. Шифрование у провайдера защищает данные от посторонних, но технически не делает их недоступными для администратора. Поэтому мы отдельно обещаем не просматривать ваши древа.</p>
+
+    <h2 id="security"><span class="n">7</span>Как мы защищаем данные</h2>
+    <ul>
+      <li>все данные передаются только по защищённому соединению (HTTPS/TLS);</li>
+      <li>на серверах Supabase данные хранятся в зашифрованном виде (AES-256);</li>
+      <li>пароли не хранятся в открытом виде — только в виде хэша;</li>
+      <li>доступ к каждому древу ограничен на уровне базы данных (Row Level Security): запрос к чужому древу база отклонит;</li>
+      <li>в коде приложения есть только публичный ключ доступа; административный ключ в приложение не попадает;</li>
+      <li>аккаунты администратора в Supabase, GitHub и Google защищены двухфакторной аутентификацией.</li>
+    </ul>
+    <p>Мы не делаем резервных копий базы данных, поэтому ваши данные не хранятся у нас в дополнительных копиях. Обратная сторона — при серьёзном сбое восстановить древо будет неоткуда, поэтому советуем время от времени сохранять его через «Экспорт JSON».</p>
+
+    <h2 id="browser"><span class="n">8</span>Копия в вашем браузере</h2>
+    <p>Чтобы приложение быстро открывалось и работало при плохой связи, копия древа хранится в браузере (IndexedDB), а данные сессии — в локальном хранилище (localStorage). На устройстве эта копия не шифруется: её может увидеть любой, у кого есть доступ к вашему браузеру. При выходе из аккаунта копия древа и сессия удаляются с устройства. Удалить их вручную можно в настройках браузера — очистив данные сайта. Если пользуетесь чужим или общим компьютером, не забудьте выйти из аккаунта.</p>
+
+    <h2 id="retention"><span class="n">9</span>Сроки хранения и удаление</h2>
+    <table>
+      <tr><td>Аккаунт и древо</td><td>пока существует аккаунт</td></tr>
+      <tr><td>Сессии и журнал входов</td><td>пока существует аккаунт; удаляются вместе с ним</td></tr>
+      <tr><td>Журналы запросов</td><td>1 сутки у Supabase, затем удаляются автоматически</td></tr>
+      <tr><td>Копия в браузере</td><td>до выхода из аккаунта или очистки данных сайта</td></tr>
+    </table>
+    <ul>
+      <li><b>Выгрузить древо</b> можно в любой момент: Настройки → «Экспорт JSON».</li>
+      <li><b>Удалить древо</b> — Настройки → «Очистить всё». Содержимое сразу удаляется и из базы данных.</li>
+      <li><b>Удалить аккаунт</b> — напишите на <a href="mailto:spayhs@ya.ru">spayhs@ya.ru</a> с почты, к которой он привязан. В течение 30 дней мы удалим аккаунт, древо, сессии и журнал входов. Резервных копий нет, поэтому после удаления у нас не остаётся копий ваших данных. Файлы, которые вы сами выгрузили, остаются у вас.</li>
+    </ul>
+
+    <h2 id="relatives"><span class="n">10</span>Данные о родственниках</h2>
+    <p>В древо вы вносите сведения о близких — живых и ушедших. Добавляя информацию о живых людях, убедитесь, что они не против. Данные о детях младше 14 лет может вносить только их родитель или законный представитель.</p>
+    <p>Если вы нашли свои данные в чужом древе или считаете, что они внесены без вашего согласия, напишите нам напрямую на <a href="mailto:spayhs@ya.ru">spayhs@ya.ru</a> — обращаться к владельцу древа не обязательно. Мы можем попросить подтвердить, что речь идёт именно о вас, и сначала связаться с владельцем древа. Но ваше право на удаление своих данных важнее его желания их сохранить: мы исправим или удалим эти сведения в течение 10 рабочих дней.</p>
+
+    <h2 id="rights"><span class="n">11</span>Ваши права</h2>
+    <p>Вы вправе узнать, какие ваши данные мы обрабатываем, исправить их, получить копию, ограничить обработку, потребовать удаления и отозвать согласие (это означает удаление аккаунта: без обработки данных сервис работать не может). Напишите на <a href="mailto:spayhs@ya.ru">spayhs@ya.ru</a> — мы ответим в течение 10 рабочих дней. Если вы считаете, что ваши права нарушены, вы можете обратиться в Роскомнадзор.</p>
+
+    <h2 id="incidents"><span class="n">12</span>Инциденты безопасности</h2>
+    <p>Если мы обнаружим утечку или несанкционированный доступ к данным, мы сразу примем меры, чтобы остановить его и ограничить последствия, разберёмся в причинах и в течение 72 часов сообщим по почте пользователям, которых это затронуло: что произошло, какие данные затронуты и что мы делаем. Роскомнадзор мы уведомим в сроки, установленные законом.</p>
+
+    <h2 id="consent"><span class="n">13</span>Согласие и возраст</h2>
+    <p>Создавая аккаунт и пользуясь Predki, вы соглашаетесь с этой политикой и даёте согласие на обработку персональных данных в описанных целях, включая их хранение на серверах Supabase в Германии. Аккаунт можно создать с 14 лет.</p>
+
+    <h2 id="changes"><span class="n">14</span>Изменения политики</h2>
+    <p>О существенных изменениях мы заранее сообщим в приложении и по почте — до того, как они вступят в силу, — и коротко опишем, что изменилось. С выходом следующей редакции здесь появится история изменений.</p>
+
+    <h2><span class="n">15</span>Контакты</h2>
+    <p>Андрей Брызгалин, оператор персональных данных Predki — <a href="mailto:spayhs@ya.ru">spayhs@ya.ru</a>.</p>
   </article>
 
   <article id="en" lang="en">
     <span class="eyebrow">Predki</span>
     <h1>Privacy Policy</h1>
     <p class="date">Version of October 5, 2026</p>
+    <p class="lead">Family history is deeply personal data: it is about you and the people you love. So here is what we promise first, and the full details below.</p>
 
-    <p>Predki is a web app for building a family tree and a map of your family’s moves.</p>
-
-    <h2>Who processes the data</h2>
-    <p>The data controller is the app’s developer, Andrey Bryzgalin (private individual). Contact: <a href="mailto:spayhs@ya.ru">spayhs@ya.ru</a>.</p>
-
-    <h2>What we receive</h2>
-    <ul>
-      <li><b>Account data:</b> your email address, and a password if you sign in with email. With Google sign-in, also the name and profile picture link that Google provides.</li>
-      <li><b>Tree content:</b> everything you add yourself. We receive and store it in JSON format.</li>
-      <li><b>Technical data:</b> we process it so your account and tree appear on different devices.</li>
+    <ul class="promises">
+      <li><b>Your tree belongs to you</b>Export all of it or delete it at any time. We claim no rights to it.</li>
+      <li><b>Only you see your tree</b>No public trees, no search across other families, no automatic “matches”. Other users cannot open your tree — the database itself enforces this.</li>
+      <li><b>We do not look at your trees</b>The developer opens tree content only to fix a failure, when you ask, or when the law requires it. We improve the app using anonymous numbers only.</li>
+      <li><b>No selling, no AI training</b>We do not sell data, share it with advertisers, insurers or employers, or use it to train AI models.</li>
+      <li><b>Protection at every step</b>Secure connections, encryption on servers in Frankfurt, database access rules and two-factor protection of admin accounts.</li>
+      <li><b>Honest about incidents</b>If something happens to your data, we will tell you within 72 hours and explain what we are doing.</li>
     </ul>
-    <p>We do not use advertising or analytics trackers.</p>
 
-    <h2>Why</h2>
+    <h2><span class="n">1</span>Who we are</h2>
+    <p>Predki is a web app for building a family tree and a map of your family’s moves. It is currently in testing. The data controller is the app’s developer, Andrey Bryzgalin, a private individual based in Russia. Data is processed under Russian Federal Law No. 152-FZ “On Personal Data”. Contact: <a href="mailto:spayhs@ya.ru">spayhs@ya.ru</a>.</p>
+
+    <h2><span class="n">2</span>What data we process</h2>
+    <h3>Account</h3>
+    <ul>
+      <li>email address and sign-in method (email or Google);</li>
+      <li>password — only as a cryptographic hash, if you sign in with email;</li>
+      <li>with Google sign-in — your name, profile picture link and Google account ID. We request only basic access from Google: name and email.</li>
+    </ul>
+    <h3>Family tree</h3>
+    <p>What you add yourself: names, surnames (including maiden names) and patronymics, gender, dates and places of birth and death, events and moves, occupation, education, life stories, family links, photos and documents, plus the tree’s look and achievements. All of it is stored as a single JSON document linked to your account.</p>
+    <h3>Technical data</h3>
+    <ul>
+      <li>IP address and the date and time of sign-in and session refresh;</li>
+      <li>a log of sign-in events: sign-in, sign-out, password change;</li>
+      <li>server request logs: time, requested address, IP address.</li>
+    </ul>
+    <p>We need these to keep you signed in across devices and to protect your account from break-ins.</p>
+
+    <h2><span class="n">3</span>What we do not collect</h2>
+    <ul>
+      <li>your device’s location — you enter places on the map yourself;</li>
+      <li>contacts, social media data or data from other services (apart from Google sign-in data);</li>
+      <li>advertising identifiers. Predki has no advertising or analytics trackers.</li>
+    </ul>
+    <p class="note">Please do not add passport or ID numbers, medical or financial details, or addresses and phone numbers of living people. Family history does not need them, and storing them raises the risk.</p>
+
+    <h2><span class="n">4</span>Why we use data</h2>
     <ul>
       <li>to let you sign in and see your tree on any device;</li>
-      <li>to store and display the data you add;</li>
-      <li>for technical maintenance, support and improving the app.</li>
+      <li>to store and display what you add;</li>
+      <li>to keep the app running, fix errors and protect accounts.</li>
+    </ul>
+    <p>This processing is necessary for the service to work. To decide how to improve Predki, we may count anonymous statistics, such as how many people and generations trees contain. Names, dates, photos and texts are never part of them.</p>
+    <p>There is no optional processing — no newsletters, ads or profiling. If future features need extra processing (for example, an AI archivist working with your texts), we will ask for separate consent and explain in advance where and why data is sent.</p>
+
+    <h2><span class="n">5</span>Where data is stored</h2>
+    <p>Accounts and trees are stored in a Supabase cloud database in the Central EU region — on servers in Frankfurt, Germany. The app’s pages are hosted on GitHub Pages; no tree data is stored there.</p>
+
+    <h2><span class="n">6</span>Who has access</h2>
+    <ul>
+      <li><b>You</b> — full access to your tree.</li>
+      <li><b>Other users</b> — no access. Database rules allow only the account owner to read or change a tree.</li>
+      <li><b>The developer</b> — technical access to the database as the service administrator. We do not open tree content except in three cases: to fix a technical failure, to fulfil your request or a request from a person whose data is in the tree, or when the law requires it.</li>
+      <li><b>Supabase</b> — stores the database and runs sign-in as the infrastructure provider.</li>
+      <li><b>Google</b> — only if you use Google sign-in: learns that you signed in to Predki.</li>
+      <li><b>GitHub</b> — hosts the app’s pages and receives technical request data (IP address, browser) when you open them.</li>
+    </ul>
+    <p>We share data with no one else, except where the law explicitly requires it.</p>
+    <p class="note">Important: Predki does not use end-to-end encryption, where only you hold the key. The provider’s encryption protects data from outsiders but does not technically prevent the administrator from accessing it. That is why we separately promise not to look at your trees.</p>
+
+    <h2><span class="n">7</span>How we protect data</h2>
+    <ul>
+      <li>all data travels only over secure connections (HTTPS/TLS);</li>
+      <li>data on Supabase servers is stored encrypted (AES-256);</li>
+      <li>passwords are never stored in plain text, only as a hash;</li>
+      <li>access to each tree is restricted at the database level (Row Level Security): the database rejects requests for someone else’s tree;</li>
+      <li>the app’s code contains only a public access key; the admin key never ships with the app;</li>
+      <li>the administrator’s Supabase, GitHub and Google accounts are protected with two-factor authentication.</li>
+    </ul>
+    <p>We do not make database backups, so your data is not kept in extra copies. The flip side: after a serious failure there would be nothing to restore your tree from, so we recommend saving it now and then with “Export JSON”.</p>
+
+    <h2><span class="n">8</span>The copy in your browser</h2>
+    <p>So the app opens quickly and works on a poor connection, a copy of your tree is kept in your browser (IndexedDB) and session data in local storage (localStorage). This copy is not encrypted on the device: anyone with access to your browser could see it. Signing out removes the tree copy and session from the device. You can also remove them manually by clearing the site’s data in your browser settings. On a shared computer, remember to sign out.</p>
+
+    <h2><span class="n">9</span>Retention and deletion</h2>
+    <table>
+      <tr><td>Account and tree</td><td>while the account exists</td></tr>
+      <tr><td>Sessions and sign-in log</td><td>while the account exists; deleted with it</td></tr>
+      <tr><td>Request logs</td><td>1 day at Supabase, then deleted automatically</td></tr>
+      <tr><td>Browser copy</td><td>until you sign out or clear site data</td></tr>
+    </table>
+    <ul>
+      <li><b>Export your tree</b> at any time: Settings → “Export JSON”.</li>
+      <li><b>Delete your tree</b>: Settings → “Clear everything”. The content is removed from the database right away.</li>
+      <li><b>Delete your account</b>: email <a href="mailto:spayhs@ya.ru">spayhs@ya.ru</a> from the address it is linked to. Within 30 days we will delete the account, tree, sessions and sign-in log. There are no backups, so no copies of your data remain with us. Files you exported yourself stay with you.</li>
     </ul>
 
-    <h2>Where data is stored and who can access it</h2>
-    <p>Data is stored on the app developers’ side, in a database hosted on the Supabase cloud platform. A copy of your tree is also kept in your browser so the app opens quickly.</p>
-    <p>Other Predki users cannot access your tree. The app developer has technical access to the database as the service administrator. We do not sell or share your data with third parties, except for the infrastructure providers the app relies on: Supabase (storage and sign-in) and Google (Google sign-in, web fonts).</p>
+    <h2><span class="n">10</span>Data about relatives</h2>
+    <p>Your tree holds information about your relatives, living and deceased. When adding details about living people, make sure they do not object. Information about children under 14 may only be added by their parent or legal guardian.</p>
+    <p>If you find your data in someone else’s tree, or believe it was added without your consent, email us directly at <a href="mailto:spayhs@ya.ru">spayhs@ya.ru</a> — you do not have to contact the tree owner. We may ask you to confirm the data is about you and may contact the tree owner first. But your right to have your data removed outweighs their wish to keep it: we will correct or delete it within 10 business days.</p>
 
-    <h2>Data about relatives</h2>
-    <p>You can add information about other people. When adding details about living relatives, make sure they do not object. If someone asks you to remove their data, you can do it in their profile.</p>
+    <h2><span class="n">11</span>Your rights</h2>
+    <p>You can ask what data we process about you, correct it, get a copy, restrict processing, have it deleted, or withdraw consent (which means deleting the account, as the service cannot work without processing data). Email <a href="mailto:spayhs@ya.ru">spayhs@ya.ru</a> and we will reply within 10 business days. If you believe your rights have been violated, you can complain to Roskomnadzor, the Russian data protection authority.</p>
 
-    <h2>Retention and deletion</h2>
-    <p>Data is kept while your account exists. You can delete your tree at any time in Settings → “Clear everything”. To delete your account entirely, email <a href="mailto:spayhs@ya.ru">spayhs@ya.ru</a> from the address it is linked to; we will delete it within 30 days.</p>
+    <h2><span class="n">12</span>Security incidents</h2>
+    <p>If we discover a data breach or unauthorized access, we will act at once to stop it and limit the damage, investigate the cause, and within 72 hours email affected users about what happened, what data was involved and what we are doing. We will notify the authorities within the time required by law.</p>
 
-    <h2>Your rights</h2>
-    <p>You can ask what data we hold about you, correct it, get a copy (Settings → “Export JSON”), delete it, or withdraw your consent. Just email us.</p>
+    <h2><span class="n">13</span>Consent and age</h2>
+    <p>By creating an account and using Predki, you agree to this policy and consent to the processing of your personal data for the purposes described, including its storage on Supabase servers in Germany. You must be at least 14 to create an account.</p>
 
-    <h2>Consent</h2>
-    <p>By creating an account and using Predki, you agree to this policy and consent to the processing of your personal data, including storage on Supabase servers. The app is not intended for children under 14.</p>
+    <h2><span class="n">14</span>Policy changes</h2>
+    <p>We will announce significant changes in the app and by email before they take effect, with a short summary of what changed. A change history will appear here with the next version.</p>
 
-    <h2>Changes</h2>
-    <p>If this policy changes, we will update this page and the version date above.</p>
+    <h2><span class="n">15</span>Contact</h2>
+    <p>Andrey Bryzgalin, Predki data controller — <a href="mailto:spayhs@ya.ru">spayhs@ya.ru</a>.</p>
   </article>
 </div>
 </body>
