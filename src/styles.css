@@ -719,9 +719,7 @@ main{position:relative;min-width:0;overflow:hidden;border-radius:var(--r-card);b
 /* Settings → «История изменений» */
 .settings .changelog{gap:14px}
 .settings .release{display:flex;flex-direction:column;gap:6px}
-.settings .release-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
-.settings .release-h b{font-weight:600;font-size:14px}
-.settings .release-h time{font-family:var(--f-mono);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.settings .release-date{font-weight:600;font-size:14px;color:var(--ink)}
 .settings .release ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:4px}
 .settings .release li{font-size:13.5px;color:var(--ink-2);line-height:1.5}
 .settings .release li::marker{color:var(--accent)}

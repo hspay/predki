@@ -5,7 +5,7 @@ const MONTHS = { ru: ['января','февраля','марта','апреля
 function relDate(iso: string) { const [y, m, d] = iso.split('-').map(Number); return LANG === 'en' ? `${MONTHS.en[m - 1]} ${d}, ${y}` : `${d} ${MONTHS.ru[m - 1]} ${y}` }
 function ReleaseNote({ r }: { r: Release }) {
   const L = LANG === 'en' ? 'en' : 'ru'
-  return <div className="release"><div className="release-h"><b>{r.title[L]}</b><time dateTime={r.date}>{relDate(r.date)}</time></div><ul>{r.items.map((it, i) => <li key={i}>{it[L]}</li>)}</ul></div>
+  return <div className="release"><time className="release-date" dateTime={r.date}>{relDate(r.date)}</time><ul>{r.items.map((it, i) => <li key={i}>{it[L]}</li>)}</ul></div>
 }
 
 export default function SettingsPage() {
