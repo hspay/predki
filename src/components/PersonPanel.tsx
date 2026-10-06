@@ -11,6 +11,7 @@ const EV_TYPES: EvType[] = ['birth', 'move', 'study', 'work', 'marriage', 'death
 const DocIcon = () => <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5M9 13h6M9 17h6" /></svg>
 const deathLabel = (g?: string) => g === 'f' ? 'p.death.f' : g === 'm' ? 'p.death.m' : 'p.death'
 const CameraIcon = () => <svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
+const FrameIcon = () => <svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3" /><rect x="8" y="7" width="8" height="10" rx="4" /></svg>
 const ImageIcon = () => <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" /><circle cx="8.5" cy="10" r="1.5" /><path d="m21 15-5-5-9 9" /></svg>
 
 function Frame({ title, children, foot }: { title: string; children: React.ReactNode; foot?: React.ReactNode }) {
@@ -50,6 +51,7 @@ function ViewPerson({ id }: { id: string }) {
         <div className="halo" style={{ backgroundImage: `url(${avatarSrc(p)})` }} />
         <div className="ph-ava"><Avatar p={p} size={120} />
           <button type="button" className="ph-cam" aria-label={t('p.photo.add')} onClick={setPhoto}><CameraIcon /></button></div>
+        <button type="button" className="ph-frame" onClick={() => openModal({ kind: 'frame', id })}><FrameIcon />{t('frm.choose')}</button>
         <h2>{fullName(p)}</h2>
         {(p.patronymic || p.maiden) && <div className="muted">{[p.patronymic, p.maiden ? `(${t('p.maiden').toLowerCase()} ${p.maiden})` : ''].filter(Boolean).join(' ')}</div>}
         {(yearsOf(p) || p.job) && <div className="mono">{[yearsOf(p), p.job].filter(Boolean).join(' · ')}</div>}

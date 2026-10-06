@@ -20,6 +20,11 @@ export default function TreeStyle() {
           {THEMES.map(th => <button key={th.k} type="button" role="radio" aria-checked={(st.theme || 'night') === th.k} onClick={() => set({ theme: th.k })}>
             <span className={'chip th-' + th.k} />{themeName(th)}</button>)}
         </div></div>
+      <div className="field"><label id="tsLinesL">{t('ts.lines')}</label>
+        <div className="seg ts-seg" role="radiogroup" aria-labelledby="tsLinesL">
+          {(['smooth', 'straight'] as const).map(k => <button key={k} type="button" role="radio" aria-checked={(st.lines || 'smooth') === k} onClick={() => set({ lines: k })}>
+            <svg viewBox="0 0 28 16" aria-hidden="true">{k === 'smooth' ? <path d="M3 2v3c0 5 22 3 22 8v1" /> : <path d="M3 2v6h22v6" />}</svg>{t('ts.lines.' + k)}</button>)}
+        </div></div>
       <label className="ts-toggle"><input type="checkbox" checked={st.ghosts !== false} onChange={e => set({ ghosts: e.target.checked })} />
         <span><b>{t('ts.ghosts')}</b><small>{t('ts.ghosts.d')}</small></span></label>
     </div>}

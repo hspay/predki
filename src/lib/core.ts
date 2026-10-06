@@ -7,6 +7,7 @@ import { findCity } from './world'
 import { sampleData } from './sample'
 import { Progress } from './progress'
 import { sb, cloud, initSession, pullTree, pushTree, signOutCloud, setSkipped } from './cloud'
+import type { FrameLook } from './frames'
 import { PRESET_SRC, presetType, typeOfPreset, pickPreset, previewPreset } from './avatars'
 
 // ---------- types ----------
@@ -20,12 +21,16 @@ export interface Person {
   media: Media[]; events: LifeEvent[]; auto?: boolean
   /** default portrait (lib/avatars.ts) shown while there is no photo */
   preset?: string
+  /** portrait frame on the Tree; none = the usual card */
+  frame?: FrameLook
 }
 export interface Rel { id: string; type: 'parent' | 'spouse'; a: string; b: string; from: string }
 export interface Settings {
   lang?: 'ru' | 'en'; onboarded?: boolean; aiUsed?: boolean; aiAudio?: boolean
   /** tree look: background theme, title above the tree, dashed places for unknown ancestors */
   theme?: string; familyName?: string; ghosts?: boolean
+  /** links between relatives on the Tree */
+  lines?: 'smooth' | 'straight'
   /** «you» in the tree and the day the family started using Predki (ДД.ММ.ГГГГ), both shown on the family passport */
   meId?: string; since?: string
   /** last look picked for the family passport */
@@ -102,7 +107,7 @@ export type Panel =
   | { mode: 'view'; id: string }
   | { mode: 'edit'; id: string | null; preset?: Partial<Person> & { _title?: string }; after?: (p: Person) => void; key: number }
   | { mode: 'event'; id: string; eventId: string | null; key: number }
-export type Modal = { kind: 'addRelative'; id: string; rel: 'parent' | 'child' | 'spouse' } | null
+export type Modal = { kind: 'addRelative'; id: string; rel: 'parent' | 'child' | 'spouse' } | { kind: 'frame'; id: string } | null
 export interface Toast { id: string; msg: string; kind?: 'ach' }
 export interface Draft {
   id: string; first: string; last: string; patronymic: string; maiden: string; gender: string; rel: string

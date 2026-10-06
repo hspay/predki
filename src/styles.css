@@ -730,3 +730,43 @@ main{position:relative;min-width:0;overflow:hidden;border-radius:var(--r-card);b
 .settings .older summary::after{content:"";width:7px;height:7px;border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;transform:rotate(45deg) translateY(-2px);transition:transform .2s var(--ease)}
 .settings .older[open] summary::after{transform:rotate(-135deg) translateY(-1px)}
 .settings .older summary:hover{color:var(--ink)}
+
+/* ===== Portrait frames on the Tree ===== */
+.node .fr-glow{fill:url(#frGlow)}
+.node.framed .fr-art{transition:transform .25s var(--ease);transform-box:fill-box;transform-origin:center}
+.node.framed:hover .fr-art{transform:scale(1.025)}
+.profile-hero .ph-frame{display:inline-flex;align-items:center;gap:6px;margin:-4px 0 6px;padding:6px 12px 6px 10px;border-radius:var(--r-pill);font-size:12.5px;font-weight:500;color:var(--ink-2);background:rgba(255,255,255,.06);border:1px solid var(--edge-2);transition:color .15s,border-color .15s}
+.profile-hero .ph-frame:hover{color:var(--accent);border-color:var(--accent-edge)}
+.profile-hero .ph-frame svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round}
+.ts-seg{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:4px;padding:4px;border-radius:14px;background:rgba(0,0,0,.25);border:1px solid var(--edge)}
+.ts-seg button{display:flex;align-items:center;justify-content:center;gap:8px;padding:8px 6px;border-radius:10px;color:var(--ink-2);font-size:12.5px;font-weight:500;transition:background .15s,color .15s}
+.ts-seg button[aria-checked="true"]{background:var(--glass-3);color:var(--ink)}
+.ts-seg svg{width:26px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.modal.fp{max-width:540px}
+.fp-body{display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+.fp-preview{display:flex;flex-direction:column;align-items:center;gap:8px;padding:14px 10px 12px;border-radius:16px;background:radial-gradient(80% 90% at 50% 30%,rgba(44,56,102,.65),rgba(10,13,24,.6));border:1px solid var(--edge)}
+.fp-preview svg{display:block;max-width:100%;max-height:210px}
+.fp-cap{font-size:13px;color:var(--ink-2)}.fp-cap b{color:var(--ink);font-weight:600}
+.fp-card{display:flex;align-items:center;gap:12px;width:176px;height:68px;margin:40px 0;padding:0 12px 0 8px;border-radius:14px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16);text-align:left}
+.fp-card b{display:block;font-family:var(--f-display);font-size:13px;font-weight:600;line-height:1.25}
+.fp-card small{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.fp-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.fp-tile{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:6px;min-height:88px;padding:10px 6px 9px;border-radius:14px;background:var(--glass);border:1px solid var(--edge);color:var(--ink-2);font-size:12.5px;font-weight:500;transition:border-color .15s,background .15s}
+.fp-tile svg{width:48px;height:54px}
+.fp-tile:hover{border-color:var(--edge-2)}
+.fp-tile[aria-checked="true"]{border-color:var(--accent);background:var(--accent-soft);color:var(--ink)}
+.fp-tile.locked svg{opacity:.38;filter:grayscale(.6)}
+.fp-tile.locked{color:var(--muted)}
+.fp-tile .fp-lock{position:absolute;top:8px;right:8px;width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;opacity:.8}
+.fp-none{position:relative;display:flex;align-items:center;gap:5px;width:58px;height:26px;margin-bottom:17px;padding:0 6px 0 3px;border-radius:8px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.16)}
+.fp-none i{display:block;height:3px;border-radius:2px;background:rgba(255,255,255,.35);flex:1}
+.fp-none i+i{display:none}
+.fp-hint{margin:0;font-size:13px;color:var(--accent);background:var(--accent-soft);border-radius:12px;padding:9px 12px}
+.fp-row{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:-6px}
+.fp-val{font-size:12.5px;color:var(--ink-2)}
+.fp-sw{display:flex;flex-wrap:wrap;gap:9px}
+.fp-sw button{position:relative;width:30px;height:30px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.2)}
+.fp-sw button i{position:absolute;inset:7px;border-radius:50%}
+.fp-sw button[aria-pressed="true"]{box-shadow:0 0 0 2px #0E121B,0 0 0 4px var(--accent)}
+.fp-foot{display:flex;justify-content:flex-end;padding-top:4px}
+@media (max-width:560px){.fp-tile{min-height:88px}.fp-tile svg{width:44px;height:52px}}

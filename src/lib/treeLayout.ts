@@ -5,7 +5,8 @@ import { S, byId, parentsOf, childrenOf, spousesOf, yearOf } from './core'
 export const DIM={NW:176,NH:68,PG:30,GAP:70,LH:120};
 export const {NW,NH,PG,GAP,LH}=DIM;
 
-export function layout(){
+/** hOf(id) — height of a person's box (a framed portrait is taller than a card); rows take the tallest box, boxes are centred in their row. */
+export function layout(hOf){
   const self=DIM;
     const people=S.people; if(!people.length) return {pos:{},blocks:[],w:0,h:0};
     const idx={}; people.forEach((p,i)=>idx[p.id]=i);
@@ -59,9 +60,11 @@ export function layout(){
     const up=()=>{ for(let i=L.length-2;i>=0;i--){ levels[L[i]].forEach(b=>{ const ks=[...new Set(b.m.flatMap(id=>KID[id]))]; b.d=ks.length?mean(ks.map(cx))-b.w/2:b.x; }); placeFixed(levels[L[i]]); } };
     const down=()=>{ for(let i=1;i<L.length;i++){ levels[L[i]].forEach(b=>{ const want=[]; b.m.forEach((id,j)=>{ if(PAR[id].length) want.push(mean(PAR[id].map(cx))-j*(NW+PG)-NW/2); }); b.d=want.length?mean(want):b.x; }); placeFixed(levels[L[i]]); } };
     for(let it=0;it<8;it++){ up(); down(); }
-    const pos={}; let minX=Infinity,maxX=-Infinity; blocks.forEach(b=>b.m.forEach((id,i)=>{ pos[id]={x:b.x+i*(NW+PG),y:b.g*(self.NH+self.LH)}; minX=Math.min(minX,pos[id].x); maxX=Math.max(maxX,pos[id].x+NW); }));
+    const hgt=id=>hOf?hOf(id):self.NH; const rowH={}; blocks.forEach(b=>b.m.forEach(id=>{ rowH[b.g]=Math.max(rowH[b.g]||0,hgt(id)); }));
+    const top={}; let acc=0; L.forEach(g=>{ top[g]=acc; acc+=rowH[g]+self.LH; });
+    const pos={}; let minX=Infinity,maxX=-Infinity; blocks.forEach(b=>b.m.forEach((id,i)=>{ const h=hgt(id); pos[id]={x:b.x+i*(NW+PG),y:top[b.g]+(rowH[b.g]-h)/2,h,g:b.g,top:top[b.g],rh:rowH[b.g]}; minX=Math.min(minX,pos[id].x); maxX=Math.max(maxX,pos[id].x+NW); }));
     Object.values(pos).forEach(p=>p.x-=minX);
-    return {pos,blocks,w:maxX-minX,h:(L.length-1)*(self.NH+self.LH)+self.NH};
+    return {pos,blocks,w:maxX-minX,h:acc-self.LH};
   }
 
 export const LINE={g:'#F2C879',f:'#8EA7FF',m:'#F29AC0',ff:'#6EC3FF',fm:'#B39AFF',mf:'#5FD3AE',mm:'#FF9F8A',n:'rgba(255,255,255,.42)'};
