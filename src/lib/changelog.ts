@@ -3,6 +3,13 @@ export interface Release { date: string; items: { ru: string; en: string }[] }
 
 export const CHANGELOG: Release[] = [
   {
+    date: '2026-10-06',
+    items: [
+      { ru: 'Рамки для портретов на Древе: 8 форм, цвет и размер. Часть рамок открывается за достижения.', en: 'Portrait frames on the Tree: 8 shapes, colour and size. Some frames unlock with achievements.' },
+      { ru: 'Выбор линий в стиле Древа: плавные или прямые.', en: 'Choose the Tree lines in Tree style: smooth or straight.' },
+    ],
+  },
+  {
     date: '2026-10-05',
     items: [
       { ru: 'Добавлена возможность авторизации через Google или почту.', en: 'Sign in with Google or email.' },
