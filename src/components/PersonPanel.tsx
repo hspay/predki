@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react'
 import {
   ui, t, LANG, byId, fullName, yearsOf, parentsOf, spousesOf, childrenOf, siblingsOf, fillPercent,
-  closePanel, openPerson, editPerson, editEvent, openModal, commit, toast, removePerson, pickFile, uid, addPerson,
+  closePanel, openPerson, editPerson, editEvent, openModal, commit, refresh, toast, removePerson, pickFile, uid, addPerson,
   avatarSrc, normDate, dateValid, bindDateMask, syncLifeEvents, ensureFathers, type Person, type EvType,
 } from '../lib/core'
 import { CITIES, findCity } from '../lib/world'
 import Avatar from './Avatar'
+import FrameEditor from './FrameEditor'
 
 const EV_TYPES: EvType[] = ['birth', 'move', 'study', 'work', 'marriage', 'death', 'other']
 const DocIcon = () => <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5M9 13h6M9 17h6" /></svg>
@@ -51,11 +52,12 @@ function ViewPerson({ id }: { id: string }) {
         <div className="halo" style={{ backgroundImage: `url(${avatarSrc(p)})` }} />
         <div className="ph-ava"><Avatar p={p} size={120} />
           <button type="button" className="ph-cam" aria-label={t('p.photo.add')} onClick={setPhoto}><CameraIcon /></button></div>
-        <button type="button" className="ph-frame" onClick={() => openModal({ kind: 'frame', id })}><FrameIcon />{t('frm.choose')}</button>
+        {!ui.frameEdit && <button type="button" className="ph-frame" onClick={() => { ui.frameEdit = true; refresh() }}><FrameIcon />{t('frm.choose')}</button>}
         <h2>{fullName(p)}</h2>
         {(p.patronymic || p.maiden) && <div className="muted">{[p.patronymic, p.maiden ? `(${t('p.maiden').toLowerCase()} ${p.maiden})` : ''].filter(Boolean).join(' ')}</div>}
         {(yearsOf(p) || p.job) && <div className="mono">{[yearsOf(p), p.job].filter(Boolean).join(' · ')}</div>}
       </div>
+      {ui.frameEdit ? <FrameEditor p={p} /> : <>
       <div className="quick-add">
         {(['parent', 'spouse', 'child'] as const).map(k => <button key={k} className="btn sm" onClick={() => openModal({ kind: 'addRelative', id, rel: k })}>{t('p.add.' + k)}</button>)}
       </div>
@@ -88,13 +90,14 @@ function ViewPerson({ id }: { id: string }) {
       </div>
       <div className="section-t"><h3>{t('p.family')}</h3></div>
       {rel('p.parents', parentsOf(id))}{rel('p.spouses', spousesOf(id))}{rel('p.children', childrenOf(id))}{rel('p.siblings', siblingsOf(id))}
+      </>}
     </div>
   )
   const foot = <>
     <button className="btn ghost danger" onClick={() => { if (confirm(t('p.delete.confirm', { name: fullName(p) }))) { removePerson(id); commit(); toast(t('toast.deleted')); closePanel() } }}>{t('p.delete')}</button>
     <button className="btn" onClick={() => editPerson(id)}>{t('p.edit')}</button>
   </>
-  return <Frame title={fullName(p)} foot={foot}>{body}</Frame>
+  return <Frame title={fullName(p)} foot={ui.frameEdit ? undefined : foot}>{body}</Frame>
 }
 
 function EditPerson({ id, preset, after }: { id: string | null; preset?: Partial<Person> & { _title?: string }; after?: (p: Person) => void }) {

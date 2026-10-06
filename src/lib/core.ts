@@ -107,7 +107,7 @@ export type Panel =
   | { mode: 'view'; id: string }
   | { mode: 'edit'; id: string | null; preset?: Partial<Person> & { _title?: string }; after?: (p: Person) => void; key: number }
   | { mode: 'event'; id: string; eventId: string | null; key: number }
-export type Modal = { kind: 'addRelative'; id: string; rel: 'parent' | 'child' | 'spouse' } | { kind: 'frame'; id: string } | null
+export type Modal = { kind: 'addRelative'; id: string; rel: 'parent' | 'child' | 'spouse' } | null
 export interface Toast { id: string; msg: string; kind?: 'ach' }
 export interface Draft {
   id: string; first: string; last: string; patronymic: string; maiden: string; gender: string; rel: string
@@ -117,6 +117,8 @@ export interface Draft {
 }
 export const ui = {
   page: 'tree' as Page, panel: null as Panel | null, modal: null as Modal, toasts: [] as Toast[],
+  /** the profile panel shows the frame settings instead of the profile */
+  frameEdit: false,
   onboarding: false, firstRun: false, loaded: false, treeRefit: 0, mapRefit: 0, share: false,
   ai: { mode: 'text' as 'text' | 'audio' | 'photo', drafts: [] as Draft[], busy: false, transcript: '', text: '', ran: false, simulating: false },
 }
@@ -141,7 +143,7 @@ let panelKey = 0
 export function openPerson(id: string) { if (!byId(id)) return; ui.panel = { mode: 'view', id }; bump() }
 export function editPerson(id: string | null, preset?: Partial<Person> & { _title?: string }, after?: (p: Person) => void) { ui.panel = { mode: 'edit', id, preset, after, key: ++panelKey }; bump() }
 export function editEvent(id: string, eventId: string | null) { ui.panel = { mode: 'event', id, eventId, key: ++panelKey }; bump() }
-export function closePanel() { ui.panel = null; bump() }
+export function closePanel() { ui.panel = null; ui.frameEdit = false; bump() }
 export function openModal(m: Modal) { ui.modal = m; bump() }
 export function closeModal() { ui.modal = null; bump() }
 

@@ -175,7 +175,7 @@ export default function TreePage() {
                 return (
                   <g key={p.id} className={cls + ' framed'} data-id={p.id} transform={`translate(${P.x},${P.y})`}>
                     {nm !== fullName(p) && <title>{fullName(p)}</title>}
-                    {sel === p.id && <ellipse className="fr-glow" cx={NW / 2} cy={fs.h / 2} rx={fs.w * .78} ry={fs.h * .72} />}
+                    <ellipse className="fr-glow" cx={NW / 2} cy={fs.h / 2} rx={fs.w * .8} ry={fs.h * .74} />
                     <g className="fr-art" transform={`translate(${(NW - fs.w) / 2},0)`} filter="url(#frShadow)" dangerouslySetInnerHTML={{ __html: `<defs>${fs.defs}</defs>${fs.body}` }} />
                     <rect className="card" x={(NW - pw) / 2} y={py} width={pw} height={yrs ? 38 : 26} rx="10" />
                     <text className="nm" x={NW / 2} y={py + 17} textAnchor="middle">{nm}</text>

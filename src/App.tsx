@@ -8,7 +8,6 @@ import Onboarding from './components/Onboarding'
 import FirstRun from './components/FirstRun'
 import PersonPanel from './components/PersonPanel'
 import AddRelativeModal from './components/AddRelativeModal'
-import FramePicker from './components/FramePicker'
 import ShareSheet from './components/ShareSheet'
 import TreePage from './pages/TreePage'
 import MapPage from './pages/MapPage'
@@ -46,7 +45,6 @@ export default function App() {
         </main>
       </div>
       <AddRelativeModal />
-      <FramePicker />
       {ui.share && <ShareSheet />}
       <Toasts />
     </>
