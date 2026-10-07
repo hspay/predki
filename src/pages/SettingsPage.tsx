@@ -1,4 +1,5 @@
-import { S, ui, t, LANG, toast, importData, clearData, bump, cloud, signOut, askToSignIn } from '../lib/core'
+import { S, ui, t, LANG, toast, importData, clearData, bump, cloud, signOut, askToSignIn, type Person } from '../lib/core'
+import { isCloudRef, refToInline } from '../lib/media'
 import { CHANGELOG, type Release } from '../lib/changelog'
 
 const MONTHS = { ru: ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря'], en: ['January','February','March','April','May','June','July','August','September','October','November','December'] }
@@ -9,8 +10,17 @@ function ReleaseNote({ r }: { r: Release }) {
 }
 
 export default function SettingsPage() {
-  const exportJson = () => {
-    const blob = new Blob([JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), people: S.people, rels: S.rels, achievements: S.achievements, achDates: S.achDates }, null, 2)], { type: 'application/json' })
+  const exportJson = async () => {
+    // files from Storage go into the backup itself, so it stays complete without the account
+    const people: Person[] = JSON.parse(JSON.stringify(S.people))
+    const refs = people.flatMap(p => [p.avatar, ...(p.media || []).map(m => m.data)]).filter(isCloudRef)
+    if (refs.length) {
+      toast(t('set.exporting'))
+      const got = new Map<string, string>()
+      await Promise.all([...new Set(refs)].map(r => refToInline(r).then(d => { got.set(r, d) }).catch(() => {})))
+      people.forEach(p => { if (got.has(p.avatar)) p.avatar = got.get(p.avatar)!; (p.media || []).forEach(m => { if (got.has(m.data)) m.data = got.get(m.data)! }) })
+    }
+    const blob = new Blob([JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), people, rels: S.rels, achievements: S.achievements, achDates: S.achDates }, null, 2)], { type: 'application/json' })
     const u = URL.createObjectURL(blob); const l = document.createElement('a'); l.href = u; l.download = 'predki-' + new Date().toISOString().slice(0, 10) + '.json'; l.click(); setTimeout(() => URL.revokeObjectURL(u), 1000)
     toast(t('set.exported'))
   }

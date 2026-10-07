@@ -93,7 +93,7 @@ function Output() {
 export default function ArchivistPage() {
   return (
     <section className="page active" data-page="ai">
-      <div className="topbar"><h2><span>{t('nav.ai')}</span><span className="sub">{t('ai.sub')}</span></h2>
+      <div className="topbar"><h2>{t('nav.ai')}</h2>
         <div className="seg" id="aiMode">{(['text', 'audio', 'photo'] as const).map(m => <button key={m} className={AI.mode === m ? 'active' : ''} onClick={() => { AI.mode = m; AI.transcript = ''; bump() }}>{t('ai.' + m)}</button>)}</div>
       </div>
       <div className="scroll"><div className="ai-layout">

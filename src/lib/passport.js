@@ -1,7 +1,7 @@
 // @ts-nocheck — canvas drawing ported from the «Паспорт семьи» prototype
 // «Паспорт семьи»: a shareable card built from the family data (stories 9:16 or post 4:5).
 import { S, LANG, byId, parentsOf, fullName, yearOf, generations } from './core'
-import { WORLD, findCity } from './world'
+import { WORLD, findCity, countryAt } from './world'
 import { familyTitle } from './treeStyle'
 import { Progress } from './progress'
 import { predkiLogo } from './logo'
@@ -28,18 +28,18 @@ const tx = () => TX[LANG === 'en' ? 'en' : 'ru']
 const plural = (n, f) => { if (LANG === 'en') return n === 1 ? f[0] : f[1]; const a = n % 10, b = n % 100; return f[(a === 1 && b !== 11) ? 0 : (a >= 2 && a <= 4 && (b < 12 || b > 14)) ? 1 : 2] }
 
 // ---------- flags (simplified, drawn inside a circle) ----------
-const FLAGS = {
+export const FLAGS = {
   RU: { h: ['#FFFFFF', '#1C57A5', '#D52B1E'] }, UA: { h: ['#0057B7', '#FFD700'] }, BY: { h: ['#C8313E', '#C8313E', '#4AA657'] }, LV: { h: ['#9E3039', '#9E3039', '#FFFFFF', '#9E3039', '#9E3039'] },
   LT: { h: ['#FDB913', '#006A44', '#C1272D'] }, EE: { h: ['#0072CE', '#111111', '#FFFFFF'] }, MD: { v: ['#0046AE', '#FFD200', '#CC092F'] }, GE: { bg: '#FFFFFF', cross: '#E8112D' },
   AM: { h: ['#D90012', '#0033A0', '#F2A800'] }, AZ: { h: ['#00B5E2', '#EF3340', '#509E2F'] }, UZ: { h: ['#1EB5E5', '#FFFFFF', '#2FB04A'] }, KZ: { bg: '#00AFCA', disc: '#FEC50C' },
-  KG: { bg: '#E8112D', disc: '#FFEF00' }, TJ: { h: ['#CC0000', '#FFFFFF', '#006600'] }, DE: { h: ['#111111', '#DD0000', '#FFCE00'] }, FR: { v: ['#0055A4', '#FFFFFF', '#EF4135'] },
+  KG: { bg: '#E8112D', sun: '#FFEF00' }, TM: { bg: '#00843D', band: '#D22630' }, TJ: { h: ['#CC0000', '#FFFFFF', '#006600'] }, DE: { h: ['#111111', '#DD0000', '#FFCE00'] }, FR: { v: ['#0055A4', '#FFFFFF', '#EF4135'] },
   GB: { bg: '#012169', cross: '#C8102E', crossW: '#FFFFFF' }, PL: { h: ['#FFFFFF', '#DC143C'] }, CZ: { h: ['#FFFFFF', '#D7141A'], tri: '#11457E' }, AT: { h: ['#ED2939', '#FFFFFF', '#ED2939'] },
   IT: { v: ['#009246', '#FFFFFF', '#CE2B37'] }, ES: { h: ['#AA151B', '#F1BF00', '#F1BF00', '#AA151B'] }, PT: { v: ['#006600', '#FF0000', '#FF0000'] }, NL: { h: ['#AE1C28', '#FFFFFF', '#21468B'] },
   FI: { bg: '#FFFFFF', cross: '#002F6C' }, SE: { bg: '#006AA7', cross: '#FECC00' }, TR: { bg: '#E30A17', crescent: '#FFFFFF' }, IL: { h: ['#FFFFFF', '#0038B8', '#FFFFFF', '#FFFFFF', '#0038B8', '#FFFFFF'] },
   AE: { h: ['#00732F', '#FFFFFF', '#111111'], tri: '#FF0000' }, RS: { h: ['#C6363C', '#0C4076', '#FFFFFF'] }, CY: { bg: '#FFFFFF', disc: '#D57800' }, US: { h: ['#B22234', '#FFFFFF', '#B22234', '#FFFFFF', '#B22234', '#FFFFFF', '#B22234'], canton: '#3C3B6E' },
   CA: { v: ['#FF0000', '#FFFFFF', '#FFFFFF', '#FF0000'], disc: '#FF0000' }, AR: { h: ['#74ACDF', '#FFFFFF', '#74ACDF'] }, BR: { bg: '#009C3B', disc: '#FFDF00' }, AU: { bg: '#012169', disc: '#FFFFFF' },
-  JP: { bg: '#FFFFFF', disc: '#BC002D' }, CN: { bg: '#EE1C25', disc: '#FFFF00' }, KR: { bg: '#FFFFFF', disc: '#CD2E3A' }, TH: { h: ['#A51931', '#F4F5F8', '#2D2A4A', '#2D2A4A', '#F4F5F8', '#A51931'] },
-  VN: { bg: '#DA251D', disc: '#FFFF00' }, ID: { h: ['#CE1126', '#FFFFFF'] }, EG: { h: ['#CE1126', '#FFFFFF', '#111111'] }, ZA: { h: ['#E03C31', '#FFFFFF', '#007749', '#FFFFFF', '#001489'] },
+  JP: { bg: '#FFFFFF', disc: '#BC002D' }, CN: { bg: '#EE1C25', star: '#FFDE00', starAt: 'tl' }, KR: { bg: '#FFFFFF', disc: '#CD2E3A' }, TH: { h: ['#A51931', '#F4F5F8', '#2D2A4A', '#2D2A4A', '#F4F5F8', '#A51931'] },
+  VN: { bg: '#DA251D', star: '#FFFF00' }, ID: { h: ['#CE1126', '#FFFFFF'] }, EG: { h: ['#CE1126', '#FFFFFF', '#111111'] }, ZA: { h: ['#E03C31', '#FFFFFF', '#007749', '#FFFFFF', '#001489'] },
   MX: { v: ['#006847', '#FFFFFF', '#CE1126'] }, CU: { h: ['#002A8F', '#FFFFFF', '#002A8F', '#FFFFFF', '#002A8F'], tri: '#CF142B' }
 }
 
@@ -79,7 +79,7 @@ export function passportData(opts = {}) {
   const pts = new Map(), arcs = [], seen = new Set()
   S.people.forEach(p => {
     const ev = (p.events || []).filter(e => e.lat != null && e.lat !== '' && e.lon != null && e.lon !== '').sort((a, b) => (+a.year || 0) - (+b.year || 0))
-    ev.forEach(e => { const k = placeKey(e.lat, e.lon); if (!pts.has(k)) pts.set(k, { key: k, lat: +e.lat, lon: +e.lon, name: (findCity(e.place)?.[LANG === 'en' ? 'en' : 'ru']) || e.place || '', country: findCity(e.place)?.country || '', count: 0 }); pts.get(k).count++ })
+    ev.forEach(e => { const k = placeKey(e.lat, e.lon); if (!pts.has(k)) pts.set(k, { key: k, lat: +e.lat, lon: +e.lon, name: (findCity(e.place)?.[LANG === 'en' ? 'en' : 'ru']) || e.place || '', country: countryAt(e.lat, e.lon) || findCity(e.place)?.country || '', count: 0 }); pts.get(k).count++ })
     for (let i = 1; i < ev.length; i++) { const a = placeKey(ev[i - 1].lat, ev[i - 1].lon), b = placeKey(ev[i].lat, ev[i].lon); const k = a + '>' + b; if (a !== b && !seen.has(k)) { seen.add(k); arcs.push([a, b]) } }
   })
   const cities = [...pts.values()]
@@ -255,6 +255,11 @@ function flags({ c, P, D }) {
       if (f.tri) { c.fillStyle = f.tri; c.beginPath(); c.moveTo(x - r, y - r); c.lineTo(x, y); c.lineTo(x - r, y + r); c.fill() }
       if (f.crossW) { c.fillStyle = f.crossW; c.fillRect(x - 7, y - r, 14, 2 * r); c.fillRect(x - r, y - 7, 2 * r, 14) }
       if (f.cross) { const off = code === 'FI' || code === 'SE' ? -6 : 0; c.fillStyle = f.cross; c.fillRect(x - 4 + off, y - r, 8, 2 * r); c.fillRect(x - r, y - 4, 2 * r, 8) }
+      if (f.star) { const big = f.starAt !== 'tl', sx = big ? x : x - 8, sy = big ? y : y - 7, R = big ? 10 : 7; c.fillStyle = f.star; c.beginPath()
+        for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? R * .4 : R; c.lineTo(sx + q * Math.cos(a), sy + q * Math.sin(a)) } c.fill() }
+      if (f.sun) { c.strokeStyle = f.sun; c.lineWidth = 1.6; for (let i = 0; i < 16; i++) { const a = i * Math.PI / 8; c.beginPath(); c.moveTo(x + 7 * Math.cos(a), y + 7 * Math.sin(a)); c.lineTo(x + 12 * Math.cos(a), y + 12 * Math.sin(a)); c.stroke() }
+        c.fillStyle = f.sun; c.beginPath(); c.arc(x, y, 6, 0, 7); c.fill(); c.strokeStyle = f.bg; c.lineWidth = 1; c.beginPath(); c.arc(x, y, 3.6, 0, 7); c.stroke() }
+      if (f.band) { c.fillStyle = f.band; c.fillRect(x - r + 7, y - r, 9, 2 * r) }
       if (f.disc) { c.fillStyle = f.disc; c.beginPath(); c.arc(x, y, 8, 0, 7); c.fill() }
       if (f.crescent) { c.fillStyle = f.crescent; c.beginPath(); c.arc(x - 3, y, 10, 0, 7); c.fill(); c.fillStyle = f.bg; c.beginPath(); c.arc(x, y, 8, 0, 7); c.fill() }
     }

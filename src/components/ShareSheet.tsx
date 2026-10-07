@@ -16,11 +16,11 @@ const TX = {
 type St = { theme: string; hero: string; fmt: string; uv: boolean; fam: string; keeper: string }
 
 export function openShare() { ui.share = true; bump() }
+/** A passport booklet with a globe on the cover. */
+export const PassportIcon = () => <svg viewBox="0 0 24 24"><rect x="4.5" y="2" width="15" height="20" rx="2.2" /><circle cx="12" cy="10.2" r="4.6" /><path d="M12 5.6c-1.5 1.3-2.2 2.8-2.2 4.6s.7 3.3 2.2 4.6c1.5-1.3 2.2-2.8 2.2-4.6s-.7-3.3-2.2-4.6zM7.4 10.2h9.2M9 18.4h6" /></svg>
+export const passportLabel = () => TX[LANG === 'en' ? 'en' : 'ru'].h
 export function ShareButton() {
-  const T = TX[LANG === 'en' ? 'en' : 'ru']
-  return <button className="btn icon share-btn" type="button" title={T.h} aria-label={T.h} onClick={openShare}>
-    <svg viewBox="0 0 24 24"><path d="M12 15V3.5M7.5 8 12 3.5 16.5 8" /><path d="M8 11H6.5A2.5 2.5 0 0 0 4 13.5v5A2.5 2.5 0 0 0 6.5 21h11a2.5 2.5 0 0 0 2.5-2.5v-5a2.5 2.5 0 0 0-2.5-2.5H16" /></svg>
-  </button>
+  return <button className="btn sm share-btn" type="button" onClick={openShare}><PassportIcon /><span>{passportLabel()}</span></button>
 }
 
 export default function ShareSheet() {

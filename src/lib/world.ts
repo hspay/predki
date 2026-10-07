@@ -36,18 +36,72 @@ const CURATED: City[] = ([
 ['Каир','Cairo',30.04,31.24],['Йоханнесбург','Johannesburg',-26.20,28.05],['Мехико','Mexico City',19.43,-99.13],['Гавана','Havana',23.11,-82.37],
 ] as [string,string,number,number][]).map(c=>({ru:c[0],en:c[1],lat:c[2],lon:c[3],major:true,country:COUNTRY[c[0]]||'RU'}));
 
+// Cities of the former USSR outside Russia (with Soviet-era names), so moves there get a place on the map and a flag on the passport.
+// [ru, en, lat, lon, country]. A name Russia also has (Подольск, Котовск) is used only to tell the country by coordinates.
+const NEAR_ABROAD: [string, string, number, number, string][] = [
+  ['Караганда','Karaganda',49.80,73.10,'KZ'],['Шымкент','Shymkent',42.32,69.60,'KZ'],['Чимкент','Chimkent',42.32,69.60,'KZ'],['Целиноград','Tselinograd',51.17,71.43,'KZ'],
+  ['Акмолинск','Akmolinsk',51.17,71.43,'KZ'],['Нур-Султан','Nur-Sultan',51.17,71.43,'KZ'],['Павлодар','Pavlodar',52.29,76.97,'KZ'],['Семипалатинск','Semipalatinsk',50.41,80.25,'KZ'],
+  ['Семей','Semey',50.41,80.25,'KZ'],['Усть-Каменогорск','Ust-Kamenogorsk',49.95,82.61,'KZ'],['Актобе','Aktobe',50.28,57.17,'KZ'],['Актюбинск','Aktyubinsk',50.28,57.17,'KZ'],
+  ['Атырау','Atyrau',47.11,51.88,'KZ'],['Гурьев','Guryev',47.11,51.88,'KZ'],['Костанай','Kostanay',53.21,63.63,'KZ'],['Кустанай','Kustanay',53.21,63.63,'KZ'],
+  ['Тараз','Taraz',42.90,71.37,'KZ'],['Джамбул','Dzhambul',42.90,71.37,'KZ'],['Кызылорда','Kyzylorda',44.85,65.51,'KZ'],['Уральск','Uralsk',51.23,51.37,'KZ'],
+  ['Темиртау','Temirtau',50.06,72.96,'KZ'],['Экибастуз','Ekibastuz',51.72,75.32,'KZ'],['Жезказган','Zhezkazgan',47.80,67.71,'KZ'],['Талдыкорган','Taldykorgan',45.02,78.37,'KZ'],
+  ['Байконур','Baikonur',45.62,63.31,'KZ'],['Петропавловск','Petropavl',54.87,69.15,'KZ'],['Кокчетав','Kokchetav',53.28,69.40,'KZ'],['Кокшетау','Kokshetau',53.28,69.40,'KZ'],
+  ['Актау','Aktau',43.65,51.17,'KZ'],['Шевченко','Shevchenko',43.65,51.17,'KZ'],
+  ['Фрунзе','Frunze',42.87,74.59,'KG'],['Ош','Osh',40.51,72.80,'KG'],['Каракол','Karakol',42.49,78.39,'KG'],['Пржевальск','Przhevalsk',42.49,78.39,'KG'],
+  ['Чолпон-Ата','Cholpon-Ata',42.65,77.08,'KG'],['Джалал-Абад','Jalal-Abad',40.93,73.00,'KG'],['Токмак','Tokmok',42.84,75.30,'KG'],['Нарын','Naryn',41.43,75.99,'KG'],['Балыкчи','Balykchy',42.46,76.19,'KG'],
+  ['Фергана','Fergana',40.39,71.78,'UZ'],['Наманган','Namangan',41.00,71.67,'UZ'],['Андижан','Andijan',40.78,72.34,'UZ'],['Бухара','Bukhara',39.77,64.42,'UZ'],
+  ['Хива','Khiva',41.38,60.36,'UZ'],['Нукус','Nukus',42.46,59.60,'UZ'],['Карши','Karshi',38.86,65.79,'UZ'],['Коканд','Kokand',40.53,70.94,'UZ'],['Чирчик','Chirchiq',41.47,69.58,'UZ'],
+  ['Ангрен','Angren',41.02,70.14,'UZ'],['Алмалык','Almalyk',40.84,69.60,'UZ'],['Навои','Navoiy',40.10,65.38,'UZ'],['Джизак','Jizzakh',40.12,67.84,'UZ'],['Термез','Termez',37.22,67.28,'UZ'],
+  ['Ургенч','Urgench',41.55,60.63,'UZ'],['Янгиюль','Yangiyul',41.11,69.05,'UZ'],
+  ['Ходжент','Khujand',40.28,69.62,'TJ'],['Худжанд','Khujand',40.28,69.62,'TJ'],['Ленинабад','Leninabad',40.28,69.62,'TJ'],['Сталинабад','Stalinabad',38.56,68.79,'TJ'],['Куляб','Kulob',37.91,69.78,'TJ'],
+  ['Ашхабад','Ashgabat',37.95,58.38,'TM'],['Красноводск','Krasnovodsk',40.02,52.97,'TM'],['Туркменбаши','Turkmenbashi',40.02,52.97,'TM'],['Мары','Mary',37.60,61.83,'TM'],['Чарджоу','Chardzhou',39.08,63.58,'TM'],
+  ['Батуми','Batumi',41.64,41.63,'GE'],['Кутаиси','Kutaisi',42.27,42.70,'GE'],['Сухуми','Sukhumi',43.00,41.02,'GE'],['Гори','Gori',41.98,44.11,'GE'],['Рустави','Rustavi',41.55,45.00,'GE'],['Поти','Poti',42.15,41.67,'GE'],
+  ['Гюмри','Gyumri',40.79,43.85,'AM'],['Ленинакан','Leninakan',40.79,43.85,'AM'],['Ванадзор','Vanadzor',40.81,44.49,'AM'],['Кировакан','Kirovakan',40.81,44.49,'AM'],
+  ['Гянджа','Ganja',40.68,46.36,'AZ'],['Кировабад','Kirovabad',40.68,46.36,'AZ'],['Сумгаит','Sumgait',40.59,49.67,'AZ'],['Нахичевань','Nakhchivan',39.21,45.41,'AZ'],
+  ['Днепр','Dnipro',48.46,35.05,'UA'],['Днепропетровск','Dnipropetrovsk',48.46,35.05,'UA'],['Запорожье','Zaporizhzhia',47.84,35.14,'UA'],['Донецк','Donetsk',48.00,37.80,'UA'],
+  ['Сталино','Stalino',48.00,37.80,'UA'],['Луганск','Luhansk',48.57,39.31,'UA'],['Ворошиловград','Voroshilovgrad',48.57,39.31,'UA'],['Николаев','Mykolaiv',46.98,32.00,'UA'],
+  ['Херсон','Kherson',46.64,32.62,'UA'],['Винница','Vinnytsia',49.23,28.47,'UA'],['Житомир','Zhytomyr',50.25,28.66,'UA'],['Полтава','Poltava',49.59,34.55,'UA'],
+  ['Чернигов','Chernihiv',51.49,31.29,'UA'],['Сумы','Sumy',50.91,34.80,'UA'],['Черкассы','Cherkasy',49.44,32.06,'UA'],['Кривой Рог','Kryvyi Rih',47.91,33.39,'UA'],
+  ['Кировоград','Kirovohrad',48.51,32.26,'UA'],['Кропивницкий','Kropyvnytskyi',48.51,32.26,'UA'],['Хмельницкий','Khmelnytskyi',49.42,26.99,'UA'],['Проскуров','Proskurov',49.42,26.99,'UA'],
+  ['Ровно','Rivne',50.62,26.25,'UA'],['Луцк','Lutsk',50.75,25.34,'UA'],['Ужгород','Uzhhorod',48.62,22.29,'UA'],['Черновцы','Chernivtsi',48.29,25.94,'UA'],
+  ['Ивано-Франковск','Ivano-Frankivsk',48.92,24.71,'UA'],['Станислав','Stanislav',48.92,24.71,'UA'],['Тернополь','Ternopil',49.55,25.59,'UA'],['Мариуполь','Mariupol',47.10,37.55,'UA'],
+  ['Жданов','Zhdanov',47.10,37.55,'UA'],['Макеевка','Makiivka',48.05,37.96,'UA'],['Горловка','Horlivka',48.30,38.05,'UA'],['Краматорск','Kramatorsk',48.72,37.56,'UA'],
+  ['Севастополь','Sevastopol',44.62,33.53,'UA'],['Симферополь','Simferopol',44.95,34.10,'UA'],['Ялта','Yalta',44.50,34.17,'UA'],['Керчь','Kerch',45.36,36.47,'UA'],['Евпатория','Yevpatoria',45.19,33.37,'UA'],
+  ['Измаил','Izmail',45.35,28.84,'UA'],['Белая Церковь','Bila Tserkva',49.80,30.11,'UA'],['Умань','Uman',48.75,30.22,'UA'],['Бердичев','Berdychiv',49.90,28.60,'UA'],
+  ['Подольск','Podilsk',47.75,29.53,'UA'],['Котовск','Kotovsk',47.75,29.53,'UA'],['Балта','Balta',47.94,29.62,'UA'],['Первомайск','Pervomaisk',48.05,30.85,'UA'],
+  ['Брест','Brest',52.10,23.69,'BY'],['Гродно','Grodno',53.68,23.83,'BY'],['Витебск','Vitebsk',55.19,30.20,'BY'],['Могилёв','Mogilev',53.90,30.33,'BY'],['Бобруйск','Bobruisk',53.14,29.22,'BY'],
+  ['Барановичи','Baranovichi',53.13,26.01,'BY'],['Борисов','Borisov',54.23,28.50,'BY'],['Пинск','Pinsk',52.12,26.10,'BY'],['Орша','Orsha',54.51,30.43,'BY'],['Мозырь','Mozyr',52.05,29.25,'BY'],
+  ['Каунас','Kaunas',54.90,23.90,'LT'],['Клайпеда','Klaipeda',55.71,21.14,'LT'],['Шяуляй','Siauliai',55.93,23.31,'LT'],['Даугавпилс','Daugavpils',55.87,26.54,'LV'],['Лиепая','Liepaja',56.51,21.01,'LV'],
+  ['Юрмала','Jurmala',56.97,23.77,'LV'],['Тарту','Tartu',58.38,26.72,'EE'],['Нарва','Narva',59.38,28.19,'EE'],['Пярну','Parnu',58.39,24.50,'EE'],
+  ['Бельцы','Balti',47.76,27.93,'MD'],['Тирасполь','Tiraspol',46.84,29.63,'MD'],['Бендеры','Bender',46.83,29.48,'MD'],['Кагул','Cahul',45.90,28.19,'MD'],
+]
 // Curated list first (historic names like Ленинград, cities abroad), then every Russian city from citiesRu.ts.
 const norm = (v: string) => v.trim().toLowerCase().replace(/ё/g, 'е')
 const INDEX = new Map<string, City>()
 const put = (k: string, c: City) => { k = norm(k); if (k && !INDEX.has(k)) INDEX.set(k, c) }
 CURATED.forEach(c => { put(c.ru, c); put(c.en, c) })
+// near-abroad cities join the name search unless a Russian town has the same name
+const RU_NAMES = new Set(RU_CITIES.map(c => norm(c[0])))
+const ABROAD: City[] = NEAR_ABROAD.map(([ru, en, lat, lon, country]) => ({ ru, en, lat, lon, major: true, country }))
+ABROAD.forEach(c => { if (!RU_NAMES.has(norm(c.ru))) { put(c.ru, c); put(c.en, c) } })
 const EXTRA: City[] = []
 RU_CITIES.forEach(([ru, en, lat, lon, pop, forms]) => {
   const known = INDEX.get(norm(ru)); if (known && Math.abs(known.lat - lat) < .5) return
   const c: City = { ru, en, lat, lon, major: pop >= 100000, country: 'RU' }; EXTRA.push(c)
   put(ru, c); if (en) put(en, c); forms.split('|').forEach(f => put(f, c))
 })
-export const CITIES: City[] = [...CURATED, ...EXTRA]
+export const CITIES: City[] = [...CURATED, ...ABROAD.filter(c => !RU_NAMES.has(norm(c.ru))), ...EXTRA]
+
+/** Country of a point on the map: the nearest known city within ~80 km. Coordinates decide, not the name,
+ *  so «Котовск» near Odesa counts as Ukraine and the Tambov one as Russia. */
+const ALL_POINTS = [...CURATED, ...ABROAD, ...EXTRA]
+export function countryAt(lat?: number | string | null, lon?: number | string | null): string {
+  if (lat == null || lon == null || lat === '' || lon === '') return ''
+  const la = +lat, lo = +lon; if (!isFinite(la) || !isFinite(lo)) return ''
+  let best = '', bd = Infinity; const k = Math.cos(la * Math.PI / 180)
+  for (const c of ALL_POINTS) { if (!c.country) continue; const dy = c.lat - la, dx = (c.lon - lo) * k, d = dy * dy + dx * dx; if (d < bd) { bd = d; best = c.country } }
+  return bd <= 0.72 * 0.72 ? best : '' // ≈ 80 km
+}
 
 /** Find a city by name, in any case form («Брянск», «из Брянска», «в Брянске») or in English.
  *  `major` limits the search to the curated list and cities over 100 000 people (used where a word could also be a surname). */

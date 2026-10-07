@@ -1,12 +1,17 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
-import { S, ui, t, byId, yearOf, parentsOf, yearsOf, avatarSrc, fullName, fillPercent, generations, openPerson, closePanel, editPerson, openModal, type Person } from '../lib/core'
+import { S, ui, t, LANG, byId, yearOf, parentsOf, yearsOf, avatarSrc, fullName, fillPercent, generations, openPerson, closePanel, editPerson, openModal, type Person } from '../lib/core'
 import { frameSvg, frameDims } from '../lib/frames'
 import { themeOf } from '../lib/treeStyle'
 import { mountFog, type Fog } from '../lib/fog'
 import TreeStyle from '../components/TreeStyle'
 import { layout, branchColors, LINE, NW, NH, PG } from '../lib/treeLayout'
 import { Progress } from '../lib/progress'
-import { ShareButton } from '../components/ShareSheet'
+
+/** «39 человек · 6 поколений» — full words, with the right Russian plural. */
+function treeSub(n: number, g: number) {
+  const ru = LANG !== 'en', pl = (k: number, f: string[]) => { const a = k % 10, b = k % 100; return f[(a === 1 && b !== 11) ? 0 : (a >= 2 && a <= 4 && (b < 12 || b > 14)) ? 1 : 2] }
+  return t('tree.sub', { n, g, people: ru ? pl(n, ['человек', 'человека', 'человек']) : n === 1 ? 'person' : 'people', gens: ru ? pl(g, ['поколение', 'поколения', 'поколений']) : g === 1 ? 'generation' : 'generations' })
+}
 
 // Names are measured with the same font the card uses, so long surnames get an ellipsis inside the card.
 let measureCtx: CanvasRenderingContext2D | null = null
@@ -142,9 +147,8 @@ export default function TreePage() {
   return (
     <section className="page active" data-page="tree">
       <div className="topbar">
-        <h2><span>{t('nav.tree')}</span><span className="sub" id="treeSub">{S.people.length ? t('tree.sub', { n: S.people.length, g: generations() }) : ''}</span></h2>
-        <button className="btn" id="btnAddPerson" onClick={() => editPerson(null)}><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg><span>{t('tree.add')}</span></button>
-        {S.people.length > 0 && <ShareButton />}
+        <h2><span>{t('nav.tree')}</span><span className="sub" id="treeSub">{S.people.length ? treeSub(S.people.length, generations()) : ''}</span></h2>
+        <button className="btn sm" id="btnAddPerson" onClick={() => editPerson(null)}><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg><span>{t('tree.add')}</span></button>
       </div>
       <div className={'tree-wrap th-' + theme.k + (theme.light ? ' th-light' : '')}>
         <canvas className="tree-fog" ref={fogRef} aria-hidden="true" />

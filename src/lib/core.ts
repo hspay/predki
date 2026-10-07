@@ -9,6 +9,7 @@ import { Progress } from './progress'
 import { sb, cloud, initSession, pullTree, pushTree, signOutCloud, setSkipped } from './cloud'
 import type { FrameLook } from './frames'
 import { PRESET_SRC, presetType, typeOfPreset, pickPreset, previewPreset } from './avatars'
+import { mediaUrl, isCloudRef, isInline, uploadInline, isPermanent, removeRefs, clearMediaCache, onMediaReady, listOwnFiles } from './media'
 
 // ---------- types ----------
 export type Gender = '' | 'm' | 'f'
@@ -61,6 +62,7 @@ const blank = (): Data => ({ people: [], rels: [], achievements: [], settings: {
 let cloudAt = 0, pushWarned = false, syncing: Promise<void> | null = null
 const pushSoon = debounce(async () => {
   if (!cloud.session || !cloud.synced) return
+  if (hasInlineFiles()) await moveFilesToCloud() // photos go to Storage first, so the tree row stays light
   try { cloudAt = await pushTree(S); if (cloud.offline || pushWarned) { cloud.offline = false; pushWarned = false; bump() } }
   catch { cloud.offline = true; if (!pushWarned) { pushWarned = true; toast(t('cloud.saveFail')) } bump() }
 }, 1200)
@@ -83,17 +85,18 @@ async function doSync(soft: boolean) {
     const localNewer = owner === uid && localAt > (row?.at || 0)
     if (cloudHas && !localNewer) {
       if (S.people.length && !owner) await idbSet(KEY + ':backup', S).catch(() => {}) // a tree made before signing in
-      S = migrateDates(Object.assign(blank(), row!.data)); S.settings.onboarded = true; cloudAt = row!.at
+      S = migrateDates(Object.assign(blank(), row!.data)); S.settings.onboarded = true; cloudAt = row!.at; knownRefs = cloudRefs()
       await idbSet(KEY, S).catch(() => {}); await idbSet(KEY_AT, row!.at).catch(() => {})
     } else if (S.people.length || cloudHas) { cloudAt = await pushTree(S) }
     await idbSet(KEY_OWNER, uid).catch(() => {})
     cloud.synced = true; cloud.offline = false
+    knownRefs = cloudRefs(); (hasInlineFiles() ? moveFilesToCloud().then(() => persist()) : Promise.resolve()).then(() => setTimeout(cleanOrphanFiles, 5000))
   } catch { cloud.offline = true; if (!soft) toast(t('cloud.loadFail')) }
   if (!soft || cloud.synced) afterLoad()
 }
 export async function signOut() {
   try { await signOutCloud() } catch { /* offline: the local session is dropped anyway */ }
-  cloud.session = null; cloud.synced = false; cloudAt = 0
+  cloud.session = null; cloud.synced = false; cloudAt = 0; clearMediaCache(); cleaned = false
   S = { ...blank(), settings: { lang: S.settings.lang, onboarded: true } }
   try { await idbDel(KEY); await idbDel(KEY_AT); await idbDel(KEY_OWNER) } catch { /* storage unavailable */ }
   ui.page = 'tree'; ui.panel = null; afterLoad()
@@ -130,7 +133,65 @@ const subscribe = (l: () => void) => { listeners.add(l); return () => { listener
 export function bump() { version++; listeners.forEach(l => l()) }
 export function useStore() { return useSyncExternalStore(subscribe, () => version) }
 
-export function commit(quiet = false) { assignPresets(); persist(); Progress.check(quiet); bump() }
+export function commit(quiet = false) { assignPresets(); forgetRemovedFiles(); persist(); Progress.check(quiet); bump() }
+onMediaReady(bump)
+
+// ---------- photos & documents in Supabase Storage (lib/media.ts) ----------
+// Every place a file can sit in the tree: the portrait and each gallery item.
+interface Slot { p: Person; kind: string; get: () => string; set: (v: string) => void }
+function fileSlots(): Slot[] {
+  const out: Slot[] = []
+  S.people.forEach(p => {
+    if (p.avatar) out.push({ p, kind: 'avatar', get: () => p.avatar, set: v => { p.avatar = v } })
+    ;(p.media || []).forEach(m => out.push({ p, kind: m.type, get: () => m.data, set: v => { m.data = v } }))
+  })
+  return out
+}
+const cloudRefs = () => new Set(fileSlots().map(x => x.get()).filter(isCloudRef))
+/** files already in Storage that the tree knows about: the ones that disappear after a user action are deleted */
+let knownRefs = new Set<string>()
+function forgetRemovedFiles() {
+  const now = cloudRefs()
+  if (cloud.session && cloud.synced) { const gone = [...knownRefs].filter(r => !now.has(r)); if (gone.length) removeRefs(gone) }
+  knownRefs = now
+}
+const refused = new Set<string>() // inline files the bucket will not take (type/size): they stay in the tree
+const hasInlineFiles = () => fileSlots().some(x => isInline(x.get()) && !refused.has(x.get()))
+let moving: Promise<void> | null = null, movedBackup = false, moveWarned = false
+/** Upload inline photos (new ones, old ones from before Storage, ones added without an account) and keep only references. */
+function moveFilesToCloud() {
+  if (!cloud.session || !cloud.synced) return Promise.resolve()
+  if (!moving) moving = doMoveFiles().finally(() => { moving = null })
+  return moving
+}
+async function doMoveFiles() {
+  const slots = fileSlots().filter(x => isInline(x.get()) && !refused.has(x.get())); if (!slots.length) return
+  if (!movedBackup) { movedBackup = true; await idbSet(KEY + ':before-storage', JSON.parse(JSON.stringify(S))).catch(() => {}) }
+  let moved = 0, failed = 0
+  for (const x of slots) {
+    const data = x.get()
+    try {
+      const ref = await uploadInline(data, x.p.id, x.kind)
+      if (S.people.includes(x.p) && x.get() === data) { x.set(ref); knownRefs.add(ref); moved++ } else removeRefs([ref]) // changed while uploading
+    } catch (e) { if (isPermanent(e)) refused.add(data); else failed++ }
+  }
+  if (moved) { try { await idbSet(KEY, S); await idbSet(KEY_AT, Date.now()) } catch { /* storage unavailable */ } bump() }
+  if (failed && !moveWarned) { moveWarned = true; toast(t('media.later')) }
+  if (!failed) moveWarned = false
+}
+/** Once a session: delete files in the user's folder that the tree no longer points to (left over from
+ *  interrupted uploads or edits on another device). Only files older than a day, so a photo another device
+ *  has just uploaded but not yet saved into the tree is never touched. */
+let cleaned = false
+async function cleanOrphanFiles() {
+  if (cleaned || !cloud.session || !cloud.synced || !S.people.length || hasInlineFiles()) return
+  cleaned = true
+  try {
+    const used = cloudRefs(), dayAgo = Date.now() - 864e5
+    const orphans = (await listOwnFiles()).filter(f => !used.has(f.ref) && f.at && f.at < dayAgo).map(f => f.ref)
+    if (orphans.length && cloud.synced) await removeRefs(orphans)
+  } catch { cleaned = false }
+}
 export const refresh = bump
 
 export function go(page: Page) { ui.page = page; ui.panel = null; bump() }
@@ -213,7 +274,7 @@ export function assignPresets() {
   return changed
 }
 /** What to show in the round portrait: the family photo, else the default silhouette. */
-export function avatarSrc(p: Partial<Person>) { return p.avatar || PRESET_SRC[(p.id && byId(p.id) === p && p.preset) || previewPreset(p)] }
+export function avatarSrc(p: Partial<Person>) { return p.avatar ? mediaUrl(p.avatar) : PRESET_SRC[(p.id && byId(p.id) === p && p.preset) || previewPreset(p)] }
 export function avatarTint(p: { gender?: string }) { return p.gender === 'f' ? { background: 'rgba(255,205,225,.16)', color: '#F6D3E2' } : p.gender === 'm' ? { background: 'rgba(170,205,255,.16)', color: '#CFE0FA' } : {} }
 /** Profile completeness: 8 checks (occupation is optional, files are not counted). */
 export function fillPercent(p: Person) { const f = ['first', 'last', 'gender', 'birthDate', 'birthPlace', 'bio', 'avatar'] as const; let n = 0; f.forEach(k => { if (p[k]) n++ }); if (p.events && p.events.length) n++; return Math.round(n / 8 * 100) }
@@ -306,6 +367,7 @@ function afterLoad() {
     const ds = Object.values(S.achDates || {}).map(v => new Date(v)).filter(d => !isNaN(+d)); const d = ds.length ? new Date(Math.min(...ds.map(Number))) : new Date()
     S.settings.since = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`; persist()
   }
+  knownRefs = cloudRefs()
   ui.onboarding = !S.settings.onboarded; ui.firstRun = !!S.settings.onboarded && !S.people.length
   ui.treeRefit++; ui.mapRefit++; bump()
 }

@@ -1,7 +1,6 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { S, t, persist, bump } from '../lib/core'
 import { Progress } from '../lib/progress'
-import { ShareButton } from '../components/ShareSheet'
 
 type Node = any // achievement node, see lib/progress.ts
 const P = Progress
@@ -86,7 +85,7 @@ export default function ProgressPage() {
 
   return (
     <section className="page active" data-page="progress" id="pgPage">
-      <div className="topbar"><h2><span>{t('nav.progress')}</span><span className="sub" id="pgSub">{N.filter(n => ST[n.id] === 'done').length} / {N.length}</span></h2>{S.people.length > 0 && <ShareButton />}</div>
+      <div className="topbar"><h2><span>{t('nav.progress')}</span><span className="sub" id="pgSub">{N.filter(n => ST[n.id] === 'done').length} / {N.length}</span></h2></div>
       <div className="pg-body">
         <div className="pg-col">
           <div className="pg-stage" id="pgStage" ref={stageRef} onClick={e => { if (!(e.target as Element).closest('.nd')) setSelected(null) }}>

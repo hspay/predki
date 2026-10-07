@@ -3,6 +3,15 @@ export interface Release { date: string; items: { ru: string; en: string }[] }
 
 export const CHANGELOG: Release[] = [
   {
+    date: '2026-10-07',
+    items: [
+      { ru: 'Новая карта: анимированная хроника переездов и событий семьи.', en: 'New map: an animated chronicle of family moves and events.' },
+      { ru: 'Загруженные файлы теперь хранятся в защищённом облаке, а древо загружается быстрее.', en: 'Uploaded files are now kept in secure cloud storage, and the tree loads faster.' },
+      { ru: 'Фото в профиле теперь можно удалить.', en: 'Profile photos can now be removed.' },
+      { ru: 'Боковое меню теперь можно сворачивать.', en: 'The side menu can now be collapsed.' },
+    ],
+  },
+  {
     date: '2026-10-06',
     items: [
       { ru: 'Рамки для портретов на Древе: 8 форм, цвет и размер. Часть рамок открывается за достижения.', en: 'Portrait frames on the Tree: 8 shapes, colour and size. Some frames unlock with achievements.' },
