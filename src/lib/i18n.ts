@@ -1,7 +1,7 @@
 export const I18N: Record<string, Record<string, string>> = {
 ru: {
   'brand.tag':'семейное древо',
-  'sb.close':'Свернуть меню','sb.open':'Развернуть меню','nav.tree':'Древо','nav.people':'Вся родня','nav.map':'Карта','nav.ai':'Архивариус','nav.progress':'Прогресс','nav.settings':'Настройки',
+  'look.h':'Оформление','look.p':'Светлая или тёмная тема. «Как на устройстве» — меняется вместе с системой.','look.auto':'Как на устройстве','look.light':'Светлая','look.dark':'Тёмная','sb.close':'Свернуть меню','sb.open':'Развернуть меню','nav.tree':'Древо','nav.people':'Вся родня','nav.map':'Карта','nav.ai':'Архивариус','nav.progress':'Прогресс','nav.settings':'Настройки',
   'ob.skip':'Пропустить','ob.next':'Далее','ob.begin':'Начать',
   'ob.1.h':'Семья — это история, которую стоит сохранить.',
   'ob.1.p':'Predki — тихое место, где родственники, их лица и дороги собираются в одно живое древо. Без хаоса таблиц и чужих шаблонов.',
@@ -71,7 +71,7 @@ ru: {
 },
 en: {
   'brand.tag':'family tree',
-  'sb.close':'Collapse menu','sb.open':'Expand menu','nav.tree':'Tree','nav.people':'All relatives','nav.map':'Map','nav.ai':'Archivist','nav.progress':'Progress','nav.settings':'Settings',
+  'look.h':'Appearance','look.p':'Light or dark. «Match device» follows your system setting.','look.auto':'Match device','look.light':'Light','look.dark':'Dark','sb.close':'Collapse menu','sb.open':'Expand menu','nav.tree':'Tree','nav.people':'All relatives','nav.map':'Map','nav.ai':'Archivist','nav.progress':'Progress','nav.settings':'Settings',
   'ob.skip':'Skip','ob.next':'Next','ob.begin':'Start',
   'ob.1.h':'Family is a story worth keeping.',
   'ob.1.p':'Predki is a quiet place where relatives, their faces and their journeys come together in one living tree. No spreadsheet chaos, no borrowed templates.',

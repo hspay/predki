@@ -8,8 +8,10 @@ export const THEMES: Theme[] = [
   { k: 'pastel', ru: 'Пастель', en: 'Pastel', fog: [255, 250, 252], light: true },
   { k: 'steel', ru: 'Сталь', en: 'Steel', fog: [215, 225, 235] },
   { k: 'rose', ru: 'Роза', en: 'Rose', fog: [235, 200, 215] },
+  { k: 'paper', ru: 'Бумага', en: 'Paper', fog: [236, 238, 233], light: true },
 ]
-export const themeOf = (k?: string) => THEMES.find(t => t.k === k) || THEMES[0]
+// no style chosen yet: paper in the light app, night in the dark one
+export const themeOf = (k?: string) => THEMES.find(t => t.k === k) || (document.documentElement.dataset.theme === 'light' ? THEMES[THEMES.length - 1] : THEMES[0])
 export const themeName = (t: Theme) => (LANG === 'en' ? t.en : t.ru)
 
 // ---- Russian surname forms

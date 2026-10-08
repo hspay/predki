@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { getAppearance, setAppearance, type Appearance } from '../lib/appearance'
 import { S, ui, t, LANG, toast, importData, clearData, bump, cloud, signOut, askToSignIn, type Person } from '../lib/core'
 import { isCloudRef, refToInline } from '../lib/media'
 import { CHANGELOG, type Release } from '../lib/changelog'
@@ -10,6 +12,7 @@ function ReleaseNote({ r }: { r: Release }) {
 }
 
 export default function SettingsPage() {
+  const [look, setLook] = useState<Appearance>(getAppearance)
   const exportJson = async () => {
     // files from Storage go into the backup itself, so it stays complete without the account
     const people: Person[] = JSON.parse(JSON.stringify(S.people))
@@ -43,6 +46,10 @@ export default function SettingsPage() {
             <div><button className="btn primary" onClick={askToSignIn}>{t('acc.signin')}</button></div>
           </>}
         </div>
+        <div className="card"><h3>{t('look.h')}</h3><p className="muted" style={{ fontSize: 13 }}>{t('look.p')}</p>
+          <div className="look-seg" role="group" aria-label={t('look.h')}>
+            {(['auto', 'light', 'dark'] as const).map(a => <button key={a} type="button" aria-pressed={look === a} onClick={() => { setAppearance(a); setLook(a) }}><i className={a} />{t('look.' + a)}</button>)}
+          </div></div>
         <div className="card"><h3>{t('set.data')}</h3><p className="muted" style={{ fontSize: 13 }}>{t(cloud.session ? 'set.data.p.cloud' : 'set.data.p')}</p>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button className="btn" onClick={exportJson}>{t('set.export')}</button>

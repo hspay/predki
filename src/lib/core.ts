@@ -195,7 +195,12 @@ async function cleanOrphanFiles() {
 export const refresh = bump
 
 export function go(page: Page) { ui.page = page; ui.panel = null; bump() }
-export function setLang(l: 'ru' | 'en') { setLangValue(l); S.settings.lang = l; document.documentElement.lang = l; persist(); bump() }
+// Language: Russian by default for now. Only a language the person picked in the RU/EN switcher on this device counts
+// (old builds could save English automatically from the browser language, so the saved data value is ignored).
+// TODO before the App Store release: when nothing was picked, follow the device language instead of 'ru'.
+const LANG_KEY = 'predki:lang'
+function pickedLang(): 'ru' | 'en' { try { return localStorage.getItem(LANG_KEY) === 'en' ? 'en' : 'ru' } catch { return 'ru' } }
+export function setLang(l: 'ru' | 'en') { try { localStorage.setItem(LANG_KEY, l) } catch { /* private mode */ } setLangValue(l); S.settings.lang = l; document.documentElement.lang = l; persist(); bump() }
 export function toast(msg: string, kind?: 'ach') {
   const id = uid(); ui.toasts = [...ui.toasts, { id, msg, kind }]; bump()
   setTimeout(() => { ui.toasts = ui.toasts.filter(x => x.id !== id); bump() }, 2900)
@@ -359,7 +364,7 @@ export function completeFirstRun(d: { theme: string; familyName: string; me: Par
 
 // ---------- boot ----------
 function afterLoad() {
-  const l = S.settings.lang || 'ru' // Russian by default; English only when chosen in the switcher
+  const l = pickedLang(); S.settings.lang = l
   setLangValue(l); document.documentElement.lang = l
   Progress.check(true)
   if (assignPresets()) persist()
@@ -374,7 +379,7 @@ function afterLoad() {
 export async function boot() {
   const saved = await loadState()
   if (saved && Array.isArray(saved.people)) S = migrateDates(Object.assign(blank(), saved))
-  setLangValue(S.settings.lang || 'ru')
+  setLangValue(pickedLang()); document.documentElement.lang = pickedLang()
   await initSession()
   sb.auth.onAuthStateChange((ev, session) => {
     const was = cloud.session?.user.id; cloud.session = session

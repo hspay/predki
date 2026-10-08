@@ -3,6 +3,12 @@ export interface Release { date: string; items: { ru: string; en: string }[] }
 
 export const CHANGELOG: Release[] = [
   {
+    date: '2026-10-08',
+    items: [
+      { ru: 'Добавлена светлая тема.', en: 'Added a light theme.' },
+    ],
+  },
+  {
     date: '2026-10-07',
     items: [
       { ru: 'Новая карта: анимированная хроника переездов и событий семьи.', en: 'New map: an animated chronicle of family moves and events.' },

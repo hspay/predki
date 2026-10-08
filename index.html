@@ -10,6 +10,10 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-title" content="Predki" />
     <meta name="theme-color" content="#07090F" />
+    <script>
+      // pick the light or dark theme before the first paint, so the app never flashes the wrong one
+      try { var a = localStorage.getItem('predki:appearance'); var t = a === 'light' ? 'light' : a === 'auto' && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; document.documentElement.dataset.theme = t; if (t === 'light') { document.querySelector('meta[name="theme-color"]').content = '#E8EAE5'; document.querySelector('meta[name="color-scheme"]').content = 'light' } } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

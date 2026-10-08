@@ -6,7 +6,14 @@ import { WORLD, countryAt } from './world'
 import { BORDERS } from './borders'
 import { FLAGS } from './passport'
 
-const PALETTE = ['#F2C879', '#7FB8FF', '#79D9A6', '#F09BC0', '#5FD3D3', '#C9B4FF', '#F0776B', '#A6D86B', '#FFB070', '#8FA9FF', '#E6E6A0', '#FF9FD8']
+// map colours for the dark and the light app (lines keep their hue, the light set is deeper so it reads on paper)
+const LOOK = {
+  dark: { line: ['#F2C879', '#7FB8FF', '#79D9A6', '#F09BC0', '#5FD3D3', '#C9B4FF', '#F0776B', '#A6D86B', '#FFB070', '#8FA9FF', '#E6E6A0', '#FF9FD8'],
+    land: 'rgba(255,255,255,.07)', coast: 'rgba(255,255,255,.2)', border: 'rgba(255,255,255,.24)', ink: '#EEF1F7', halo: '#0B0F17', head: '#FFFFFF', muted: '#7C8698', wed: '#F2C879' },
+  light: { line: ['#B7860F', '#2F6FCC', '#1F8E5E', '#C0507A', '#14908F', '#6F55C4', '#C8432F', '#5E8F1E', '#C76A12', '#3E5FCC', '#8A8A1C', '#B8448C'],
+    land: '#DCE0D8', coast: '#C2C7BE', border: 'rgba(18,21,19,.32)', ink: '#121513', halo: '#F2F3EE', head: '#121513', muted: '#6F756F', wed: '#A9740F' },
+}
+let K = LOOK.dark
 const EV_MS = 1700, QUIET_MS = 110, MOVE_MS = 1500, STAR_MS = 1300 // a year with events lasts 1.7 s, a quiet year flies by
 
 const TX = {
@@ -83,8 +90,8 @@ export function mountMap(root) {
       <div class="mp-map" data-r="map">
         <svg data-r="svg">
           <g data-r="world">
-            <path data-r="land" fill="rgba(255,255,255,.07)" stroke="rgba(255,255,255,.2)" stroke-width=".6" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
-            <path data-r="borders" fill="none" stroke="rgba(255,255,255,.24)" stroke-width=".7" stroke-dasharray="3 2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+            <path data-r="land" stroke-width=".6" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
+            <path data-r="borders" fill="none" stroke-width=".7" stroke-dasharray="3 2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
           </g>
           <g data-r="routes"></g><g data-r="stations"></g><g data-r="labels"></g><g data-r="fx"></g><g data-r="deco"></g>
         </svg>
@@ -125,7 +132,7 @@ export function mountMap(root) {
       travellers.push({ p, geo, first: geo.find(e => e.y != null)?.y ?? 9999 })
     })
     travellers.sort((a, b) => a.first - b.first)
-    const colorOf = {}; travellers.forEach((tr, i) => { tr.color = PALETTE[i % PALETTE.length]; colorOf[tr.p.id] = tr.color })
+    const colorOf = {}; travellers.forEach((tr, i) => { tr.color = K.line[i % K.line.length]; colorOf[tr.p.id] = tr.color })
     const segs = []
     travellers.forEach(tr => { let prev = null; tr.geo.forEach(e => { if (prev && key(prev) !== key(e)) segs.push({ id: 's' + segs.length, pid: tr.p.id, a: key(prev), b: key(e), from: prev, to: e, km: km({ la: +prev.la, lo: +prev.lo }, { la: +e.la, lo: +e.lo }) }); prev = e }) })
     const kindOf = (ty, p) => ty === 'death' ? t.kind[p.gender === 'f' ? 'deathF' : 'deathM'] : (t.kind[ty] || t.kind.other)
@@ -276,7 +283,7 @@ export function mountMap(root) {
         const ox = fwd ? x1 : x2, oy = fwd ? y1 : y2, ex = fwd ? x2 : x1, ey = fwd ? y2 : y1
         const hx = (1 - e) ** 2 * ox + 2 * (1 - e) * e * mx + e * e * ex, hy = (1 - e) ** 2 * oy + 2 * (1 - e) * e * my + e * e * ey
         paths += `<path d="M${ox.toFixed(1)} ${oy.toFixed(1)}Q${mx.toFixed(1)} ${my.toFixed(1)} ${ex.toFixed(1)} ${ey.toFixed(1)}" pathLength="1" stroke-dasharray="1 1" stroke-dashoffset="${(1 - e).toFixed(4)}" stroke="${C[s.pid]}" stroke-width="2.6"/>`
-        heads += `<circle cx="${hx}" cy="${hy}" r="9" fill="${C[s.pid]}" opacity=".22"/><circle cx="${hx}" cy="${hy}" r="3.6" fill="#fff"/>`
+        heads += `<circle cx="${hx}" cy="${hy}" r="9" fill="${C[s.pid]}" opacity=".22"/><circle cx="${hx}" cy="${hy}" r="3.6" fill="${K.head}"/>`
         return
       }
       const d = `M${x1.toFixed(1)} ${y1.toFixed(1)}Q${mx.toFixed(1)} ${my.toFixed(1)} ${x2.toFixed(1)} ${y2.toFixed(1)}`
@@ -295,8 +302,8 @@ export function mountMap(root) {
       const multi = who.length > 1, r = (multi ? 5.5 + Math.min(3, who.length * .4) : 4.5) * U + (hiSt.has(pl.key) ? 2 : 0)
       const faded = (hiSeg || hiPlace) ? !hiSt.has(pl.key) : focusP ? !who.includes(focusP) : false
       stn += `<g class="mp-stn" data-k="${pl.key}" opacity="${faded ? .3 : 1}">` + (multi
-        ? `<circle cx="${x}" cy="${y}" r="${r}" fill="#EEF1F7" stroke="#0B0F17" stroke-width="2"/><circle cx="${x}" cy="${y}" r="${r * .42}" fill="#0B0F17"/>`
-        : `<circle cx="${x}" cy="${y}" r="${r}" fill="${C[who[0]]}" stroke="#0B0F17" stroke-width="1.8"/>`) + `<circle cx="${x}" cy="${y}" r="${r + 6}" fill="transparent"/></g>`
+        ? `<circle cx="${x}" cy="${y}" r="${r}" fill="${K.ink}" stroke="${K.halo}" stroke-width="2"/><circle cx="${x}" cy="${y}" r="${r * .42}" fill="${K.halo}"/>`
+        : `<circle cx="${x}" cy="${y}" r="${r}" fill="${C[who[0]]}" stroke="${K.halo}" stroke-width="1.8"/>`) + `<circle cx="${x}" cy="${y}" r="${r + 6}" fill="transparent"/></g>`
       placed.push({ pl, x, y, r, pri: (hiSt.has(pl.key) ? 100 : 0) + pl.visits.length, faded, fade: an ? Math.min(1, (T - appearAt(pl)) / 500) : 1 })
     })
     $('stations').innerHTML = stn
@@ -312,21 +319,21 @@ export function mountMap(root) {
       for (const [x, y, a] of tries) { const bx = a === 'start' ? x : a === 'end' ? x - w : x - w / 2, b = { x: bx - 2, y: y - fs, w: w + 4, h }
         if ((!hit(b) && b.x > 4 && b.x + b.w < W - 4 && b.y > top) || s.pri >= 100) { boxes.push(b); lb += `<text x="${x}" y="${y}" text-anchor="${a}" font-size="${fs}" font-weight="${s.pl.visits.length > 3 ? 600 : 500}" opacity="${(s.faded ? .35 : 1) * s.fade}">${esc(s.pl.name)}</text>`; break } }
     })
-    $('labels').innerHTML = `<g fill="#EEF1F7" stroke="#0B0F17" stroke-width="3" paint-order="stroke" stroke-linejoin="round">${lb}</g>`
+    $('labels').innerHTML = `<g fill="${K.ink}" stroke="${K.halo}" stroke-width="3" paint-order="stroke" stroke-linejoin="round">${lb}</g>`
 
     // twinkles for births, weddings and first appearances; a pulse for other events in place
     let fx = ''
     if (an) M.sparks.forEach(sp => { if (!vis(sp.pid)) return; const p = (T - st(sp.e.y)) / STAR_MS; if (p < 0 || p >= 1) return
-      const x = sx(+sp.e.lo), y = sy(+sp.e.la), c = sp.kind === 'wed' ? '#F2C879' : C[sp.pid], a = Math.sin(Math.PI * p)
+      const x = sx(+sp.e.lo), y = sy(+sp.e.la), c = sp.kind === 'wed' ? K.wed : C[sp.pid], a = Math.sin(Math.PI * p)
       if (sp.kind === 'pulse') { fx += `<circle cx="${x}" cy="${y}" r="${6 + 22 * p}" fill="none" stroke="${c}" stroke-width="2" opacity="${(1 - p).toFixed(3)}"/>`; return }
       const R = (8 + 10 * a) * U
-      fx += `<circle cx="${x}" cy="${y}" r="${R * 1.5}" fill="${c}" opacity="${(.3 * a).toFixed(3)}"/><path transform="rotate(${(p * 90).toFixed(1)} ${x} ${y})" d="M${x} ${y - R}Q${x} ${y} ${x + R} ${y}Q${x} ${y} ${x} ${y + R}Q${x} ${y} ${x - R} ${y}Q${x} ${y} ${x} ${y - R}Z" fill="#fff" opacity="${a.toFixed(3)}"/>` })
+      fx += `<circle cx="${x}" cy="${y}" r="${R * 1.5}" fill="${c}" opacity="${(.3 * a).toFixed(3)}"/><path transform="rotate(${(p * 90).toFixed(1)} ${x} ${y})" d="M${x} ${y - R}Q${x} ${y} ${x + R} ${y}Q${x} ${y} ${x} ${y + R}Q${x} ${y} ${x - R} ${y}Q${x} ${y} ${x} ${y - R}Z" fill="${K.head}" opacity="${a.toFixed(3)}"/>` })
     $('fx').innerHTML = fx
 
     // scale bar in real kilometres
     const midLat = 90 - ((H / 2 - ty) / k) / 500 * 180, kmPerPx = .36 * 111.32 * Math.cos(midLat * Math.PI / 180) / k
     const nice = [10, 20, 50, 100, 200, 250, 500, 1000, 2000, 5000].find(v => v / kmPerPx > 70) || 5000, bw = nice / kmPerPx
-    $('deco').innerHTML = `<g transform="translate(18 ${H - 22})" font-family="JetBrains Mono,monospace" font-size="10.5" fill="#7C8698"><path d="M0 0H${bw}M0 -4V0M${bw} -4V0" stroke="#7C8698" stroke-width="1" fill="none"/><text x="${bw + 8}" y="3">${nice.toLocaleString(LANG === 'en' ? 'en-US' : 'ru-RU')} ${L().km}</text></g>`
+    $('deco').innerHTML = `<g transform="translate(18 ${H - 22})" font-family="JetBrains Mono,monospace" font-size="10.5" fill="${K.muted}"><path d="M0 0H${bw}M0 -4V0M${bw} -4V0" stroke="${K.muted}" stroke-width="1" fill="none"/><text x="${bw + 8}" y="3">${nice.toLocaleString(LANG === 'en' ? 'en-US' : 'ru-RU')} ${L().km}</text></g>`
   }
 
   // ---------- timeline & playback ----------
@@ -439,9 +446,11 @@ export function mountMap(root) {
   // ---------- data changes ----------
   let dataSig = ''
   function update() {
-    const s2 = LANG + '|' + (S.settings.familyName || '') + '|' + JSON.stringify(S.people.map(p => [p.id, p.first, p.last, p.gender, p.birthDate, p.birthPlace, p.deathDate, p.deathPlace, p.events]))
+    const th = document.documentElement.dataset.theme === 'light' ? 'light' : 'dark'
+    const s2 = th + '|' + LANG + '|' + (S.settings.familyName || '') + '|' + JSON.stringify(S.people.map(p => [p.id, p.first, p.last, p.gender, p.birthDate, p.birthPlace, p.deathDate, p.deathPlace, p.events]))
     if (s2 === dataSig) return
     const firstTime = !dataSig; dataSig = s2
+    K = LOOK[th]; $('land').setAttribute('fill', K.land); $('land').setAttribute('stroke', K.coast); $('borders').setAttribute('stroke', K.border)
     regionNames = null; if (A.anim) { A.anim = null; cancelAnimationFrame(raf) }
     build(); if (MV.only && !M.byId[MV.only]) MV.only = null
     texts(); buildTimeline(); renderChips(); sig = ''
