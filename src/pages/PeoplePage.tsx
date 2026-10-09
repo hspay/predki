@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { S, t, fullName, yearsOf, yearOf, fillPercent, generations, openPerson, editPerson } from '../lib/core'
+import { S, t, fullName, formerNames, yearsOf, yearOf, fillPercent, generations, openPerson, editPerson } from '../lib/core'
 import Avatar from '../components/Avatar'
 
 export default function PeoplePage() {
@@ -8,7 +8,7 @@ export default function PeoplePage() {
   S.people.forEach(p => { (p.events || []).forEach(e => { if (e.lat != null) places.add(e.place) }); media += (p.media || []).length + (p.avatar ? 1 : 0) })
   const stats: [number, string][] = [[S.people.length, 'people.stat.people'], [generations(), 'people.stat.gen'], [media, 'people.stat.photos'], [places.size, 'people.stat.places']]
   const ql = q.toLowerCase()
-  const list = S.people.filter(p => !ql || fullName(p).toLowerCase().includes(ql) || (p.maiden || '').toLowerCase().includes(ql)).sort((a, b) => (yearOf(a.birthDate) || '9999').localeCompare(yearOf(b.birthDate) || '9999'))
+  const list = S.people.filter(p => !ql || fullName(p).toLowerCase().includes(ql) || (p.maiden || '').toLowerCase().includes(ql) || formerNames(p).some(n => n.toLowerCase().includes(ql))).sort((a, b) => (yearOf(a.birthDate) || '9999').localeCompare(yearOf(b.birthDate) || '9999'))
   return (
     <section className="page active" data-page="people">
       <div className="topbar">

@@ -50,7 +50,8 @@ export default function FrameEditor({ p }: { p: Person }) {
           {(['S', 'M', 'L'] as FrameSize[]).map(s => <button key={s} type="button" role="radio" aria-checked={look.size === s} onClick={() => set({ ...look, size: s })}>{t('frm.' + s)}</button>)}
         </div>
       </>}
-      <p className="fe-note">{t('frm.live')}</p>
+      <p className="fe-note fe-desk">{t('frm.live')}</p>
+      <p className="fe-note fe-mob">{t('frm.live.m')}</p>
     </div>
   )
 }

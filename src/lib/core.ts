@@ -24,8 +24,12 @@ export interface Person {
   preset?: string
   /** portrait frame on the Tree; none = the usual card */
   frame?: FrameLook
+  /** earlier names (changed after a move, a war, a marriage…); shown under the name and found by search */
+  names?: FormerName[]
 }
-export interface Rel { id: string; type: 'parent' | 'spouse'; a: string; b: string; from: string }
+export interface FormerName { id: string; first: string; last: string; patronymic: string; until: string }
+/** parent: a → b (step = stepfather / stepmother); spouse: a ↔ b; sibling: a ↔ b when they have no shared parent in the tree */
+export interface Rel { id: string; type: 'parent' | 'spouse' | 'sibling'; a: string; b: string; from: string; step?: boolean }
 export interface Settings {
   lang?: 'ru' | 'en'; onboarded?: boolean; aiUsed?: boolean; aiAudio?: boolean
   /** tree look: background theme, title above the tree, dashed places for unknown ancestors */
@@ -108,9 +112,11 @@ export function continueWithoutAccount() { setSkipped(true); bump() }
 export type Page = 'tree' | 'map' | 'progress' | 'people' | 'ai' | 'settings'
 export type Panel =
   | { mode: 'view'; id: string }
-  | { mode: 'edit'; id: string | null; preset?: Partial<Person> & { _title?: string }; after?: (p: Person) => void; key: number }
+  | { mode: 'edit'; id: string | null; preset?: Partial<Person> & { _title?: string; _rel?: RelKind }; after?: (p: Person, step: boolean) => void; key: number }
   | { mode: 'event'; id: string; eventId: string | null; key: number }
-export type Modal = { kind: 'addRelative'; id: string; rel: 'parent' | 'child' | 'spouse' } | null
+/** how someone is related to the person whose profile is open */
+export type RelKind = 'parent' | 'step' | 'spouse' | 'child' | 'stepchild' | 'sibling'
+export type Modal = { kind: 'link'; id: string } | null
 export interface Toast { id: string; msg: string; kind?: 'ach' }
 export interface Draft {
   id: string; first: string; last: string; patronymic: string; maiden: string; gender: string; rel: string
@@ -122,6 +128,8 @@ export const ui = {
   page: 'tree' as Page, panel: null as Panel | null, modal: null as Modal, toasts: [] as Toast[],
   /** the profile panel shows the frame settings instead of the profile */
   frameEdit: false,
+  /** the «Семья» block of the profile shows remove buttons and «Связать» */
+  relEdit: false,
   onboarding: false, firstRun: false, loaded: false, treeRefit: 0, mapRefit: 0, share: false,
   ai: { mode: 'text' as 'text' | 'audio' | 'photo', drafts: [] as Draft[], busy: false, transcript: '', text: '', ran: false, simulating: false },
 }
@@ -203,13 +211,13 @@ function pickedLang(): 'ru' | 'en' { try { return localStorage.getItem(LANG_KEY)
 export function setLang(l: 'ru' | 'en') { try { localStorage.setItem(LANG_KEY, l) } catch { /* private mode */ } setLangValue(l); S.settings.lang = l; document.documentElement.lang = l; persist(); bump() }
 export function toast(msg: string, kind?: 'ach') {
   const id = uid(); ui.toasts = [...ui.toasts, { id, msg, kind }]; bump()
-  setTimeout(() => { ui.toasts = ui.toasts.filter(x => x.id !== id); bump() }, 2900)
+  setTimeout(() => { ui.toasts = ui.toasts.filter(x => x.id !== id); bump() }, kind === 'ach' ? 4000 : 2900) // an achievement stays a bit longer
 }
 let panelKey = 0
-export function openPerson(id: string) { if (!byId(id)) return; ui.panel = { mode: 'view', id }; bump() }
-export function editPerson(id: string | null, preset?: Partial<Person> & { _title?: string }, after?: (p: Person) => void) { ui.panel = { mode: 'edit', id, preset, after, key: ++panelKey }; bump() }
+export function openPerson(id: string) { if (!byId(id)) return; if (ui.panel?.mode !== 'view' || ui.panel.id !== id) ui.relEdit = false; ui.panel = { mode: 'view', id }; bump() }
+export function editPerson(id: string | null, preset?: Partial<Person> & { _title?: string; _rel?: RelKind }, after?: (p: Person, step: boolean) => void) { ui.panel = { mode: 'edit', id, preset, after, key: ++panelKey }; bump() }
 export function editEvent(id: string, eventId: string | null) { ui.panel = { mode: 'event', id, eventId, key: ++panelKey }; bump() }
-export function closePanel() { ui.panel = null; ui.frameEdit = false; bump() }
+export function closePanel() { ui.panel = null; ui.frameEdit = false; ui.relEdit = false; bump() }
 export function openModal(m: Modal) { ui.modal = m; bump() }
 export function closeModal() { ui.modal = null; bump() }
 
@@ -257,10 +265,17 @@ export const byId = (id: string) => S.people.find(p => p.id === id)
 export function fullName(p?: Person | null) { if (!p) return ''; const n = [p.first, p.last].filter(Boolean).join(' '); return n || t('p.unknown') }
 export function initials(p: { first?: string; last?: string }) { return ((p.first || '')[0] || '') + ((p.last || '')[0] || '') || '?' }
 export function yearsOf(p: Person) { const b = yearOf(p.birthDate), d = yearOf(p.deathDate); if (!b && !d) return ''; return `${b || '…'} – ${d || ''}`.replace(/ – $/, '') }
-export function parentsOf(id: string) { return S.rels.filter(r => r.type === 'parent' && r.b === id).map(r => byId(r.a)).filter(Boolean) as Person[] }
-export function childrenOf(id: string) { return S.rels.filter(r => r.type === 'parent' && r.a === id).map(r => byId(r.b)).filter(Boolean) as Person[] }
+// parents / children are by birth (or adoption); stepfathers and stepmothers are kept apart
+export function parentsOf(id: string) { return S.rels.filter(r => r.type === 'parent' && !r.step && r.b === id).map(r => byId(r.a)).filter(Boolean) as Person[] }
+export function childrenOf(id: string) { return S.rels.filter(r => r.type === 'parent' && !r.step && r.a === id).map(r => byId(r.b)).filter(Boolean) as Person[] }
+export function stepParentsOf(id: string) { return S.rels.filter(r => r.type === 'parent' && r.step && r.b === id).map(r => byId(r.a)).filter(Boolean) as Person[] }
+export function stepChildrenOf(id: string) { return S.rels.filter(r => r.type === 'parent' && r.step && r.a === id).map(r => byId(r.b)).filter(Boolean) as Person[] }
+/** brothers and sisters linked directly (no shared parent in the tree yet) */
+export function linkedSiblingsOf(id: string) { return S.rels.filter(r => r.type === 'sibling' && (r.a === id || r.b === id)).map(r => byId(r.a === id ? r.b : r.a)).filter(Boolean) as Person[] }
 export function spousesOf(id: string) { return S.rels.filter(r => r.type === 'spouse' && (r.a === id || r.b === id)).map(r => byId(r.a === id ? r.b : r.a)).filter(Boolean) as Person[] }
-export function siblingsOf(id: string) { const ps = parentsOf(id).map(p => p.id); const set = new Set<string>(); ps.forEach(pid => childrenOf(pid).forEach(c => { if (c.id !== id) set.add(c.id) })); return [...set].map(byId).filter(Boolean) as Person[] }
+export function siblingsOf(id: string) { const ps = parentsOf(id).map(p => p.id); const set = new Set<string>(); ps.forEach(pid => childrenOf(pid).forEach(c => { if (c.id !== id) set.add(c.id) })); linkedSiblingsOf(id).forEach(x => set.add(x.id)); return [...set].map(byId).filter(Boolean) as Person[] }
+/** «Голышев Иван (до 1946)» — earlier names in one line */
+export function formerNames(p: Person) { return (p.names || []).map(n => { const s = [n.first, n.patronymic, n.last].filter(Boolean).join(' '); return n.until ? `${s} (${t('p.names.upto')} ${n.until})` : s }).filter(Boolean) }
 /** Birth year for choosing a portrait: the real one, else a guess from children (−27) or parents (+27). Never saved. */
 function estBirthYear(p: Person) {
   const own = +yearOf(p.birthDate); if (own) return own
@@ -292,7 +307,11 @@ export function addPerson(data?: Partial<Person>): Person {
   const p: Person = Object.assign({ id: uid(), first: '', last: '', maiden: '', patronymic: '', gender: '', birthDate: '', birthPlace: '', deathDate: '', deathPlace: '', job: '', edu: '', bio: '', avatar: '', media: [], events: [] }, data || {})
   S.people.push(p); return p
 }
-export function addRel(type: Rel['type'], a: string, b: string, from?: string) { if (a === b) return; if (S.rels.some(r => r.type === type && ((r.a === a && r.b === b) || (type === 'spouse' && r.a === b && r.b === a)))) return; S.rels.push({ id: uid(), type, a, b, from: from || '' }) }
+export function addRel(type: Rel['type'], a: string, b: string, from?: string, step?: boolean) {
+  if (a === b) return; const sym = type !== 'parent'
+  if (S.rels.some(r => r.type === type && ((r.a === a && r.b === b) || (sym && r.a === b && r.b === a)))) return
+  S.rels.push(step ? { id: uid(), type, a, b, from: from || '', step: true } : { id: uid(), type, a, b, from: from || '' })
+}
 export function removePerson(id: string) { S.people = S.people.filter(p => p.id !== id); S.rels = S.rels.filter(r => r.a !== id && r.b !== id) }
 /** Birth/death fields on the card double as map events. */
 export function syncLifeEvents(p: Person) {
@@ -315,7 +334,12 @@ export function nameFromPatronymic(pt?: string) {
   else return ''
   return base.length > 1 ? base[0].toUpperCase() + base.slice(1) : ''
 }
-function mascForm(s: string) { return s.replace(/(ов|ев|ёв|ин|ын)а$/i, '$1').replace(/ская$/i, 'ский').replace(/цкая$/i, 'цкий') }
+export function mascForm(s: string) { return s.replace(/(ов|ев|ёв|ин|ын)а$/i, '$1').replace(/ская$/i, 'ский').replace(/цкая$/i, 'цкий') }
+/** a family surname in the right form for a man or a woman: Ершова → Ершов, Журавский → Журавская */
+export function surnameFor(s: string, g: Gender) {
+  if (!s || !g) return s; const m = mascForm(s.trim())
+  return g === 'm' ? m : m.replace(/(ов|ев|ёв|ин|ын)$/i, '$1а').replace(/ский$/i, 'ская').replace(/цкий$/i, 'цкая')
+}
 function mascSurname(p: Person) {
   let s = (p.gender === 'f' ? (p.maiden || p.last) : p.last) || ''; s = s.trim(); if (!s) return ''
   if (p.gender === 'f') { if (!p.maiden) { const sp = spousesOf(p.id).find(x => x.gender === 'm' && x.last); if (sp && mascForm(s) === sp.last.trim()) return '' } s = mascForm(s) }
@@ -358,8 +382,9 @@ export function completeFirstRun(d: { theme: string; familyName: string; me: Par
   const mom = d.mom.first ? addPerson({ first: d.mom.first, last: d.mom.last, gender: 'f' }) : null
   const dad = d.dad.first ? addPerson({ first: d.dad.first, last: d.dad.last, gender: 'm' }) : null
   if (mom) addRel('parent', mom.id, me.id); if (dad) addRel('parent', dad.id, me.id); if (mom && dad) addRel('spouse', dad.id, mom.id)
-  ui.firstRun = false; ui.treeRefit++; commit()
-  setTimeout(() => toast(t('fr.done', { name: me.first })), 400)
+  // show the tree first, then save: the first achievement pops up once the new tree is on screen
+  ui.firstRun = false; ui.treeRefit++; persist(); bump()
+  setTimeout(() => commit(), 700)
 }
 
 // ---------- boot ----------

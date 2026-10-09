@@ -1,10 +1,11 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
-import { S, ui, t, LANG, byId, yearOf, parentsOf, yearsOf, avatarSrc, fullName, fillPercent, generations, openPerson, closePanel, editPerson, openModal, type Person } from '../lib/core'
+import { S, ui, t, LANG, byId, yearOf, parentsOf, yearsOf, avatarSrc, fullName, fillPercent, generations, openPerson, closePanel, editPerson, type Person } from '../lib/core'
+import { addRelative } from '../lib/relations'
 import { frameSvg, frameDims } from '../lib/frames'
 import { themeOf } from '../lib/treeStyle'
 import { mountFog, type Fog } from '../lib/fog'
 import TreeStyle from '../components/TreeStyle'
-import { layout, branchColors, LINE, NW, NH, PG } from '../lib/treeLayout'
+import { layout, familyColors, NW, NH, PG } from '../lib/treeLayout'
 import { Progress } from '../lib/progress'
 
 /** «39 человек · 6 поколений» — full words, with the right Russian plural. */
@@ -60,12 +61,14 @@ export default function TreePage() {
   // the family's look: title above the tree, dashed places for the parents of the oldest relatives
   const st = S.settings, theme = themeOf(st.theme)
   const title = (st.familyName || '').trim()
-  const roots = st.ghosts === false ? [] : S.people.filter(p => lay.pos[p.id] && lay.pos[p.id].g === 0 && !parentsOf(p.id).length)
+  const roots = st.ghosts === false ? [] : S.people.filter(p => lay.pos[p.id] && lay.pos[p.id].g === 0 && !lay.pos[p.id].iso && !parentsOf(p.id).length
+    // brothers and sisters linked directly share one pair of empty places, above the leftmost of them
+    && !S.rels.some(r => r.type === 'sibling' && (r.a === p.id || r.b === p.id) && lay.pos[r.a === p.id ? r.b : r.a] && lay.pos[r.a === p.id ? r.b : r.a].x < lay.pos[p.id].x))
   const GH = roots.length ? 84 : 0, TH = title ? 96 : 0, TOP = GH + TH
   // approximate birth year of each generation row, drawn as a scale on the left
   const scale = (() => {
     const rows = new Map<number, number[]>(); let minX = Infinity
-    S.people.forEach(p => { const P = lay.pos[p.id]; if (!P) return; minX = Math.min(minX, P.x); const ry = P.top + P.rh / 2; if (!rows.has(ry)) rows.set(ry, []); const y = +yearOf(p.birthDate); if (y) rows.get(ry)!.push(y) })
+    S.people.forEach(p => { const P = lay.pos[p.id]; if (!P || P.iso) return; minX = Math.min(minX, P.x); const ry = P.top + P.rh / 2; if (!rows.has(ry)) rows.set(ry, []); const y = +yearOf(p.birthDate); if (y) rows.get(ry)!.push(y) })
     const list = [...rows.entries()].filter(([, ys]) => ys.length).map(([y, ys]) => ({ y, label: (ys.length > 1 ? '≈' : '') + Math.round(ys.reduce((a, b) => a + b, 0) / ys.length) })).sort((a, b) => a.y - b.y)
     return rows.size > 1 && list.length ? { x: minX - 28, list } : null
   })()
@@ -114,7 +117,7 @@ export default function TreePage() {
     }
     const up = (e: PointerEvent) => {
       pts.delete(e.pointerId); if (pts.size < 2) pinch = null
-      if (pts.size === 0) { svg.classList.remove('dragging'); if (!moved) { const n = drag && drag.node as SVGGElement | null; if (n && n.dataset.ghost) openModal({ kind: 'addRelative', id: n.dataset.ghost, rel: 'parent' }); else if (n && n.dataset.id) openPerson(n.dataset.id); else closePanel() } drag = null }
+      if (pts.size === 0) { svg.classList.remove('dragging'); if (!moved) { const n = drag && drag.node as SVGGElement | null; if (n && n.dataset.ghost) addRelative(n.dataset.ghost, 'parent'); else if (n && n.dataset.id) openPerson(n.dataset.id); else closePanel() } drag = null }
     }
     const resize = () => setTimeout(fit, 50)
     svg.addEventListener('wheel', wheel, { passive: false }); svg.addEventListener('pointerdown', down); svg.addEventListener('pointermove', move); svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up); window.addEventListener('resize', resize)
@@ -122,13 +125,20 @@ export default function TreePage() {
   })
 
   // ---- links: marriages, then lines from the couple (or single parent) down to each child: smooth S-curves or straight steps
-  const col = branchColors(); const links: JSX.Element[] = [], dots: JSX.Element[] = []
+  const col = familyColors(!!theme.light); const links: JSX.Element[] = [], dots: JSX.Element[] = []
   const straight = st.lines === 'straight'
   const box = (id: string) => { const P = lay.pos[id], fw = frameW(byId(id)); return { cx: P.x + NW / 2, l: P.x + (NW - fw) / 2, r: P.x + (NW + fw) / 2, top: P.y, bot: P.y + P.h, mid: P.top + P.rh / 2, g: P.g } }
   S.rels.filter(r => r.type === 'spouse' && lay.pos[r.a] && lay.pos[r.b]).forEach(r => {
     const A = box(r.a), B = box(r.b)
-    if (A.g === B.g) { const l = A.cx < B.cx ? A : B, rr = A.cx < B.cx ? B : A; links.push(<path key={'m' + r.id} className="link marriage" d={`M${l.r} ${l.mid}H${rr.l}`} />); if (r.from) links.push(<text key={'mt' + r.id} className="yr" x={(l.r + rr.l) / 2} y={l.mid - 7} textAnchor="middle" style={{ fontFamily: 'var(--f-mono)', fontSize: 10, fill: 'var(--accent)' }}>{r.from}</text>) }
-    else { const my = (A.bot + B.top) / 2; links.push(<path key={'m' + r.id} className="link marriage" d={`M${A.cx} ${A.bot}C${A.cx} ${my} ${B.cx} ${my} ${B.cx} ${B.top}`} />) }
+    const color = col.mar(r)
+    if (A.g === B.g) {
+      const l = A.cx < B.cx ? A : B, rr = A.cx < B.cx ? B : A
+      // spouses not side by side (a third marriage): an arc under the cards instead of a line through someone else
+      const apart = Math.abs(lay.pos[r.a].x - lay.pos[r.b].x) > NW + PG + 1, yb = Math.max(l.bot, rr.bot)
+      links.push(<path key={'m' + r.id} className="link marriage" style={{ stroke: color }} d={apart ? `M${l.cx} ${yb}C${l.cx} ${yb + 44} ${rr.cx} ${yb + 44} ${rr.cx} ${yb}` : `M${l.r} ${l.mid}H${rr.l}`} />)
+      if (r.from && !apart) links.push(<text key={'mt' + r.id} className="yr" x={(l.r + rr.l) / 2} y={l.mid - 7} textAnchor="middle" style={{ fontFamily: 'var(--f-mono)', fontSize: 10, fill: color }}>{r.from}</text>)
+    }
+    else { const my = (A.bot + B.top) / 2; links.push(<path key={'m' + r.id} className="link marriage" style={{ stroke: color }} d={`M${A.cx} ${A.bot}C${A.cx} ${my} ${B.cx} ${my} ${B.cx} ${B.top}`} />) }
   })
   S.people.forEach(ch => {
     const ps = parentsOf(ch.id).filter(p => lay.pos[p.id]); if (!ps.length) return; const C = { x: box(ch.id).cx, y: box(ch.id).top }
@@ -136,12 +146,23 @@ export default function TreePage() {
     const a = lay.pos[ps[0].id], b = ps[1] && lay.pos[ps[1].id]
     if (b && a.g === b.g && Math.abs(a.x - b.x) < NW + PG + 2) { sx = (a.x + b.x + NW) / 2; sy = a.top + a.rh / 2; y0 = Math.max(box(ps[0].id).bot, box(ps[1].id).bot) + 6 }
     else { const A = box(ps[0].id); sx = A.cx; sy = A.bot; y0 = sy + 6 }
-    const color = (LINE as Record<string, string>)[col.link(ch.id)] || LINE.n
+    const color = col.kin(ch.id)
     let d: string
     if (straight) { const bus = Math.max(y0, lay.pos[ch.id].top - 26); d = `M${sx} ${sy}V${bus}H${C.x}V${C.y}` }
     else { const y1 = C.y - 8, k = (y1 - y0) * .55; d = `M${sx} ${sy}V${y0}C${sx} ${y0 + k} ${C.x} ${y1 - k} ${C.x} ${y1}V${C.y}` }
     links.push(<path key={'k' + ch.id} className="link kin" style={{ stroke: color }} d={d} />)
     dots.push(<circle key={'d' + ch.id} cx={sx} cy={sy} r="3.5" fill={color} />)
+  })
+  // stepfather / stepmother → stepchild: a dashed line
+  S.rels.filter(r => r.type === 'parent' && r.step && lay.pos[r.a] && lay.pos[r.b]).forEach(r => {
+    const A = box(r.a), C = box(r.b), sy = A.bot, y1 = C.top - 8, k = (y1 - sy) * .55
+    const d = straight ? `M${A.cx} ${sy}V${Math.max(sy + 6, lay.pos[r.b].top - 18)}H${C.cx}V${C.top}` : `M${A.cx} ${sy}C${A.cx} ${sy + k} ${C.cx} ${y1 - k} ${C.cx} ${y1}V${C.top}`
+    links.push(<path key={'s' + r.id} className="link kin step" style={{ stroke: col.kin(r.b) }} d={d} />)
+  })
+  // brothers and sisters with no parent in the tree yet: a bracket above the cards
+  S.rels.filter(r => r.type === 'sibling' && lay.pos[r.a] && lay.pos[r.b] && lay.pos[r.a].g === lay.pos[r.b].g).forEach(r => {
+    const A = box(r.a), B = box(r.b), y = Math.min(A.top, B.top) - 22
+    links.push(<path key={'b' + r.id} className="link sib" style={{ stroke: col.kin(r.a) }} d={`M${A.cx} ${A.top}V${y}H${B.cx}V${B.top}`} />)
   })
 
   return (

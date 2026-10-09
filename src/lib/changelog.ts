@@ -3,6 +3,13 @@ export interface Release { date: string; items: { ru: string; en: string }[] }
 
 export const CHANGELOG: Release[] = [
   {
+    date: '2026-10-09',
+    items: [
+      { ru: 'Исправлены баги интерфейса (за тест спасибо Ане Журавской <3)', en: 'Interface bugs fixed (thanks to Anya Zhuravskaya for testing <3)' },
+      { ru: 'Линии древа теперь окрашены по семейным ветвям', en: 'Tree lines are now coloured by family branch' },
+    ],
+  },
+  {
     date: '2026-10-08',
     items: [
       { ru: 'Добавлена светлая тема.', en: 'Added a light theme.' },

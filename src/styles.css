@@ -967,3 +967,52 @@ main{position:relative;min-width:0;overflow:hidden;border-radius:var(--r-card);b
 .look-seg i.auto{background:linear-gradient(135deg,#E8EAE5 50%,#07090F 50%)}
 .look-seg i.light{background:#E8EAE5}
 .look-seg i.dark{background:#07090F}
+
+/* ---- relatives: quick add, «Семья → Изменить», «Новая связь», earlier names ---- */
+.quick-add{grid-template-columns:repeat(2,1fr)}
+.link.step{stroke-dasharray:5 6;opacity:.75}
+.link.sib{stroke-width:1.75;opacity:.7}
+.fam-chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip.fam{padding:0;gap:0;overflow:hidden}
+.chip.fam > button:first-child{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;color:inherit;font:inherit}
+.chip.fam > button:first-child:hover{color:var(--ink)}
+.chip.fam.editing > button:first-child{padding-right:4px}
+.chip.fam .fam-x{display:grid;place-items:center;width:26px;align-self:stretch;color:var(--muted);border-left:1px solid var(--edge)}
+.chip.fam .fam-x:hover{color:var(--danger);background:var(--glass-2)}
+.chip.fam .fam-x svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.fam-note{margin:12px 0 0;font-size:12.5px;line-height:1.5;color:var(--muted)}
+.fam-link{margin-top:14px;width:100%;justify-content:center}
+.modal.lk .panel-body{display:flex;flex-direction:column;gap:10px;overflow:auto}
+.lk-who{display:flex;align-items:center;gap:10px;font-weight:600;margin-bottom:6px}
+.lk-kinds{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-bottom:8px}
+.lk-kinds button{padding:9px 8px;border-radius:12px;font-size:13px;font-weight:500;color:var(--ink-2);background:var(--well);border:1px solid var(--edge);transition:border-color .15s,color .15s}
+.lk-kinds button:hover{color:var(--ink)}
+.lk-kinds button[aria-checked="true"]{color:var(--ink);border-color:var(--accent);background:var(--glass-2)}
+.lk-search{max-width:none;flex:none}
+.lk-list{display:flex;flex-direction:column;gap:2px;max-height:min(320px,40vh);overflow:auto;margin:0 -8px}
+.lk-list button{display:flex;align-items:center;gap:12px;padding:8px;border-radius:12px;text-align:left;color:var(--ink)}
+.lk-list button:hover{background:var(--glass-2)}
+.lk-list span{display:flex;flex-direction:column;gap:1px;min-width:0}
+.lk-list b{font-weight:600;font-size:14px}
+.lk-list small{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
+.lk-list .muted{padding:8px;font-size:13px;margin:0}
+.fn-card{display:flex;flex-direction:column;gap:10px;padding:12px;border:1px solid var(--edge);border-radius:14px;background:var(--well)}
+.fn-head{display:flex;align-items:center;justify-content:space-between;margin:-4px -4px -2px 0}
+.fn-head .btn.icon{width:28px;height:28px}
+.fn-head .btn.icon svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round}
+.fn-add{align-self:flex-start;font-size:13px;font-weight:500;color:var(--accent);padding:2px 0}
+.fn-add:hover{text-decoration:underline;text-underline-offset:3px}
+.ph-names{font-size:13px;max-width:34ch}
+.fe-prev,.fe-note.fe-mob{display:none}
+@media (max-width:860px){
+  .fe-prev{display:flex;justify-content:center;margin-bottom:6px;filter:drop-shadow(0 10px 18px rgba(0,0,0,.45))}
+  .ph-ava.fe-hide,.fe-note.fe-desk{display:none}
+  .fe-note.fe-mob{display:block}
+  .lk-kinds{grid-template-columns:repeat(2,1fr)}
+}
+
+/* profile: the family right under the name, tighter spacing */
+.profile-hero{margin-bottom:4px;padding-bottom:12px}
+.section-t.fam-top{margin-top:0}
+.fam-link{margin-bottom:6px}
+.quick-add{margin-top:18px}
