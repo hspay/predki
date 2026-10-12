@@ -5,7 +5,9 @@ import { frameSvg, frameDims } from '../lib/frames'
 import { themeOf } from '../lib/treeStyle'
 import { mountFog, type Fog } from '../lib/fog'
 import TreeStyle from '../components/TreeStyle'
-import { layout, familyColors, NW, NH, PG } from '../lib/treeLayout'
+import { openCalendar } from '../components/FamilyCalendar'
+import { layout, familyColors, rootPerson, NW, NH, PG } from '../lib/treeLayout'
+import { kinship, chainName } from '../lib/kinship'
 import { Progress } from '../lib/progress'
 
 /** «39 человек · 6 поколений» — full words, with the right Russian plural. */
@@ -16,39 +18,51 @@ function treeSub(n: number, g: number) {
 
 // Names are measured with the same font the card uses, so long surnames get an ellipsis inside the card.
 let measureCtx: CanvasRenderingContext2D | null = null
-function fitText(s: string, max: number) {
+const NM_FONT = '600 13px Onest, system-ui, -apple-system, "Segoe UI", sans-serif', KN_FONT = '500 11px Onest, system-ui, -apple-system, "Segoe UI", sans-serif'
+function fitText(s: string, max: number, font = NM_FONT) {
   if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d')
-  const ctx = measureCtx!; ctx.font = '600 13px Onest, system-ui, -apple-system, "Segoe UI", sans-serif'
+  const ctx = measureCtx!; ctx.font = font
   if (ctx.measureText(s).width <= max) return s
   let x = s; while (x.length > 2 && ctx.measureText(x.trimEnd() + '…').width > max) x = x.slice(0, -1)
   return x.trimEnd() + '…'
 }
-const textW = (s: string) => { if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d'); measureCtx!.font = '600 13px Onest, system-ui, sans-serif'; return measureCtx!.measureText(s).width }
-// a framed portrait: the frame, then a name plate under it
-const PLQ = 48
-const boxH = (id: string) => { const p = byId(id); return p && p.frame ? frameDims(p.frame).h + PLQ : NH }
-const frameW = (p?: Person) => (p && p.frame ? frameDims(p.frame).w : NW)
-
 type View = { x: number; y: number; k: number }
 // pan/zoom survive switching pages, like in the prototype
 const TV = { view: { x: 0, y: 0, k: 1 } as View, fitted: false, lastN: -1, lastSz: '', refit: -1, lastTop: -1 }
 
-function NodeLabel({ p, yrs }: { p: Person; yrs: string }) {
+// Square cards, all the same size. A framed portrait takes the avatar's place inside the card.
+const FH = 78
+
+/** portrait in a circle, first name and surname on two lines, years */
+function Portrait({ p, yrs, kin }: { p: Person; yrs: string; kin: boolean }) {
+  const r = kin ? 29 : 32, cy = kin ? 59 : 50, y = cy + r + 20
   const rows = [p.first, p.last].filter(Boolean); if (!rows.length) rows.push(fullName(p))
-  const lh = 16, total = rows.length * lh + (yrs ? 16 : 0); let y = (NH - total) / 2 + 12
-  const max = NW - 54 - 12; const cut = rows.some(r => fitText(r, max) !== r)
   return <>
-    {cut && <title>{rows.join(' ')}</title>}
-    {rows.map((r, i) => { const el = <text key={i} className="nm" x="54" y={y}>{fitText(r, max)}</text>; y += lh; return el })}
-    {yrs && <text className="yr" x="54" y={y + 1}>{yrs}</text>}
+    <image href={avatarSrc(p)} x={NW / 2 - r} y={cy - r} width={2 * r} height={2 * r} clipPath="url(#avClip)" preserveAspectRatio="xMidYMid slice" />
+    <circle className="av-ring" cx={NW / 2} cy={cy} r={r} />
+    {rows.map((s, i) => <text key={i} className="nm" x={NW / 2} y={y + i * 16} textAnchor="middle">{fitText(s, NW - 20)}</text>)}
+    {yrs && <text className="yr" x={NW / 2} y={y + rows.length * 16 + (kin ? 0 : 2)} textAnchor="middle">{yrs}</text>}
+  </>
+}
+
+/** the person's frame drawn small inside the card, the full name on one line under it */
+function FramedPortrait({ p, yrs, kin }: { p: Person; yrs: string; kin: boolean }) {
+  const look = p.frame!, h = FH, sc = h / frameDims(look).h
+  const fs = frameSvg(look, 'fr' + p.id.replace(/[^A-Za-z0-9]/g, ''), avatarSrc(p), sc)
+  const top = kin ? 25 : 10, block = h + 20 + (yrs ? 15 : 0), fy = top + (NH - 6 - top - block) / 2
+  return <>
+    <ellipse className="fr-glow" cx={NW / 2} cy={fy + h / 2} rx={fs.w * .8} ry={h * .74} />
+    <g className="fr-art" transform={`translate(${(NW - fs.w) / 2},${fy})`} filter="url(#frShadow)" dangerouslySetInnerHTML={{ __html: `<defs>${fs.defs}</defs>${fs.body}` }} />
+    <text className="nm" x={NW / 2} y={fy + h + 18} textAnchor="middle">{fitText(fullName(p), NW - 18)}</text>
+    {yrs && <text className="yr" x={NW / 2} y={fy + h + 33} textAnchor="middle">{yrs}</text>}
   </>
 }
 
 function Memo() {
   const m = Progress.nearestBirthday(); if (!m) return null
   return (
-    <button className="tree-memo" id="treeMemo" type="button" onClick={() => openPerson(m.id)}>
-      <span className="d"><b>{m.day}</b><span>{m.month}</span></span>
+    <button className="tree-memo" id="treeMemo" type="button" onClick={openCalendar}>
+      <span className="d" aria-hidden="true"><span className="m">{m.month}</span><b>{m.day}</b></span>
       <span className="tx">{m.line} <b>{m.name}</b></span>
     </button>
   )
@@ -57,7 +71,7 @@ function Memo() {
 export default function TreePage() {
   const svgRef = useRef<SVGSVGElement>(null), gRef = useRef<SVGGElement>(null)
   const sel = ui.panel && ui.panel.mode === 'view' ? ui.panel.id : null
-  const lay = layout(boxH)
+  const lay = layout(() => NH)
   // the family's look: title above the tree, dashed places for the parents of the oldest relatives
   const st = S.settings, theme = themeOf(st.theme)
   const title = (st.familyName || '').trim()
@@ -77,6 +91,9 @@ export default function TreePage() {
   useEffect(() => { fog.current = mountFog(fogRef.current!, { density: .32, clear: .35 }); return () => fog.current?.destroy() }, [])
   useEffect(() => { if (fog.current) { fog.current.color = theme.fog; fog.current.target = .32 } }, [theme.k])
   const memo = Progress.nearestBirthday()
+  // «бабушка», «тёща»… under the names, relative to «you»; the chain of relatives for the selected person
+  const me = st.kin === false ? null : rootPerson()
+  const kin = me ? kinship(me.id) : null
 
   const apply = (anim?: boolean) => { const g = gRef.current; if (!g) return; const v = TV.view; if (anim) { g.style.transition = 'transform .35s'; setTimeout(() => { g.style.transition = '' }, 400) } g.setAttribute('transform', `translate(${v.x},${v.y}) scale(${v.k})`) }
   const fit = () => {
@@ -127,7 +144,7 @@ export default function TreePage() {
   // ---- links: marriages, then lines from the couple (or single parent) down to each child: smooth S-curves or straight steps
   const col = familyColors(!!theme.light); const links: JSX.Element[] = [], dots: JSX.Element[] = []
   const straight = st.lines === 'straight'
-  const box = (id: string) => { const P = lay.pos[id], fw = frameW(byId(id)); return { cx: P.x + NW / 2, l: P.x + (NW - fw) / 2, r: P.x + (NW + fw) / 2, top: P.y, bot: P.y + P.h, mid: P.top + P.rh / 2, g: P.g } }
+  const box = (id: string) => { const P = lay.pos[id]; return { cx: P.x + NW / 2, l: P.x, r: P.x + NW, top: P.y, bot: P.y + P.h, mid: P.top + P.rh / 2, g: P.g } }
   S.rels.filter(r => r.type === 'spouse' && lay.pos[r.a] && lay.pos[r.b]).forEach(r => {
     const A = box(r.a), B = box(r.b)
     const color = col.mar(r)
@@ -136,7 +153,7 @@ export default function TreePage() {
       // spouses not side by side (a third marriage): an arc under the cards instead of a line through someone else
       const apart = Math.abs(lay.pos[r.a].x - lay.pos[r.b].x) > NW + PG + 1, yb = Math.max(l.bot, rr.bot)
       links.push(<path key={'m' + r.id} className="link marriage" style={{ stroke: color }} d={apart ? `M${l.cx} ${yb}C${l.cx} ${yb + 44} ${rr.cx} ${yb + 44} ${rr.cx} ${yb}` : `M${l.r} ${l.mid}H${rr.l}`} />)
-      if (r.from && !apart) links.push(<text key={'mt' + r.id} className="yr" x={(l.r + rr.l) / 2} y={l.mid - 7} textAnchor="middle" style={{ fontFamily: 'var(--f-mono)', fontSize: 10, fill: color }}>{r.from}</text>)
+      if (r.from && !apart) links.push(<text key={'mt' + r.id} className="yr" x={(l.r + rr.l) / 2} y={l.mid - 7} textAnchor="middle" style={{ fontFamily: 'var(--f-mono)', fontSize: 10, fill: color }}>{yearOf(r.from) || r.from}</text>)
     }
     else { const my = (A.bot + B.top) / 2; links.push(<path key={'m' + r.id} className="link marriage" style={{ stroke: color }} d={`M${A.cx} ${A.bot}C${A.cx} ${my} ${B.cx} ${my} ${B.cx} ${B.top}`} />) }
   })
@@ -174,7 +191,7 @@ export default function TreePage() {
       <div className={'tree-wrap th-' + theme.k + (theme.light ? ' th-light' : '')}>
         <canvas className="tree-fog" ref={fogRef} aria-hidden="true" />
         <svg id="treeSvg" ref={svgRef}>
-          <defs><clipPath id="avClip"><circle r="21" /></clipPath>
+          <defs><clipPath id="avClip" clipPathUnits="objectBoundingBox"><circle cx=".5" cy=".5" r=".5" /></clipPath>
             <filter id="frShadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#000" floodOpacity=".45" /></filter>
             <radialGradient id="frGlow"><stop offset="0" stopColor="#F2C879" stopOpacity=".5" /><stop offset="1" stopColor="#F2C879" stopOpacity="0" /></radialGradient></defs>
           <g id="treeView" ref={gRef}>
@@ -192,35 +209,28 @@ export default function TreePage() {
             </g>}
             {links}{dots}
             {S.people.map(p => {
-              const P = lay.pos[p.id]; if (!P) return null; const yrs = yearsOf(p)
-              const cls = 'node' + (sel === p.id ? ' selected' : '') + (fillPercent(p) === 100 ? ' complete' : '')
-              if (p.frame) {
-                const fs = frameSvg(p.frame, 'fr' + p.id.replace(/[^A-Za-z0-9]/g, ''), avatarSrc(p)), nm = fitText(fullName(p), NW - 28)
-                const pw = Math.min(NW, Math.max(textW(nm), yrs.length * 7) + 28), py = fs.h + 10
-                return (
-                  <g key={p.id} className={cls + ' framed'} data-id={p.id} transform={`translate(${P.x},${P.y})`}>
-                    {nm !== fullName(p) && <title>{fullName(p)}</title>}
-                    <ellipse className="fr-glow" cx={NW / 2} cy={fs.h / 2} rx={fs.w * .8} ry={fs.h * .74} />
-                    <g className="fr-art" transform={`translate(${(NW - fs.w) / 2},0)`} filter="url(#frShadow)" dangerouslySetInnerHTML={{ __html: `<defs>${fs.defs}</defs>${fs.body}` }} />
-                    <rect className="card" x={(NW - pw) / 2} y={py} width={pw} height={yrs ? 38 : 26} rx="10" />
-                    <text className="nm" x={NW / 2} y={py + 17} textAnchor="middle">{nm}</text>
-                    {yrs && <text className="yr" x={NW / 2} y={py + 31} textAnchor="middle">{yrs}</text>}
-                  </g>
-                )
-              }
+              const P = lay.pos[p.id]; if (!P) return null; const yrs = yearsOf(p), k = kin && kin.label[p.id]
+              const cls = 'node' + (sel === p.id ? ' selected' : '') + (fillPercent(p) === 100 ? ' complete' : '') + (p.frame ? ' framed' : '')
               return (
                 <g key={p.id} className={cls} data-id={p.id} transform={`translate(${P.x},${P.y})`}>
-                  <rect className="card" width={NW} height={NH} rx="14" />
-                  <g transform={`translate(29,${NH / 2})`}>
-                    <image href={avatarSrc(p)} x="-21" y="-21" width="42" height="42" clipPath="url(#avClip)" preserveAspectRatio="xMidYMid slice" />
-                    <circle className="av-ring" r="21" />
-                  </g>
-                  <NodeLabel p={p} yrs={yrs} />
+                  <title>{fullName(p) + (k ? ' — ' + k : '')}</title>
+                  <rect className="card" width={NW} height={NH} rx="16" />
+                  {k && <text className="kn" x={NW / 2} y="19" textAnchor="middle" style={{ fill: col.kin(p.id) }}>{fitText(k, NW - 18, KN_FONT)}</text>}
+                  {p.frame ? <FramedPortrait p={p} yrs={yrs} kin={!!k} /> : <Portrait p={p} yrs={yrs} kin={!!k} />}
                 </g>
               )
             })}
           </g>
         </svg>
+        {kin && sel && me && sel !== me.id && byId(sel) && (() => {
+          const chain = kin.chain(sel)
+          return <div className="tree-kin" aria-live="polite">
+            <span className="k" style={{ color: col.kin(sel) }}>{kin.label[sel]}</span>
+            <b className="n">{fullName(byId(sel))}</b>
+            {chain.length > 1 && <span className="ch">{chain.map((id, i) => <span key={id}>{i > 0 && <i aria-hidden="true">→</i>}{chainName(id)}</span>)}</span>}
+            {!kin.blood[sel] && <span className="m">{t('kin.marriage')}</span>}
+          </div>
+        })()}
         {!S.people.length && <div className="empty" id="treeEmpty">
           <h3>{t('tree.empty.h')}</h3><p className="muted" style={{ maxWidth: '36ch' }}>{t('tree.empty.p')}</p>
           <button className="btn primary" onClick={() => editPerson(null)}>{t('tree.add')}</button>

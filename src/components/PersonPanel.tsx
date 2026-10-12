@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react'
 import {
-  ui, t, LANG, byId, fullName, fillPercent, formerNames,
+  ui, S, t, LANG, byId, fullName, spousesOf, yearOf, fillPercent, formerNames,
   closePanel, openPerson, editPerson, editEvent, openModal, commit, refresh, toast, removePerson, pickFile, uid, addPerson,
   avatarSrc, surnameFor, normDate, dateValid, bindDateMask, syncLifeEvents, ensureFathers, type Person, type EvType, type FormerName, type RelKind,
 } from '../lib/core'
@@ -208,12 +208,26 @@ function EditPerson({ id, preset, after }: { id: string | null; preset?: Partial
 }
 
 function EditEvent({ pid, eid }: { pid: string; eid: string | null }) {
-  const p = byId(pid)!; const e = eid ? p.events.find(x => x.id === eid)! : { id: '', type: 'move' as EvType, year: '' as const, place: '', lat: null, lon: null, note: '' }
-  const form = useRef<HTMLFormElement>(null)
+  const p = byId(pid)!; const e = eid ? p.events.find(x => x.id === eid)! : { id: '', type: 'move' as EvType, year: '' as const, place: '', lat: null, lon: null, note: '' } as LifeEventDraft
+  const form = useRef<HTMLFormElement>(null), dateRef = useRef<HTMLInputElement>(null)
+  const [type, setType] = useState<EvType>(e.type)
+  // a wedding: the full date goes into the marriage link too, so the Tree and the family calendar know it
+  const spouses = spousesOf(pid)
+  const relWith = (sid: string) => S.rels.find(r => r.type === 'spouse' && ((r.a === pid && r.b === sid) || (r.b === pid && r.a === sid)))
+  const withId = e.with || (spouses.length === 1 ? spouses[0].id : '')
+  const date0 = e.date || (withId && relWith(withId)?.from) || (e.year ? String(e.year) : '')
+  useEffect(() => { if (type === 'marriage' && dateRef.current) return bindDateMask(dateRef.current) }, [type])
   const save = () => {
     const d = Object.fromEntries(new FormData(form.current!).entries()) as Record<string, string>
-    const ne = { id: e.id || uid(), type: d.type as EvType, year: (d.year ? +d.year : '') as number | '', place: d.place.trim(), lat: d.lat === '' ? null : +d.lat, lon: d.lon === '' ? null : +d.lon, note: d.note.trim() }
-    if (!eid) p.events.push(ne); else Object.assign(e, ne)
+    const ne: LifeEventDraft = { id: e.id || uid(), type: d.type as EvType, year: (d.year ? +d.year : '') as number | '', place: d.place.trim(), lat: d.lat === '' ? null : +d.lat, lon: d.lon === '' ? null : +d.lon, note: d.note.trim() }
+    if (ne.type === 'marriage') {
+      const date = normDate(d.date || '')
+      if (!dateValid(date)) { dateRef.current?.classList.add('bad'); toast(t('p.date.bad')); return }
+      ne.year = date ? (+yearOf(date) || '') : ''
+      ne.date = date; ne.with = d.with || undefined
+      const r = ne.with ? relWith(ne.with) : undefined; if (r && date) r.from = date
+    }
+    if (!eid) p.events.push(ne as typeof p.events[number]); else { Object.assign(e, ne); if (ne.type !== 'marriage') { delete e.date; delete e.with } }
     commit(); openPerson(pid)
   }
   const onPlace = (v: string) => { const c = findCity(v); const f = form.current!; if (c) { (f.elements.namedItem('lat') as HTMLInputElement).value = String(c.lat); (f.elements.namedItem('lon') as HTMLInputElement).value = String(c.lon) } }
@@ -225,9 +239,16 @@ function EditEvent({ pid, eid }: { pid: string; eid: string | null }) {
   return <Frame title={t('ev.title')} foot={foot}>
     <form className="form" ref={form} onSubmit={ev => { ev.preventDefault(); save() }}>
       <div className="row">
-        <div className="field"><label>{t('ev.type')}</label><select name="type" defaultValue={e.type}>{EV_TYPES.map(k => <option key={k} value={k}>{t('ev.' + k)}</option>)}</select></div>
-        <div className="field"><label>{t('ev.year')}</label><input name="year" type="number" defaultValue={e.year || ''} placeholder="1955" /></div>
+        <div className="field"><label>{t('ev.type')}</label><select name="type" defaultValue={e.type} onChange={x => setType(x.target.value as EvType)}>{EV_TYPES.map(k => <option key={k} value={k}>{t('ev.' + k)}</option>)}</select></div>
+        {type === 'marriage'
+          ? <div className="field"><label>{t('ev.date')}</label><input name="date" ref={dateRef} defaultValue={date0} placeholder={t('p.date.ph')} /></div>
+          : <div className="field"><label>{t('ev.year')}</label><input name="year" type="number" defaultValue={e.year || ''} placeholder="1955" /></div>}
       </div>
+      {type === 'marriage' && <>
+        {spouses.length > 1 && <div className="field"><label>{t('ev.with')}</label><select name="with" defaultValue={withId}><option value="">—</option>{spouses.map(s => <option key={s.id} value={s.id}>{fullName(s)}</option>)}</select></div>}
+        {spouses.length === 1 && <input type="hidden" name="with" value={spouses[0].id} />}
+        <p className="muted" style={{ fontSize: 12.5, margin: '-4px 0 0' }}>{t('ev.date.hint')}</p>
+      </>}
       <div className="field"><label>{t('ev.place')}</label><input name="place" list="cityList" defaultValue={e.place || ''} placeholder={t('ev.place.ph')} onInput={x => onPlace((x.target as HTMLInputElement).value)} />
         <datalist id="cityList">{CITIES.map(c => <option key={c.ru + c.lat} value={LANG === 'en' ? c.en : c.ru} />)}</datalist></div>
       <div className="row">
@@ -238,4 +259,4 @@ function EditEvent({ pid, eid }: { pid: string; eid: string | null }) {
     </form>
   </Frame>
 }
-
+type LifeEventDraft = { id: string; type: EvType; year: number | ''; place: string; lat: number | null; lon: number | null; note: string; date?: string; with?: string }

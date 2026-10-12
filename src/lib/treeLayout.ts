@@ -2,7 +2,8 @@
 // Tree: layered layout. Generations by relaxation, couples as blocks, crossing-minimising sweeps, then x placement.
 import { S, byId, parentsOf, childrenOf, spousesOf, stepParentsOf, stepChildrenOf, linkedSiblingsOf, yearOf } from './core'
 
-export const DIM={NW:176,NH:68,PG:30,GAP:70,LH:120};
+// square cards: 152×152, 26 px between spouses, 56 px between families, 100 px between generations
+export const DIM={NW:152,NH:152,PG:26,GAP:56,LH:100};
 export const {NW,NH,PG,GAP,LH}=DIM;
 
 /** hOf(id) — height of a person's box (a framed portrait is taller than a card); rows take the tallest box, boxes are centred in their row. */
@@ -106,7 +107,7 @@ export function layout(hOf){
 const okc=(c,light)=>light?`oklch(${(c.l-.25).toFixed(3)} ${Math.min(.2,c.c+.03).toFixed(3)} ${c.h.toFixed(1)})`:`oklch(${c.l.toFixed(3)} ${c.c.toFixed(3)} ${c.h.toFixed(1)})`;
 const GOLD={l:.84,c:.125,h:82};
 /** «me»: the person marked as you; otherwise the youngest person with the most known ancestors */
-function rootPerson(){
+export function rootPerson(){
   const me=S.settings.meId&&byId(S.settings.meId); if(me) return me;
   const anc=id=>{ const seen=new Set(), st=[id]; while(st.length){ const x=st.pop(); parentsOf(x).forEach(p=>{ if(!seen.has(p.id)){ seen.add(p.id); st.push(p.id); } }); } return seen.size; };
   let root=null, bestN=-1; S.people.filter(p=>!childrenOf(p.id).length).forEach(p=>{ const n=anc(p.id); if(n>bestN||(n===bestN&&(yearOf(p.birthDate)||'0')>(yearOf(root.birthDate)||'0'))){ bestN=n; root=p; } });

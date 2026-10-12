@@ -3,6 +3,10 @@ import { S, ui, go, setLang, t, LANG, generations, type Page } from '../lib/core
 import { predkiLogo } from '../lib/logo'
 import { Progress } from '../lib/progress'
 import { PassportIcon, passportLabel, openShare } from './ShareSheet'
+import { openCalendar } from './FamilyCalendar'
+
+/** a calendar page with two rings and a few marked days */
+const CalendarIcon = () => <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /><path d="M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01" strokeWidth="2.4" strokeLinecap="round" /></svg>
 
 const NAV: [Page, JSX.Element][] = [
   ['tree', <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5" /><circle cx="5" cy="19" r="2.5" /><circle cx="19" cy="19" r="2.5" /><path d="M12 7.5V12M12 12 5 16.5M12 12l7 4.5" /></svg>],
@@ -54,6 +58,7 @@ export default function Sidebar() {
       </div>
       <nav className="nav" id="nav">
         {NAV.map(([k, icon]) => <Fragment key={k}>
+          {k === 'settings' && S.people.length > 0 && <button className={'nav-calendar' + (ui.calendar ? ' active' : '')} onClick={openCalendar} title={t('nav.calendar')}><CalendarIcon /><span>{t('nav.calendar')}</span></button>}
           {k === 'settings' && S.people.length > 0 && <button className={'nav-passport' + (ui.share ? ' active' : '')} onClick={openShare} title={passportLabel()}><PassportIcon /><span>{passportLabel()}</span></button>}
           <button className={(ui.page === k ? 'active' : '') + (k === 'settings' ? ' nav-settings' : '') + (k === 'ai' ? ' nav-ai' : '')} onClick={() => go(k)} title={t('nav.' + k)}>
             {icon}<span>{t('nav.' + k)}</span>

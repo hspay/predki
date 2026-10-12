@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ui, t, commit, refresh, type Person } from '../lib/core'
-import { FR, frameSvg, frameName, frameMood, frameAchName, isOpen, varOf, colorName, PAL, type FrameLook, type FrameSize } from '../lib/frames'
+import { FR, frameSvg, frameName, frameMood, frameAchName, isOpen, varOf, colorName, PAL, type FrameLook } from '../lib/frames'
 import Avatar from './Avatar'
 
 const Lock = () => <svg className="fp-lock" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2.5" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
@@ -14,7 +14,7 @@ export default function FrameEditor({ p }: { p: Person }) {
   const choose = (id: string) => {
     const N = FR.find(x => x.id === id)!
     if (!isOpen(N)) { setHint(t('frm.lock', { a: frameAchName(N) })); return }
-    setHint(''); set({ id, color: varOf(N, look?.color).k, size: look?.size || 'M' })
+    setHint(''); set({ id, color: varOf(N, look?.color).k, size: 'M' })
   }
   const close = () => { ui.frameEdit = false; refresh() }
   return (
@@ -44,10 +44,6 @@ export default function FrameEditor({ p }: { p: Person }) {
         <div className="fp-sw">
           {F.vars.map((V: { k: string; edge?: string; ring?: string }) => <button key={V.k} type="button" aria-label={colorName(V.k)} title={colorName(V.k)} aria-pressed={V.k === varOf(F, look.color).k} style={{ background: PAL[V.k][0] }} onClick={() => set({ ...look, color: V.k })}>
             {(V.edge || V.ring) && <i style={{ boxShadow: `0 0 0 3px ${V.edge || V.ring} inset` }} />}</button>)}
-        </div>
-        <div className="fp-row"><span className="eyebrow">{t('frm.size')}</span></div>
-        <div className="ts-seg" role="radiogroup" aria-label={t('frm.size')}>
-          {(['S', 'M', 'L'] as FrameSize[]).map(s => <button key={s} type="button" role="radio" aria-checked={look.size === s} onClick={() => set({ ...look, size: s })}>{t('frm.' + s)}</button>)}
         </div>
       </>}
       <p className="fe-note fe-desk">{t('frm.live')}</p>

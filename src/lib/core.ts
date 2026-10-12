@@ -14,7 +14,9 @@ import { mediaUrl, isCloudRef, isInline, uploadInline, isPermanent, removeRefs, 
 // ---------- types ----------
 export type Gender = '' | 'm' | 'f'
 export type EvType = 'birth' | 'move' | 'study' | 'work' | 'marriage' | 'death' | 'other'
-export interface LifeEvent { id: string; type: EvType; year: number | ''; place: string; lat: number | null; lon: number | null; note: string }
+export interface LifeEvent { id: string; type: EvType; year: number | ''; place: string; lat: number | null; lon: number | null; note: string
+  /** a wedding: the full date (ДД.ММ.ГГГГ, also written into the marriage link) and the spouse */
+  date?: string; with?: string }
 export interface Media { id: string; type: 'photo' | 'doc'; name: string; data: string }
 export interface Person {
   id: string; first: string; last: string; maiden: string; patronymic: string; gender: Gender
@@ -36,6 +38,8 @@ export interface Settings {
   theme?: string; familyName?: string; ghosts?: boolean
   /** links between relatives on the Tree */
   lines?: 'smooth' | 'straight'
+  /** kinship labels on the Tree cards («бабушка», «тёща»), on unless switched off */
+  kin?: boolean
   /** «you» in the tree and the day the family started using Predki (ДД.ММ.ГГГГ), both shown on the family passport */
   meId?: string; since?: string
   /** last look picked for the family passport */
@@ -131,6 +135,8 @@ export const ui = {
   /** the «Семья» block of the profile shows remove buttons and «Связать» */
   relEdit: false,
   onboarding: false, firstRun: false, loaded: false, treeRefit: 0, mapRefit: 0, share: false,
+  /** «Календарь семьи» is open over the page */
+  calendar: false,
   ai: { mode: 'text' as 'text' | 'audio' | 'photo', drafts: [] as Draft[], busy: false, transcript: '', text: '', ran: false, simulating: false },
 }
 

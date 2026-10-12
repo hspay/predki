@@ -31,10 +31,12 @@ export const frameMood = F => F.mood[LANG === 'en' ? 1 : 0]
 export const frameAchName = F => (F.achT ? F.achT[LANG === 'en' ? 1 : 0] : '')
 export const isOpen = F => !F.ach || (S.achievements || []).includes(F.ach)
 export const varOf = (F, key) => F.vars.find(v => v.k === key) || F.vars[0]
-export function frameDims(look: FrameLook) { const F = FBY[look.id] || FR[0], sc = SZ[look.size] || 1; return { w: F.base[0] * sc, h: F.base[1] * sc } }
+// one size for every frame now («Средняя»); a size saved earlier is ignored
+export function frameDims(look: FrameLook) { const F = FBY[look.id] || FR[0], sc = 1; return { w: F.base[0] * sc, h: F.base[1] * sc } }
 /** SVG pieces for a portrait in a frame: defs (gradients, clip paths) and the drawing, sized w×h with the origin at the top-left. */
-export function frameSvg(look: FrameLook, u: string, photo?: string) {
-  const F = FBY[look.id] || FR[0], sc = SZ[look.size] || 1, w = F.base[0] * sc, h = F.base[1] * sc, v = varOf(F, look.color)
+/** scale: draw at this scale instead of the size's own (the Tree draws frames small, inside the square card) */
+export function frameSvg(look: FrameLook, u: string, photo?: string, scale?: number) {
+  const F = FBY[look.id] || FR[0], sc = scale || 1, w = F.base[0] * sc, h = F.base[1] * sc, v = varOf(F, look.color)
   const D = FRAMES[F.id](w, h, v, u, sc)
   const [ix, iy, iw, ih] = D.win || [0, 0, w, h]
   const img = photo ? `<image href="${photo}" x="${f(ix)}" y="${f(iy)}" width="${f(iw)}" height="${f(ih)}" preserveAspectRatio="xMidYMid slice" clip-path="url(#c${u})"/>` : ''
