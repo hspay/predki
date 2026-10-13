@@ -3,6 +3,13 @@ export interface Release { date: string; items: { ru: string; en: string }[] }
 
 export const CHANGELOG: Release[] = [
   {
+    date: '2026-10-12',
+    items: [
+      { ru: 'Добавили Пробелы — раздел для заполнения пробелов в истории семьи.', en: 'Added Gaps — a section for filling in the gaps in your family history.' },
+      { ru: 'Добавили Календарь — памятные даты в одном месте.', en: 'Added Calendar — the family’s memorable dates in one place.' },
+    ],
+  },
+  {
     date: '2026-10-09',
     items: [
       { ru: 'Исправлены баги интерфейса (за тест спасибо Ане Журавской <3)', en: 'Interface bugs fixed (thanks to Anya Zhuravskaya for testing <3)' },

@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { ui, boot, useStore, bump, cloud } from './lib/core'
+import { refreshInbox } from './lib/invites'
 import AuthScreen from './components/AuthScreen'
 import Sidebar from './components/Sidebar'
 import Toasts from './components/Toasts'
@@ -13,8 +14,7 @@ import FamilyCalendar from './components/FamilyCalendar'
 import TreePage from './pages/TreePage'
 import MapPage from './pages/MapPage'
 import ProgressPage from './pages/ProgressPage'
-import PeoplePage from './pages/PeoplePage'
-import ArchivistPage from './pages/ArchivistPage'
+import GapsPage from './pages/GapsPage'
 import SettingsPage from './pages/SettingsPage'
 
 export default function App() {
@@ -22,6 +22,8 @@ export default function App() {
   useEffect(() => { boot() }, [])
   // names on the tree are measured with the real font: redraw once Onest has loaded
   useEffect(() => { document.fonts?.ready.then(() => bump()) }, [])
+  // answers from relatives («Попросить заполнить»): the number shows on «Заполнить пробелы» in the menu
+  useEffect(() => { if (ui.loaded && cloud.session) refreshInbox() }, [ui.loaded, !!cloud.session])
   if (!ui.loaded) return null
   const p = ui.page
   // after the welcome landing nobody enters the tree without an account (unless they chose «without an account»)
@@ -39,8 +41,7 @@ export default function App() {
           {p === 'tree' && <TreePage />}
           {p === 'map' && <MapPage />}
           {p === 'progress' && <ProgressPage />}
-          {p === 'people' && <PeoplePage />}
-          {p === 'ai' && <ArchivistPage />}
+          {p === 'gaps' && <GapsPage />}
           {p === 'settings' && <SettingsPage />}
           <PersonPanel />
         </main>

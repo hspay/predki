@@ -113,7 +113,7 @@ export function askToSignIn() { setSkipped(false); bump() }
 export function continueWithoutAccount() { setSkipped(true); bump() }
 
 // ---------- UI state ----------
-export type Page = 'tree' | 'map' | 'progress' | 'people' | 'ai' | 'settings'
+export type Page = 'tree' | 'map' | 'progress' | 'gaps' | 'settings' // 'ai' (Архивариус) is archived: _backup/archivist-page
 export type Panel =
   | { mode: 'view'; id: string }
   | { mode: 'edit'; id: string | null; preset?: Partial<Person> & { _title?: string; _rel?: RelKind }; after?: (p: Person, step: boolean) => void; key: number }

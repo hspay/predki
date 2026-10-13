@@ -4,6 +4,7 @@ import { predkiLogo } from '../lib/logo'
 import { Progress } from '../lib/progress'
 import { PassportIcon, passportLabel, openShare } from './ShareSheet'
 import { openCalendar } from './FamilyCalendar'
+import { newCount } from '../lib/invites'
 
 /** a calendar page with two rings and a few marked days */
 const CalendarIcon = () => <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /><path d="M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01" strokeWidth="2.4" strokeLinecap="round" /></svg>
@@ -12,8 +13,7 @@ const NAV: [Page, JSX.Element][] = [
   ['tree', <svg viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5" /><circle cx="5" cy="19" r="2.5" /><circle cx="19" cy="19" r="2.5" /><path d="M12 7.5V12M12 12 5 16.5M12 12l7 4.5" /></svg>],
   ['map', <svg viewBox="0 0 24 24"><path d="M3 6.5 9 4l6 2.5 6-2.5v13.5L15 20l-6-2.5-6 2.5z" /><path d="M9 4v13.5M15 6.5V20" /></svg>],
   ['progress', <svg viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0z" /><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4" /><path d="M12 13v4M9 20h6M10 17h4" /></svg>],
-  ['people', <svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" /><circle cx="17" cy="9" r="2.5" /><path d="M16 14.5c3 0 5.5 2 5.5 5" /></svg>],
-  ['ai', <svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z" /><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z" /></svg>],
+  ['gaps', <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.4-4.4" /></svg>],
   ['settings', <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>],
 ]
 
@@ -60,11 +60,10 @@ export default function Sidebar() {
         {NAV.map(([k, icon]) => <Fragment key={k}>
           {k === 'settings' && S.people.length > 0 && <button className={'nav-calendar' + (ui.calendar ? ' active' : '')} onClick={openCalendar} title={t('nav.calendar')}><CalendarIcon /><span>{t('nav.calendar')}</span></button>}
           {k === 'settings' && S.people.length > 0 && <button className={'nav-passport' + (ui.share ? ' active' : '')} onClick={openShare} title={passportLabel()}><PassportIcon /><span>{passportLabel()}</span></button>}
-          <button className={(ui.page === k ? 'active' : '') + (k === 'settings' ? ' nav-settings' : '') + (k === 'ai' ? ' nav-ai' : '')} onClick={() => go(k)} title={t('nav.' + k)}>
+          <button className={(ui.page === k ? 'active' : '') + (k === 'settings' ? ' nav-settings' : '')} onClick={() => go(k)} title={t('nav.' + k)}>
             {icon}<span>{t('nav.' + k)}</span>
-            {k === 'ai' && <i className="beta">beta</i>}
-            {k === 'ai' && ui.ai.drafts.length > 0 && <i className="badge">{ui.ai.drafts.length}</i>}
             {k === 'progress' && unseen > 0 && <i className="badge">{unseen}</i>}
+            {k === 'gaps' && newCount() > 0 && <i className="badge">{newCount()}</i>}
           </button>
         </Fragment>)}
       </nav>

@@ -188,7 +188,7 @@ const COPY = {
   ru: {
     sub: 'Предки — конструктор семейного древа и карта миграций',
     brandTag: 'семейное древо',
-    nav: { tree: 'Древо', map: 'Карта', progress: 'Прогресс', people: 'Люди', ai: 'Архивариус', card: 'Анкета' },
+    nav: { tree: 'Древо', map: 'Карта', progress: 'Прогресс', gaps: 'Пробелы', ai: 'Архивариус', card: 'Анкета' },
     growth: 'Вашему древу: 128 лет', growthSub: '12 человек · 4 поколения',
     suiteH: 'Вся семья в одном месте', suiteBtn: 'Начать с себя', more: 'Попробовать',
     tabs: {
@@ -228,7 +228,7 @@ const COPY = {
   en: {
     sub: 'Predki is a family tree builder and a map of your family’s moves',
     brandTag: 'family tree',
-    nav: { tree: 'Tree', map: 'Map', progress: 'Progress', people: 'People', ai: 'Archivist', card: 'Profile' },
+    nav: { tree: 'Tree', map: 'Map', progress: 'Progress', gaps: 'Gaps', ai: 'Archivist', card: 'Profile' },
     growth: 'Your tree: 128 years', growthSub: '12 people · 4 generations',
     suiteH: 'Your whole family in one place', suiteBtn: 'Start with me', more: 'Try it',
     tabs: {
@@ -272,7 +272,7 @@ const I = {
   tree: '<svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="5" r="2.5"/><circle cx="5" cy="19" r="2.5"/><circle cx="19" cy="19" r="2.5"/><path d="M12 7.5V12M12 12 5 16.5M12 12l7 4.5"/></svg>',
   map: '<svg class="ico" viewBox="0 0 24 24"><path d="M3 6.5 9 4l6 2.5 6-2.5v13.5L15 20l-6-2.5-6 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg>',
   progress: '<svg class="ico" viewBox="0 0 24 24"><path d="M8 4h8v5a4 4 0 0 1-8 0z"/><path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4"/><path d="M12 13v4M9 20h6M10 17h4"/></svg>',
-  people: '<svg class="ico" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.5c3 0 5.5 2 5.5 5"/></svg>',
+  gaps: '<svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5"/><path d="m20 20-4.4-4.4"/></svg>',
   ai: '<svg class="ico" viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>',
   spark: '<svg class="ico" viewBox="0 0 24 24"><path d="M12 3l1.8 4.7L18.5 9.5l-4.7 1.8L12 16l-1.8-4.7L5.5 9.5l4.7-1.8z"/></svg>',
   card: '<svg class="ico" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="3"/><circle cx="9" cy="10.5" r="2.2"/><path d="M5.8 16.5c.6-1.8 1.8-2.7 3.2-2.7s2.6.9 3.2 2.7M14.5 9.5h3.5M14.5 13h3.5"/></svg>',
@@ -369,7 +369,7 @@ function tabBody(k, C, world, logo) {
       <div class="dcards"><span class="lbl">${esc(a.found)}</span>${dc(a.d1, 'm')}${dc(a.d2, 'f', a.d2[3])}${dc(a.d3, 'f', null, true)}</div></div>`; }
   if (k === 'progress') body = `<img class="prog-shot" src="${progressShot}" alt="${esc(C.progAlt)}">`;
   const active = k;
-  const NAVM = ['tree', 'map', 'progress', 'people', 'ai'];
+  const NAVM = ['tree', 'map', 'progress', 'gaps', 'ai'];
   return `<aside class="m-side"><div class="m-brand"><span class="mark">${logo}</span><div>Predki<small>${esc(C.brandTag)}</small></div></div>
       ${NAVM.map(n => `<div class="m-nav${n === active ? ' on' : ''}">${I[n]}${esc(C.nav[n])}${n === 'ai' ? '<span class="beta">beta</span>' : ''}</div>`).join('')}
       <div class="m-grow">${ring(45)}<div><b>${esc(C.growth)}</b><small>${esc(C.growthSub)}</small></div></div></aside>
