@@ -5,6 +5,7 @@ export const CHANGELOG: Release[] = [
   {
     date: '2026-10-16',
     items: [
+      { ru: 'Мяу! Добавили питомцев.', en: 'Meow! Pets are here.' },
       { ru: 'Обновлены Настройки и Календарь', en: 'Settings and Calendar updated' },
       { ru: 'У светлой темы исправлена вёрстка', en: 'Light theme layout fixed' },
       { ru: 'Фикс багов в мобильной вёрстке', en: 'Mobile layout bug fixes' },
