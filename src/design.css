@@ -820,3 +820,9 @@ main{border-radius:var(--r-card);background:var(--mainbg);border-color:var(--edg
 .cal-lg .k-death i{border-color:var(--k-death);border-style:dashed}
 .cal-lg .k-wedding i{border-color:var(--k-wedding)}
 @media (max-width:860px){ .cal-t h2{font-size:28px} .cal-nav h3{font-size:26px} }
+
+/* card frames (October 2026): the frame shelf shows each frame on a small copy of the person's card */
+.fp-tile svg{width:84px;height:86px}
+.fp-tile.locked svg{opacity:.45;filter:grayscale(.5)}
+@media (max-width:560px){.fp-tile svg{width:72px;height:74px}}
+.node.framed .frm{pointer-events:none}

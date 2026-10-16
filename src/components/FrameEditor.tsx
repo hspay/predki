@@ -1,22 +1,25 @@
 import { useState } from 'react'
-import { ui, t, commit, refresh, type Person } from '../lib/core'
-import { FR, frameSvg, frameName, frameMood, frameAchName, isOpen, varOf, colorName, PAL, type FrameLook } from '../lib/frames'
-import Avatar from './Avatar'
+import { ui, t, commit, refresh, avatarSrc, yearsOf, type Person } from '../lib/core'
+import { FR, frameOf, frameName, frameMood, frameAchName, isOpen, colorName, swatchCss, miniCard, type FrameLook } from '../lib/frames'
+import { isLight } from '../lib/appearance'
 
 const Lock = () => <svg className="fp-lock" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2.5" /><path d="M8 11V8a4 4 0 0 1 8 0v3" /></svg>
 
-/** «Настроить рамку»: replaces the profile under the photo; every change shows up on the Tree right away. */
+/** «Настроить рамку»: the card's own frame on the Tree; replaces the profile under the photo, every change shows up on the Tree right away. */
 export default function FrameEditor({ p }: { p: Person }) {
   const [hint, setHint] = useState('')
-  const look = p.frame
+  const look = frameOf(p)
   const F = look ? FR.find(x => x.id === look.id) : null
   const set = (f?: FrameLook) => { if (f) p.frame = f; else delete p.frame; commit(true) }
   const choose = (id: string) => {
     const N = FR.find(x => x.id === id)!
     if (!isOpen(N)) { setHint(t('frm.lock', { a: frameAchName(N) })); return }
-    setHint(''); set({ id, color: varOf(N, look?.color).k, size: 'M' })
+    setHint(''); set({ id, color: look && look.id === id ? look.color : N.vars[0] })
   }
   const close = () => { ui.frameEdit = false; refresh() }
+  const card = { src: avatarSrc(p), first: p.first, last: p.last, years: yearsOf(p), light: isLight() }
+  const tile = (svg: string) => <svg viewBox="-32 -34 216 222" aria-hidden="true" dangerouslySetInnerHTML={{ __html: svg }} />
+  const key = p.id.replace(/[^A-Za-z0-9]/g, '')
   return (
     <div className="fe">
       <div className="fe-head">
@@ -27,23 +30,21 @@ export default function FrameEditor({ p }: { p: Person }) {
 
       <div className="fp-grid" role="radiogroup" aria-label={t('frm.title')}>
         <button type="button" role="radio" aria-checked={!look} className="fp-tile" onClick={() => { setHint(''); set() }}>
-          <span className="fp-none"><Avatar p={p} size={22} /><i /></span>{t('frm.none')}
+          {tile(miniCard(null, 'fpn' + key, card))}{t('frm.none')}
         </button>
         {FR.map(N => {
-          const th = frameSvg({ id: N.id, color: varOf(N, look?.color).k, size: 'M' }, 'fpt' + N.id), open = isOpen(N)
+          const open = isOpen(N), th = miniCard({ id: N.id, color: look && look.id === N.id ? look.color : N.vars[0] }, 'fpt' + N.id + key, card)
           return <button key={N.id} type="button" role="radio" aria-checked={look?.id === N.id} aria-disabled={!open} className={'fp-tile' + (open ? '' : ' locked')} title={open ? frameMood(N) : t('frm.lock', { a: frameAchName(N) })} onClick={() => choose(N.id)}>
-            <svg viewBox={`-6 -6 ${th.w + 12} ${th.h + 12}`} aria-hidden="true" dangerouslySetInnerHTML={{ __html: `<defs>${th.defs}</defs>${th.body}` }} />
-            {!open && <Lock />}{frameName(N)}
+            {tile(th)}{!open && <Lock />}{frameName(N)}
           </button>
         })}
       </div>
       {hint && <p className="fp-hint" role="status">{hint}</p>}
 
       {look && F && <>
-        <div className="fp-row"><span className="eyebrow">{t('frm.color')}</span><span className="fp-val">{colorName(varOf(F, look.color).k)}</span></div>
+        <div className="fp-row"><span className="eyebrow">{t('frm.color')}</span><span className="fp-val">{colorName(look.color)}</span></div>
         <div className="fp-sw">
-          {F.vars.map((V: { k: string; edge?: string; ring?: string }) => <button key={V.k} type="button" aria-label={colorName(V.k)} title={colorName(V.k)} aria-pressed={V.k === varOf(F, look.color).k} style={{ background: PAL[V.k][0] }} onClick={() => set({ ...look, color: V.k })}>
-            {(V.edge || V.ring) && <i style={{ boxShadow: `0 0 0 3px ${V.edge || V.ring} inset` }} />}</button>)}
+          {F.vars.map((v: string) => <button key={v} type="button" aria-label={colorName(v)} title={colorName(v)} aria-pressed={v === look.color} style={{ background: swatchCss(v) }} onClick={() => set({ id: look.id, color: v })} />)}
         </div>
       </>}
       <p className="fe-note fe-desk">{t('frm.live')}</p>

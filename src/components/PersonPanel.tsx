@@ -2,12 +2,13 @@ import React, { useEffect, useRef, useState } from 'react'
 import {
   ui, S, t, LANG, byId, fullName, spousesOf, yearOf, fillPercent, formerNames,
   closePanel, openPerson, showNewPerson, editPerson, editEvent, openModal, commit, refresh, toast, removePerson, pickFile, uid, addPerson,
-  avatarSrc, surnameFor, normDate, dateValid, bindDateMask, syncLifeEvents, ensureFathers, type Person, type EvType, type FormerName, type RelKind,
+  avatarSrc, yearsOf, surnameFor, normDate, dateValid, bindDateMask, syncLifeEvents, ensureFathers, type Person, type EvType, type FormerName, type RelKind,
 } from '../lib/core'
 import { rootPerson } from '../lib/treeLayout'
 import { kinship } from '../lib/kinship'
 import { addRelative, relativesOf, unlinkPeople } from '../lib/relations'
-import { frameSvg } from '../lib/frames'
+import { frameOf, miniCard } from '../lib/frames'
+import { isLight } from '../lib/appearance'
 import { CITIES, findCity } from '../lib/world'
 import { mediaUrl } from '../lib/media'
 import Avatar from './Avatar'
@@ -46,9 +47,9 @@ export default function PersonPanel() {
 
 /** On a phone the Tree is hidden behind the profile, so the frame being set up is shown right here. */
 function FramePreview({ p }: { p: Person }) {
-  if (!p.frame) return <div className="fe-prev"><Avatar p={p} size={120} /></div>
-  const fs = frameSvg(p.frame, 'fpv' + p.id.replace(/[^A-Za-z0-9]/g, ''), avatarSrc(p))
-  return <div className="fe-prev"><svg width={fs.w + 12} height={fs.h + 12} viewBox={`-6 -6 ${fs.w + 12} ${fs.h + 12}`} aria-hidden="true" dangerouslySetInnerHTML={{ __html: `<defs>${fs.defs}</defs>${fs.body}` }} /></div>
+  const look = frameOf(p)
+  const svg = miniCard(look, 'fpv' + p.id.replace(/[^A-Za-z0-9]/g, ''), { src: avatarSrc(p), first: p.first, last: p.last, years: yearsOf(p), light: isLight() })
+  return <div className="fe-prev"><svg width="216" height="222" viewBox="-32 -34 216 222" aria-hidden="true" dangerouslySetInnerHTML={{ __html: svg }} /></div>
 }
 
 /** «Семья»: relatives by kind; «Изменить» adds a remove button to each link and «Связать с человеком из древа». */

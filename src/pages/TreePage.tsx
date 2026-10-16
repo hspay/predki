@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { S, ui, t, LANG, byId, yearOf, parentsOf, childrenOf, yearsOf, avatarSrc, fullName, fillPercent, generations, openPerson, closePanel, editPerson, bump, type Person } from '../lib/core'
 import { addRelative } from '../lib/relations'
-import { frameSvg, frameDims } from '../lib/frames'
+import { frameOf, frameArt } from '../lib/frames'
 import { themeOf } from '../lib/treeStyle'
 import TreeStyle from '../components/TreeStyle'
 import { openCalendar } from '../components/FamilyCalendar'
@@ -35,8 +35,7 @@ const TV = { view: { x: 0, y: 0, k: 1 } as View, fitted: false, lastN: -1, lastS
 const GROW = { known: null as Set<string> | null, refit: -1, ids: new Set<string>(), until: 0, n: 0, timer: 0 as ReturnType<typeof setTimeout> | 0 }
 const GROW_MS = 4700
 
-// Square cards, all the same size. A framed portrait takes the avatar's place inside the card.
-const FH = 78
+// Square cards, all the same size. A frame goes along the card's own edge and the content shrinks a little to fit inside it.
 
 
 /** portrait in a circle, first name and surname on two lines in capitals, years */
@@ -51,18 +50,6 @@ function Portrait({ p, yrs, kin }: { p: Person; yrs: string; kin: boolean }) {
   </>
 }
 
-/** the person's frame drawn small inside the card, the full name on one line under it */
-function FramedPortrait({ p, yrs, kin }: { p: Person; yrs: string; kin: boolean }) {
-  const look = p.frame!, h = FH, sc = h / frameDims(look).h
-  const fs = frameSvg(look, 'fr' + p.id.replace(/[^A-Za-z0-9]/g, ''), avatarSrc(p), sc)
-  const top = kin ? 25 : 10, block = h + 20 + (yrs ? 15 : 0), fy = top + (NH - 6 - top - block) / 2
-  return <>
-    <ellipse className="fr-glow" cx={NW / 2} cy={fy + h / 2} rx={fs.w * .8} ry={h * .74} />
-    <g className="fr-art" transform={`translate(${(NW - fs.w) / 2},${fy})`} filter="url(#frShadow)" dangerouslySetInnerHTML={{ __html: `<defs>${fs.defs}</defs>${fs.body.replace('fill="#2a3044"', 'fill="#2533FF"')}` }} />
-    <text className="nm" x={NW / 2} y={fy + h + 19} textAnchor="middle">{fitText(up(fullName(p)), NW - 16)}</text>
-    {yrs && <text className="yr" x={NW / 2} y={fy + h + 34} textAnchor="middle">{yrs}</text>}
-  </>
-}
 
 function Memo() {
   const m = Progress.nearestBirthday(); if (!m) return null
@@ -246,7 +233,7 @@ export default function TreePage() {
       <div className={'tree-wrap th-' + theme.k + (theme.light ? ' th-light' : '')}>
         <svg id="treeSvg" ref={svgRef}>
           <defs><clipPath id="avClip" clipPathUnits="objectBoundingBox"><circle cx=".5" cy=".5" r=".5" /></clipPath>
-            <filter id="frShadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#000" floodOpacity=".45" /></filter>
+            <filter id="frShadow" x="-20%" y="-20%" width="140%" height="145%"><feDropShadow dx="0" dy="3" stdDeviation="3" floodColor="#000" floodOpacity=".4" /></filter>
             <filter id="ndGlow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="14" /></filter>
             <radialGradient id="frGlow"><stop offset="0" stopColor="#8C96FF" stopOpacity=".5" /><stop offset="1" stopColor="#8C96FF" stopOpacity="0" /></radialGradient>
           </defs>
@@ -266,17 +253,21 @@ export default function TreePage() {
             {links}{dots}
             {spark.cur && <Spark key={'sp' + GROW.n} n={GROW.n} d={spark.cur.d} color={spark.cur.color} rev={spark.cur.rev} />}
             {S.people.map(p => {
-              const P = lay.pos[p.id]; if (!P) return null; const yrs = yearsOf(p), k = kin && kin.label[p.id], isMe = !!me && me.id === p.id
-              const cls = 'node' + (sel === p.id ? ' selected' : '') + (fillPercent(p) === 100 ? ' complete' : '') + (p.frame ? ' framed' : '') + (isMe ? ' me' : '') + (growing.has(p.id) ? ' grow' : '')
+              const P = lay.pos[p.id]; if (!P) return null; const yrs = yearsOf(p), k = kin && kin.label[p.id], isMe = !!me && me.id === p.id, look = frameOf(p)
+              const art = look ? frameArt(look, 'fr' + p.id.replace(/[^A-Za-z0-9]/g, '')) : null
+              const cls = 'node' + (sel === p.id ? ' selected' : '') + (fillPercent(p) === 100 ? ' complete' : '') + (look ? ' framed' : '') + (isMe ? ' me' : '') + (growing.has(p.id) ? ' grow' : '')
               return (
                 <g key={p.id} className={cls} data-id={p.id} transform={`translate(${P.x},${P.y})`}>
                   <title>{fullName(p) + (k ? ' — ' + k : '')}</title>
                   <g className="nd-in">
                     {sel === p.id && <rect className="nd-glow" x="-10" y="-10" width={NW + 20} height={NH + 20} rx="18" filter="url(#ndGlow)" />}
                     {growing.has(p.id) && <circle className="nd-flash" cx={NW / 2} cy={NH / 2} r={NW * .72} />}
-                    <rect className="card" width={NW} height={NH} rx="10" />
-                    {k && <text className="kn" x={NW / 2} y="21" textAnchor="middle" style={{ fill: isMe ? undefined : col.kin(p.id) }}>{fitText(up(k), NW - 18, KN_FONT, .8)}</text>}
-                    {p.frame ? <FramedPortrait p={p} yrs={yrs} kin={!!k} /> : <Portrait p={p} yrs={yrs} kin={!!k} />}
+                    <rect className="card" width={NW} height={NH} rx={art ? art.rx : 10} />
+                    <g transform={art ? `translate(${NW / 2} ${NH / 2}) scale(${art.sc}) translate(${-NW / 2} ${-NH / 2})` : undefined}>
+                      {k && <text className="kn" x={NW / 2} y="21" textAnchor="middle" style={{ fill: isMe ? undefined : col.kin(p.id) }}>{fitText(up(k), NW - 18, KN_FONT, .8)}</text>}
+                      <Portrait p={p} yrs={yrs} kin={!!k} />
+                    </g>
+                    {art && <g className="frm" filter="url(#frShadow)" dangerouslySetInnerHTML={{ __html: `<defs>${art.defs}</defs>${art.body}` }} />}
                   </g>
                 </g>
               )

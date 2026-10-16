@@ -386,7 +386,12 @@ export function finishOnboarding(how?: 'sample' | 'blank' | null) {
 }
 export function importData(d: Partial<Data>) {
   if (!Array.isArray(d.people)) throw new Error('bad json')
-  migrateDates(d as Data); S.people = d.people; S.rels = d.rels || []; S.achievements = d.achievements || []; S.achDates = d.achDates || {}; S.achPasted = Array.isArray(d.achPasted) ? d.achPasted : undefined
+  migrateDates(d as Data); S.people = d.people; S.rels = d.rels || []; S.achievements = d.achievements || []; S.achDates = d.achDates || {}
+  // an older backup has no Album: everything earned counts as pasted, so the stickers do not all come back as new
+  S.achPasted = Array.isArray(d.achPasted) ? d.achPasted : [...S.achievements]; S.achSeen = Array.isArray(d.achSeen) ? d.achSeen : [...S.achievements]
+  // «you», the title above the tree, its look and the first day come back too (an older backup has none of them)
+  if (d.settings) { const keep = ['meId', 'since', 'familyName', 'theme', 'lines', 'kin', 'ghosts', 'share'] as const; keep.forEach(k => { if (d.settings![k] !== undefined) (S.settings as Record<string, unknown>)[k] = d.settings![k] }) }
+  if (S.settings.meId && !S.people.some(p => p.id === S.settings.meId)) delete S.settings.meId
   const made = ensureFathers(); if (made.length) setTimeout(() => toast(t('auto.father', { name: made.map(fullName).join(', ') })), 900)
   ui.treeRefit++; ui.mapRefit++; commit(true)
 }
