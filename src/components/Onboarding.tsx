@@ -1,26 +1,9 @@
-import { useEffect, useRef } from 'react'
-import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { Landing } from '../lib/landing'
-import '../landing.css'
-import { Sky } from '../lib/sky'
-import { WORLD } from '../lib/world'
-import { predkiLogo } from '../lib/logo'
-import { S, LANG, finishOnboarding, setLang } from '../lib/core'
+import Landing from './Landing'
+import { S, LANG, finishOnboarding, setLang, bump } from '../lib/core'
 
-/** Welcome landing: hero collage, app tabs, snippets, family phone and planet CTA. The landing itself is framework-free (lib/landing.js). */
+/** Welcome landing (October 2026 redesign): components/Landing.tsx. The old one is kept in _backup/landing-v2. */
 export default function Onboarding() {
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    const el = ref.current!; el.scrollTop = 0
-    const destroy = Landing.mount(el, {
-      gsap, ScrollTrigger, lang: LANG, world: WORLD, sky: Sky, logo: predkiLogo,
-      hasData: () => S.people.length > 0,
-      onStart: (how: 'sample' | 'blank' | null) => finishOnboarding(S.people.length ? null : how),
-      onBrand: () => finishOnboarding(S.people.length ? null : 'blank'),
-      onLang: (l: 'ru' | 'en') => setLang(l),
-    })
-    return () => { if (typeof destroy === 'function') destroy() }
-  }, [])
-  return <div id="landing" ref={ref} />
+  return <Landing lang={LANG === 'en' ? 'en' : 'ru'} hasData={S.people.length > 0}
+    onStart={how => finishOnboarding(S.people.length ? null : how)}
+    onLang={l => { setLang(l); bump() }} />
 }

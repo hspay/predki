@@ -1,9 +1,8 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
-import { S, ui, t, LANG, byId, yearOf, parentsOf, yearsOf, avatarSrc, fullName, fillPercent, generations, openPerson, closePanel, editPerson, type Person } from '../lib/core'
+import { S, ui, t, LANG, byId, yearOf, parentsOf, childrenOf, yearsOf, avatarSrc, fullName, fillPercent, generations, openPerson, closePanel, editPerson, bump, type Person } from '../lib/core'
 import { addRelative } from '../lib/relations'
 import { frameSvg, frameDims } from '../lib/frames'
 import { themeOf } from '../lib/treeStyle'
-import { mountFog, type Fog } from '../lib/fog'
 import TreeStyle from '../components/TreeStyle'
 import { openCalendar } from '../components/FamilyCalendar'
 import { layout, familyColors, rootPerson, NW, NH, PG } from '../lib/treeLayout'
@@ -17,31 +16,38 @@ function treeSub(n: number, g: number) {
 }
 
 // Names are measured with the same font the card uses, so long surnames get an ellipsis inside the card.
+// Names: condensed capitals; kinship: small mono capitals with tracking (canvas does not track, so it is added by hand).
 let measureCtx: CanvasRenderingContext2D | null = null
-const NM_FONT = '600 13px Onest, system-ui, -apple-system, "Segoe UI", sans-serif', KN_FONT = '500 11px Onest, system-ui, -apple-system, "Segoe UI", sans-serif'
-function fitText(s: string, max: number, font = NM_FONT) {
+const NM_FONT = '800 17px "Sofia Sans Extra Condensed", "Arial Narrow", sans-serif', KN_FONT = '500 10px "IBM Plex Mono", ui-monospace, monospace'
+function fitText(s: string, max: number, font = NM_FONT, track = 0) {
   if (!measureCtx) measureCtx = document.createElement('canvas').getContext('2d')
   const ctx = measureCtx!; ctx.font = font
-  if (ctx.measureText(s).width <= max) return s
-  let x = s; while (x.length > 2 && ctx.measureText(x.trimEnd() + '…').width > max) x = x.slice(0, -1)
+  const w = (x: string) => ctx.measureText(x).width + x.length * track
+  if (w(s) <= max) return s
+  let x = s; while (x.length > 2 && w(x.trimEnd() + '…') > max) x = x.slice(0, -1)
   return x.trimEnd() + '…'
 }
+const up = (s: string) => s.toLocaleUpperCase(LANG === 'en' ? 'en' : 'ru')
 type View = { x: number; y: number; k: number }
 // pan/zoom survive switching pages, like in the prototype
 const TV = { view: { x: 0, y: 0, k: 1 } as View, fitted: false, lastN: -1, lastSz: '', refit: -1, lastTop: -1 }
+// growth: who has just appeared in the tree (their branch draws, the card blooms)
+const GROW = { known: null as Set<string> | null, refit: -1, ids: new Set<string>(), until: 0, n: 0, timer: 0 as ReturnType<typeof setTimeout> | 0 }
+const GROW_MS = 4700
 
 // Square cards, all the same size. A framed portrait takes the avatar's place inside the card.
 const FH = 78
 
-/** portrait in a circle, first name and surname on two lines, years */
+
+/** portrait in a circle, first name and surname on two lines in capitals, years */
 function Portrait({ p, yrs, kin }: { p: Person; yrs: string; kin: boolean }) {
-  const r = kin ? 29 : 32, cy = kin ? 59 : 50, y = cy + r + 20
-  const rows = [p.first, p.last].filter(Boolean); if (!rows.length) rows.push(fullName(p))
+  const r = 28, rows = [p.first, p.last].filter(Boolean); if (!rows.length) rows.push(fullName(p))
+  const h = 2 * r + 9 + rows.length * 17 + (yrs ? 15 : 0), top = kin ? 25 : 8, cy = top + (NH - 6 - top - h) / 2 + r, y = cy + r + 22
   return <>
-    <image href={avatarSrc(p)} x={NW / 2 - r} y={cy - r} width={2 * r} height={2 * r} clipPath="url(#avClip)" preserveAspectRatio="xMidYMid slice" />
-    <circle className="av-ring" cx={NW / 2} cy={cy} r={r} />
-    {rows.map((s, i) => <text key={i} className="nm" x={NW / 2} y={y + i * 16} textAnchor="middle">{fitText(s, NW - 20)}</text>)}
-    {yrs && <text className="yr" x={NW / 2} y={y + rows.length * 16 + (kin ? 0 : 2)} textAnchor="middle">{yrs}</text>}
+    <circle className="av-bg" cx={NW / 2} cy={cy} r={r} />
+    <image className="av" href={avatarSrc(p)} x={NW / 2 - r} y={cy - r} width={2 * r} height={2 * r} clipPath="url(#avClip)" preserveAspectRatio="xMidYMid slice" />
+    {rows.map((s, i) => <text key={i} className="nm" x={NW / 2} y={y + i * 17} textAnchor="middle">{fitText(up(s), NW - 18)}</text>)}
+    {yrs && <text className="yr" x={NW / 2} y={y + rows.length * 17 - 1} textAnchor="middle">{yrs}</text>}
   </>
 }
 
@@ -52,9 +58,9 @@ function FramedPortrait({ p, yrs, kin }: { p: Person; yrs: string; kin: boolean 
   const top = kin ? 25 : 10, block = h + 20 + (yrs ? 15 : 0), fy = top + (NH - 6 - top - block) / 2
   return <>
     <ellipse className="fr-glow" cx={NW / 2} cy={fy + h / 2} rx={fs.w * .8} ry={h * .74} />
-    <g className="fr-art" transform={`translate(${(NW - fs.w) / 2},${fy})`} filter="url(#frShadow)" dangerouslySetInnerHTML={{ __html: `<defs>${fs.defs}</defs>${fs.body}` }} />
-    <text className="nm" x={NW / 2} y={fy + h + 18} textAnchor="middle">{fitText(fullName(p), NW - 18)}</text>
-    {yrs && <text className="yr" x={NW / 2} y={fy + h + 33} textAnchor="middle">{yrs}</text>}
+    <g className="fr-art" transform={`translate(${(NW - fs.w) / 2},${fy})`} filter="url(#frShadow)" dangerouslySetInnerHTML={{ __html: `<defs>${fs.defs}</defs>${fs.body.replace('fill="#2a3044"', 'fill="#2533FF"')}` }} />
+    <text className="nm" x={NW / 2} y={fy + h + 19} textAnchor="middle">{fitText(up(fullName(p)), NW - 16)}</text>
+    {yrs && <text className="yr" x={NW / 2} y={fy + h + 34} textAnchor="middle">{yrs}</text>}
   </>
 }
 
@@ -66,6 +72,15 @@ function Memo() {
       <span className="tx">{m.line} <b>{m.name}</b></span>
     </button>
   )
+}
+
+/** a spark that runs along a new branch once, from the relative to the newcomer */
+function Spark({ d, color, n, rev }: { d: string; color: string; n: number; rev?: boolean }) {
+  const ref = useRef<SVGAnimateMotionElement>(null)
+  useEffect(() => { const a = ref.current; if (!a) return; const h = setTimeout(() => { try { a.beginElement() } catch { /* no SMIL */ } }, matchMedia('(max-width:860px)').matches ? 600 : 200); return () => clearTimeout(h) }, [n])
+  return <circle className="spark" r="4.5" style={{ fill: color, color }}>
+    <animateMotion ref={ref} begin="indefinite" dur="1.6s" fill="freeze" calcMode="spline" keyPoints={rev ? "1;0" : "0;1"} keyTimes="0;1" keySplines=".65 0 .35 1" path={d} />
+  </circle>
 }
 
 export default function TreePage() {
@@ -86,20 +101,48 @@ export default function TreePage() {
     const list = [...rows.entries()].filter(([, ys]) => ys.length).map(([y, ys]) => ({ y, label: (ys.length > 1 ? '≈' : '') + Math.round(ys.reduce((a, b) => a + b, 0) / ys.length) })).sort((a, b) => a.y - b.y)
     return rows.size > 1 && list.length ? { x: minX - 28, list } : null
   })()
-  const SC = scale ? 100 : 0
-  const fogRef = useRef<HTMLCanvasElement>(null), fog = useRef<Fog | null>(null)
-  useEffect(() => { fog.current = mountFog(fogRef.current!, { density: .32, clear: .35 }); return () => fog.current?.destroy() }, [])
-  useEffect(() => { if (fog.current) { fog.current.color = theme.fog; fog.current.target = .32 } }, [theme.k])
+  const SC = scale ? 130 : 0
   const memo = Progress.nearestBirthday()
   // «бабушка», «тёща»… under the names, relative to «you»; the chain of relatives for the selected person
   const me = st.kin === false ? null : rootPerson()
   const kin = me ? kinship(me.id) : null
 
-  const apply = (anim?: boolean) => { const g = gRef.current; if (!g) return; const v = TV.view; if (anim) { g.style.transition = 'transform .35s'; setTimeout(() => { g.style.transition = '' }, 400) } g.setAttribute('transform', `translate(${v.x},${v.y}) scale(${v.k})`) }
-  const fit = () => {
+  // ---- who is new: a person or two added by hand grows in; a sample, an import or the first render does not
+  const now = Date.now(), ids = new Set(S.people.map(p => p.id))
+  if (!GROW.known || GROW.refit !== ui.treeRefit) { GROW.known = ids; GROW.refit = ui.treeRefit }
+  else {
+    const fresh = S.people.filter(p => !GROW.known!.has(p.id) && lay.pos[p.id]).map(p => p.id)
+    if (fresh.length && fresh.length <= 3) { GROW.ids = new Set(fresh); GROW.until = now + GROW_MS; GROW.n++ }
+    GROW.known = ids
+  }
+  const growing = GROW.until > now ? GROW.ids : new Set<string>()
+  useEffect(() => { if (!growing.size) return; clearTimeout(GROW.timer as ReturnType<typeof setTimeout>); GROW.timer = setTimeout(bump, GROW.until - Date.now() + 50) }, [GROW.n])
+
+  const apply = (anim?: boolean) => { const g = gRef.current; if (!g) return; const v = TV.view; if (anim) { g.style.transition = 'transform .9s cubic-bezier(.22,.61,.36,1)'; setTimeout(() => { g.style.transition = '' }, 950) } g.setAttribute('transform', `translate(${v.x},${v.y}) scale(${v.k})`); g.style.setProperty('--tk', String(v.k)) }
+  const fit = (anim?: boolean) => {
     const svg = svgRef.current; if (!svg) return; const W = svg.clientWidth || 800, H = svg.clientHeight || 600; const pad = Progress.nearestBirthday() ? 64 : 0
     const lw = (lay.w || NW) + SC, lh = (lay.h || NH) + TOP; const k = Math.min(1.1, Math.max(.25, Math.min((W - 80) / lw, (H - 80 - pad) / lh)))
-    TV.view = { k, x: (W - lw * k) / 2 + SC * k, y: (H - pad - lh * k) / 2 + TOP * k }; apply()
+    TV.view = { k, x: (W - lw * k) / 2 + SC * k, y: (H - pad - lh * k) / 2 + TOP * k }; apply(anim)
+  }
+  /** a new relative: the camera moves in on them and the relatives they are linked to, so the growth is seen up close */
+  const focus = (who: Set<string>) => {
+    const svg = svgRef.current; if (!svg) return; const H = svg.clientHeight || 600; const pad = Progress.nearestBirthday() ? 64 : 0
+    // the profile panel covers the right side on a wide screen: centre in what is left
+    const W = (svg.clientWidth || 800) - (ui.panel && window.innerWidth > 860 ? 420 : 0)
+    const near = new Set(who)
+    who.forEach(id => { parentsOf(id).forEach(p => near.add(p.id)); childrenOf(id).forEach(c => near.add(c.id))
+      S.rels.forEach(r => { if (r.type === 'spouse' && (r.a === id || r.b === id)) near.add(r.a === id ? r.b : r.a) }) })
+    const box = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity }
+    near.forEach(id => { const P = lay.pos[id]; if (!P) return; box.x0 = Math.min(box.x0, P.x); box.y0 = Math.min(box.y0, P.y); box.x1 = Math.max(box.x1, P.x + NW); box.y1 = Math.max(box.y1, P.y + P.h) })
+    if (!isFinite(box.x0)) { fit(true); return }
+    const bw = box.x1 - box.x0, bh = box.y1 - box.y0
+    const k = Math.min(1.05, Math.max(.6, Math.min((W - 160) / bw, (H - 140 - pad) / bh)))
+    // centre on the newcomers when everything around them does not fit
+    const nb = { x0: Infinity, y0: Infinity, x1: -Infinity, y1: -Infinity }
+    who.forEach(id => { const P = lay.pos[id]; if (!P) return; nb.x0 = Math.min(nb.x0, P.x); nb.y0 = Math.min(nb.y0, P.y); nb.x1 = Math.max(nb.x1, P.x + NW); nb.y1 = Math.max(nb.y1, P.y + P.h) })
+    const fits = bw * k <= W - 120 && bh * k <= H - 100 - pad
+    const cx = fits || !isFinite(nb.x0) ? (box.x0 + box.x1) / 2 : (nb.x0 + nb.x1) / 2, cy = fits || !isFinite(nb.y0) ? (box.y0 + box.y1) / 2 : (nb.y0 + nb.y1) / 2
+    TV.view = { k, x: W / 2 - cx * k, y: (H - pad) / 2 - cy * k }; apply(true)
   }
   const zoomBy = (f: number, cx?: number, cy?: number) => {
     const svg = svgRef.current!; cx = cx == null ? svg.clientWidth / 2 : cx; cy = cy == null ? svg.clientHeight / 2 : cy
@@ -109,7 +152,7 @@ export default function TreePage() {
   // fit on first show, when the number of people or the size changes, or when asked (sample loaded, drafts approved)
   useLayoutEffect(() => {
     const svg = svgRef.current; if (!svg) return; const sz = svg.clientWidth + 'x' + svg.clientHeight
-    if (!TV.fitted || TV.lastN !== S.people.length || TV.lastSz !== sz || TV.refit !== ui.treeRefit || TV.lastTop !== TOP) { fit(); TV.fitted = true; TV.lastN = S.people.length; TV.lastSz = sz; TV.refit = ui.treeRefit; TV.lastTop = TOP } else apply()
+    if (!TV.fitted || TV.lastN !== S.people.length || TV.lastSz !== sz || TV.refit !== ui.treeRefit || TV.lastTop !== TOP) { if (TV.fitted && TV.lastN !== S.people.length && growing.size > 0 && TV.lastSz === sz) focus(growing); else fit(); TV.fitted = true; TV.lastN = S.people.length; TV.lastSz = sz; TV.refit = ui.treeRefit; TV.lastTop = TOP } else apply()
   })
   // keep the selected card in view when the profile panel opens
   useEffect(() => {
@@ -145,6 +188,16 @@ export default function TreePage() {
   const col = familyColors(!!theme.light); const links: JSX.Element[] = [], dots: JSX.Element[] = []
   const straight = st.lines === 'straight'
   const box = (id: string) => { const P = lay.pos[id]; return { cx: P.x + NW / 2, l: P.x, r: P.x + NW, top: P.y, bot: P.y + P.h, mid: P.top + P.rh / 2, g: P.g } }
+  // a new branch draws itself (pathLength 1 + dash offset) from the relative already in the tree towards the newcomer:
+  // a new parent grows upwards from the child, a new child downwards. The first branch also carries a spark.
+  const spark = { cur: null as null | { d: string; color: string; rev: boolean } }
+  const grows = (...who: string[]) => growing.size > 0 && who.some(id => growing.has(id))
+  /** the path is drawn from `from` to `to`: true when only the far end is new, so it has to grow backwards */
+  const back = (from: string[], to: string[]) => from.some(id => growing.has(id)) && !to.some(id => growing.has(id))
+  const lk = (key: string, cls: string, d: string, color: string, grow: boolean, rev = false) => {
+    if (grow && !spark.cur && !cls.includes('marriage')) spark.cur = { d, color, rev }
+    links.push(<path key={key} className={'link ' + cls + (grow ? ' grow' + (rev ? ' rev' : '') : '')} style={{ stroke: color }} d={d} pathLength={grow ? 1 : undefined} />)
+  }
   S.rels.filter(r => r.type === 'spouse' && lay.pos[r.a] && lay.pos[r.b]).forEach(r => {
     const A = box(r.a), B = box(r.b)
     const color = col.mar(r)
@@ -152,10 +205,11 @@ export default function TreePage() {
       const l = A.cx < B.cx ? A : B, rr = A.cx < B.cx ? B : A
       // spouses not side by side (a third marriage): an arc under the cards instead of a line through someone else
       const apart = Math.abs(lay.pos[r.a].x - lay.pos[r.b].x) > NW + PG + 1, yb = Math.max(l.bot, rr.bot)
-      links.push(<path key={'m' + r.id} className="link marriage" style={{ stroke: color }} d={apart ? `M${l.cx} ${yb}C${l.cx} ${yb + 44} ${rr.cx} ${yb + 44} ${rr.cx} ${yb}` : `M${l.r} ${l.mid}H${rr.l}`} />)
-      if (r.from && !apart) links.push(<text key={'mt' + r.id} className="yr" x={(l.r + rr.l) / 2} y={l.mid - 7} textAnchor="middle" style={{ fontFamily: 'var(--f-mono)', fontSize: 10, fill: color }}>{yearOf(r.from) || r.from}</text>)
+      const lid = A.cx < B.cx ? r.a : r.b, rid = lid === r.a ? r.b : r.a
+      lk('m' + r.id, 'marriage', apart ? `M${l.cx} ${yb}C${l.cx} ${yb + 44} ${rr.cx} ${yb + 44} ${rr.cx} ${yb}` : `M${l.r} ${l.mid}H${rr.l}`, color, grows(r.a, r.b), back([lid], [rid]))
+      if (r.from && !apart) links.push(<text key={'mt' + r.id} className="mar-yr" x={(l.r + rr.l) / 2} y={l.mid - 7} textAnchor="middle" style={{ fill: color }}>{yearOf(r.from) || r.from}</text>)
     }
-    else { const my = (A.bot + B.top) / 2; links.push(<path key={'m' + r.id} className="link marriage" style={{ stroke: color }} d={`M${A.cx} ${A.bot}C${A.cx} ${my} ${B.cx} ${my} ${B.cx} ${B.top}`} />) }
+    else { const my = (A.bot + B.top) / 2; lk('m' + r.id, 'marriage', `M${A.cx} ${A.bot}C${A.cx} ${my} ${B.cx} ${my} ${B.cx} ${B.top}`, color, grows(r.a, r.b), back([r.a], [r.b])) }
   })
   S.people.forEach(ch => {
     const ps = parentsOf(ch.id).filter(p => lay.pos[p.id]); if (!ps.length) return; const C = { x: box(ch.id).cx, y: box(ch.id).top }
@@ -167,8 +221,8 @@ export default function TreePage() {
     let d: string
     if (straight) { const bus = Math.max(y0, lay.pos[ch.id].top - 26); d = `M${sx} ${sy}V${bus}H${C.x}V${C.y}` }
     else { const y1 = C.y - 8, k = (y1 - y0) * .55; d = `M${sx} ${sy}V${y0}C${sx} ${y0 + k} ${C.x} ${y1 - k} ${C.x} ${y1}V${C.y}` }
-    links.push(<path key={'k' + ch.id} className="link kin" style={{ stroke: color }} d={d} />)
-    dots.push(<circle key={'d' + ch.id} cx={sx} cy={sy} r="3.5" fill={color} />)
+    lk('k' + ch.id, 'kin', d, color, grows(ch.id, ...ps.map(p => p.id)), back(ps.map(p => p.id), [ch.id]))
+    dots.push(<circle key={'d' + ch.id} className="cdot" cx={sx} cy={sy} r="3.5" fill={color} />)
   })
   // stepfather / stepmother → stepchild: a dashed line
   S.rels.filter(r => r.type === 'parent' && r.step && lay.pos[r.a] && lay.pos[r.b]).forEach(r => {
@@ -179,44 +233,51 @@ export default function TreePage() {
   // brothers and sisters with no parent in the tree yet: a bracket above the cards
   S.rels.filter(r => r.type === 'sibling' && lay.pos[r.a] && lay.pos[r.b] && lay.pos[r.a].g === lay.pos[r.b].g).forEach(r => {
     const A = box(r.a), B = box(r.b), y = Math.min(A.top, B.top) - 22
-    links.push(<path key={'b' + r.id} className="link sib" style={{ stroke: col.kin(r.a) }} d={`M${A.cx} ${A.top}V${y}H${B.cx}V${B.top}`} />)
+    lk('b' + r.id, 'sib', `M${A.cx} ${A.top}V${y}H${B.cx}V${B.top}`, col.kin(r.a), grows(r.a, r.b), back([r.a], [r.b]))
   })
+
 
   return (
     <section className="page active" data-page="tree">
       <div className="topbar">
         <h2><span>{t('nav.tree')}</span><span className="sub" id="treeSub">{S.people.length ? treeSub(S.people.length, generations()) : ''}</span></h2>
-        <button className="btn sm" id="btnAddPerson" onClick={() => editPerson(null)}><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg><span>{t('tree.add')}</span></button>
+        <button className="btn sm add" id="btnAddPerson" onClick={() => editPerson(null)}><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg><span className="full">{t('tree.add')}</span><span className="short">{t('tree.add.short')}</span></button>
       </div>
       <div className={'tree-wrap th-' + theme.k + (theme.light ? ' th-light' : '')}>
-        <canvas className="tree-fog" ref={fogRef} aria-hidden="true" />
         <svg id="treeSvg" ref={svgRef}>
           <defs><clipPath id="avClip" clipPathUnits="objectBoundingBox"><circle cx=".5" cy=".5" r=".5" /></clipPath>
             <filter id="frShadow" x="-30%" y="-30%" width="160%" height="170%"><feDropShadow dx="0" dy="6" stdDeviation="6" floodColor="#000" floodOpacity=".45" /></filter>
-            <radialGradient id="frGlow"><stop offset="0" stopColor="#F2C879" stopOpacity=".5" /><stop offset="1" stopColor="#F2C879" stopOpacity="0" /></radialGradient></defs>
+            <filter id="ndGlow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="14" /></filter>
+            <radialGradient id="frGlow"><stop offset="0" stopColor="#8C96FF" stopOpacity=".5" /><stop offset="1" stopColor="#8C96FF" stopOpacity="0" /></radialGradient>
+          </defs>
           <g id="treeView" ref={gRef}>
-            {title && <text className="tree-title" x={(lay.w || NW) / 2} y={-GH - 34} textAnchor="middle">{title}</text>}
+            {title && <text className="tree-title" x={(lay.w || NW) / 2} y={-GH - 34} textAnchor="middle">{up(title)}</text>}
             {roots.map(p => { const P = lay.pos[p.id], w = (NW - 10) / 2, y = P.top - 64; return (
               <g key={'gh' + p.id} className="ghost" data-ghost={p.id} role="button" aria-label={t('ts.ghost') + ': ' + fullName(p)}>
                 <title>{t('ts.ghost')}</title>
                 <path className="gl" d={`M${P.x + w} ${y + 17}H${P.x + w + 10}M${P.x + NW / 2} ${y + 17}V${P.y}`} />
-                <rect x={P.x} y={y} width={w} height={34} rx="12" /><rect x={P.x + w + 10} y={y} width={w} height={34} rx="12" />
-                <text x={P.x + w / 2} y={y + 22} textAnchor="middle">+</text><text x={P.x + w * 1.5 + 10} y={y + 22} textAnchor="middle">+</text>
+                <rect x={P.x} y={y} width={w} height={34} rx="8" /><rect x={P.x + w + 10} y={y} width={w} height={34} rx="8" />
+                <text x={P.x + w / 2} y={y + 23} textAnchor="middle">+</text><text x={P.x + w * 1.5 + 10} y={y + 23} textAnchor="middle">+</text>
               </g>) })}
             {scale && <g className="gen-scale" aria-hidden="true">
               {scale.list.length > 1 && <line x1={scale.x} x2={scale.x} y1={scale.list[0].y} y2={scale.list[scale.list.length - 1].y} />}
-              {scale.list.map(r => <g key={r.y}><circle cx={scale.x} cy={r.y} r="3" /><text x={scale.x - 14} y={r.y + 4} textAnchor="end">{r.label}</text></g>)}
+              {scale.list.map(r => <g key={r.y}><circle cx={scale.x} cy={r.y} r="4" /><text x={scale.x - 14} y={r.y} dominantBaseline="central" textAnchor="end">{r.label}</text></g>)}
             </g>}
             {links}{dots}
+            {spark.cur && <Spark key={'sp' + GROW.n} n={GROW.n} d={spark.cur.d} color={spark.cur.color} rev={spark.cur.rev} />}
             {S.people.map(p => {
-              const P = lay.pos[p.id]; if (!P) return null; const yrs = yearsOf(p), k = kin && kin.label[p.id]
-              const cls = 'node' + (sel === p.id ? ' selected' : '') + (fillPercent(p) === 100 ? ' complete' : '') + (p.frame ? ' framed' : '')
+              const P = lay.pos[p.id]; if (!P) return null; const yrs = yearsOf(p), k = kin && kin.label[p.id], isMe = !!me && me.id === p.id
+              const cls = 'node' + (sel === p.id ? ' selected' : '') + (fillPercent(p) === 100 ? ' complete' : '') + (p.frame ? ' framed' : '') + (isMe ? ' me' : '') + (growing.has(p.id) ? ' grow' : '')
               return (
                 <g key={p.id} className={cls} data-id={p.id} transform={`translate(${P.x},${P.y})`}>
                   <title>{fullName(p) + (k ? ' — ' + k : '')}</title>
-                  <rect className="card" width={NW} height={NH} rx="16" />
-                  {k && <text className="kn" x={NW / 2} y="19" textAnchor="middle" style={{ fill: col.kin(p.id) }}>{fitText(k, NW - 18, KN_FONT)}</text>}
-                  {p.frame ? <FramedPortrait p={p} yrs={yrs} kin={!!k} /> : <Portrait p={p} yrs={yrs} kin={!!k} />}
+                  <g className="nd-in">
+                    {sel === p.id && <rect className="nd-glow" x="-10" y="-10" width={NW + 20} height={NH + 20} rx="18" filter="url(#ndGlow)" />}
+                    {growing.has(p.id) && <circle className="nd-flash" cx={NW / 2} cy={NH / 2} r={NW * .72} />}
+                    <rect className="card" width={NW} height={NH} rx="10" />
+                    {k && <text className="kn" x={NW / 2} y="21" textAnchor="middle" style={{ fill: isMe ? undefined : col.kin(p.id) }}>{fitText(up(k), NW - 18, KN_FONT, .8)}</text>}
+                    {p.frame ? <FramedPortrait p={p} yrs={yrs} kin={!!k} /> : <Portrait p={p} yrs={yrs} kin={!!k} />}
+                  </g>
                 </g>
               )
             })}
@@ -224,22 +285,22 @@ export default function TreePage() {
         </svg>
         {kin && sel && me && sel !== me.id && byId(sel) && (() => {
           const chain = kin.chain(sel)
-          return <div className="tree-kin" aria-live="polite">
-            <span className="k" style={{ color: col.kin(sel) }}>{kin.label[sel]}</span>
+          return <div className="tree-kin" key={sel} aria-live="polite">
+            {kin.label[sel] && <span className="k" style={{ color: col.kin(sel) }}>{kin.label[sel]}</span>}
             <b className="n">{fullName(byId(sel))}</b>
             {chain.length > 1 && <span className="ch">{chain.map((id, i) => <span key={id}>{i > 0 && <i aria-hidden="true">→</i>}{chainName(id)}</span>)}</span>}
-            {!kin.blood[sel] && <span className="m">{t('kin.marriage')}</span>}
+            {!kin.blood[sel] && <span className="m">{t(kin.linked(sel) ? 'kin.marriage' : 'kin.none')}</span>}
           </div>
         })()}
         {!S.people.length && <div className="empty" id="treeEmpty">
           <h3>{t('tree.empty.h')}</h3><p className="muted" style={{ maxWidth: '36ch' }}>{t('tree.empty.p')}</p>
-          <button className="btn primary" onClick={() => editPerson(null)}>{t('tree.add')}</button>
+          <button className="btn add" onClick={() => editPerson(null)}>{t('tree.add')}</button>
         </div>}
         <div className="tree-tools">
           <TreeStyle />
           <button className="btn icon" title="+" onClick={() => zoomBy(1.25)}><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg></button>
           <button className="btn icon" title="−" onClick={() => zoomBy(.8)}><svg viewBox="0 0 24 24"><path d="M5 12h14" /></svg></button>
-          <button className="btn icon" title="fit" onClick={fit}><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg></button>
+          <button className="btn icon" title="fit" onClick={() => fit()}><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg></button>
         </div>
         {memo && <Memo />}
       </div>

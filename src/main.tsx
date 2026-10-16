@@ -5,11 +5,22 @@ import GuestApp from './components/GuestApp'
 import { tokenFromUrl } from './lib/invites'
 import './fonts'
 import './styles.css'
-import { applyAppearance, onThemeChange } from './lib/appearance'
-import { bump } from './lib/core'
+import './design.css'
+import { applyAppearance, onThemeChange, isLight } from './lib/appearance'
+import { S, ui, bump, persist } from './lib/core'
+import { THEMES } from './lib/treeStyle'
 
 applyAppearance()
-onThemeChange(bump) // canvas and SVG parts redraw with the new colours
+onThemeChange(() => {
+  // the light app gets the «Пастель» tree, the dark one «Ночь» (when its tree was on a light style); people can still pick any style after
+  if (ui.loaded) {
+    const light = isLight(), cur = THEMES.find(x => x.k === S.settings.theme)
+    if (light) S.settings.theme = 'pastel'
+    else if (!cur || cur.light) S.settings.theme = 'night'
+    persist()
+  }
+  bump() // canvas and SVG parts redraw with the new colours
+})
 
 // «Попросить заполнить»: a relative's link (?s=…) opens a light copy of the tree, without an account and without the app's own data
 const shareToken = tokenFromUrl()

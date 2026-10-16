@@ -10,7 +10,7 @@ const TX = {
     askFill: 'Попросить заполнить', invite: 'Попросить родных заполнить древо', anyone: 'любому из родных',
     hello: 'Привет! Собираю наше семейное древо. Посмотри, пожалуйста, и допиши, что помнишь: даты, места, истории.', helloGap: 'Привет! Помоги восстановить историю семьи.',
     lede: (y: number, n: number) => <>{pl(y, ['год', 'года', 'лет'])} из жизни семьи — <b>без единой записи</b>. {n ? <>На {n} {pl(n, ['пробел', 'пробела', 'пробелов'])} есть родственник, который может помнить: эти вопросы можно задать уже сегодня. Начните со старших.</> : <>Живых свидетелей для них нет: помогут документы и архивы.</>}</>,
-    first: 'Выбрали пробелы, о которых могут знать родственники', you: 'вы',
+    first: 'Выбрали пробелы, о которых могут знать родственники', you: 'вы', lgKnown: 'годы с записями', lgGap: 'пробел, о котором спрашиваем',
     who: 'Кто может помнить:', nobody: 'Из живых родственников помнить некому — ищите в документах и архивах.',
     last: 'Последняя запись:', next: 'Следующая:', silence: (a: number, place: string, n: number) => `Последняя запись — ${a}${place ? ', ' + place : ''}. После неё ${n} ${pl(n, ['год', 'года', 'лет'])} тишины.`,
     add: 'Добавить, что узнали', more: (n: number) => `Ещё ${n} ${pl(n, ['вопрос', 'вопроса', 'вопросов'])}`,
@@ -28,7 +28,7 @@ const TX = {
     askFill: 'Ask to fill in', invite: 'Ask relatives to fill in the tree', anyone: 'any relative',
     hello: 'Hi! I am putting together our family tree. Please have a look and add what you remember: dates, places, stories.', helloGap: 'Hi! Help me piece together our family history.',
     lede: (y: number, n: number) => <>{y === 1 ? 'year' : 'years'} of family life with <b>no record at all</b>. {n ? <>For {n} {n === 1 ? 'gap' : 'gaps'} there is a relative who may remember: you can ask today. Start with the eldest.</> : <>No living relative remembers them: documents and archives will help.</>}</>,
-    first: 'Gaps your relatives may know about', you: 'you',
+    first: 'Gaps your relatives may know about', you: 'you', lgKnown: 'years with records', lgGap: 'the gap we ask about',
     who: 'Who may remember:', nobody: 'No living relative remembers this — look in documents and archives.',
     last: 'Last record:', next: 'Next:', silence: (a: number, place: string, n: number) => `Last record — ${a}${place ? ', ' + place : ''}. ${n} ${n === 1 ? 'year' : 'years'} of silence since.`,
     add: 'Add what you learned', more: (n: number) => `${n} more ${n === 1 ? 'question' : 'questions'}`,
@@ -52,13 +52,16 @@ function Mini({ g }: { g: Gap }) {
   const known: [number, number][] = []; let s = a0
   l.facts.forEach((f, k) => { const nx = l.facts[k + 1]; if (nx != null && nx - f > GAP_MIN) { known.push([s, f]); s = nx } })
   known.push([s, l.last ?? a0])
-  return (
+  const pc = (y: number) => (sc(y) / W * 100).toFixed(2) + '%'
+  return (<div className="gp-life">
     <svg className="gp-mini" viewBox={`0 0 ${W} 26`} preserveAspectRatio="none" aria-hidden="true">
       <path d={`M${sc(a0)} 13H${sc(a1)}`} className="ln" vectorEffect="non-scaling-stroke" />
       {known.map(([x, y]) => <rect key={x} x={sc(x)} y="9" width={Math.max(4, sc(y) - sc(x))} height="8" rx="4" className="known" />)}
       <rect x={sc(g.a)} y="6" width={Math.max(2, sc(g.b) - sc(g.a))} height="14" rx="4" className="gap" vectorEffect="non-scaling-stroke" />
     </svg>
-  )
+    {/* years under the line: birth, the gap, the end */}
+    <div className="gp-life-y" aria-hidden="true"><span style={{ left: pc(a0) }}>{a0}</span><span className="g" style={{ left: `calc((${pc(g.a)} + ${pc(g.b)}) / 2)` }}>{g.a}–{g.b}</span><span className="e" style={{ left: pc(a1) }}>{a1}</span></div>
+  </div>)
 }
 
 export default function GapsPage() {
@@ -100,8 +103,9 @@ export default function GapsPage() {
       <div className="scroll gp">
         <FamilyAnswers />
         {gaps.length ? <>
-          <div className="gp-hero"><b className="gp-big">{midYears}</b><div className="gp-hero-r"><p>{T.lede(midYears, answerable)}</p><button type="button" className="btn primary" onClick={() => askFill(null)}><LinkIcon />{T.invite}</button></div></div>
-          <h3 className="gp-h gp-h-solo">{T.first}</h3>
+          <div className="gp-hero"><b className="gp-big">{midYears}</b><div className="gp-hero-r"><p>{T.lede(midYears, answerable)}</p><button type="button" className="btn wax" onClick={() => askFill(null)}><LinkIcon />{T.invite}</button></div></div>
+          <div className="gp-h-row"><h3 className="gp-h gp-h-solo">{T.first}</h3>
+            <span className="gp-legend" aria-hidden="true"><span><i className="k" />{T.lgKnown}</span><span><i className="g" />{T.lgGap}</span></span></div>
           <div className="gp-cards">
             {shown.map((g, i) => {
               const p = byId(g.id)!, q2 = firstOf.get(g.id) === g ? question2(g, null) : ''

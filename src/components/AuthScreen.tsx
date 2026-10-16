@@ -1,5 +1,5 @@
 import { useMemo, useState, type FormEvent } from 'react'
-import { predkiLogo } from '../lib/logo'
+import { globeTile } from '../lib/globe'
 import { t, LANG, cloud, continueWithoutAccount, bump } from '../lib/core'
 import { signInGoogle, signInEmail, signUpEmail, resetPassword, setNewPassword, authError } from '../lib/cloud'
 
@@ -8,7 +8,7 @@ const G = <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M4
 
 /** Sign in before the tree opens: Google or email + password. Also shows «loading your tree» and the new-password step after a reset link. */
 export default function AuthScreen({ loading = false }: { loading?: boolean }) {
-  const logo = useMemo(() => predkiLogo(), [])
+  const logo = useMemo(() => globeTile(64), [])
   const [mode, setMode] = useState<Mode>(cloud.recovery ? 'newpass' : 'up')
   const [email, setEmail] = useState(''); const [pass, setPass] = useState('')
   const [busy, setBusy] = useState(false); const [err, setErr] = useState('')

@@ -1,6 +1,6 @@
 // @ts-nocheck — achievement logic ported from the prototype as-is
 // Progress: achievement constellation (Род · Летопись · Странствия). Data + evaluation live here, the page draws it.
-import { S, LANG, fullName, go, editPerson, openPerson, fillPercent, toast, t, ui } from './core'
+import { S, LANG, fullName, go, editPerson, openPerson, fillPercent, toast, t, ui, persist, bump } from './core'
 
 export const Progress=(function(){
   const L=()=>LANG==='en'?'en':'ru';
@@ -123,8 +123,7 @@ export const Progress=(function(){
    {id:'c_voice',off:1,br:'chron',tier:2,x:810,y:345,ic:'wave',t:T('Голос семьи','Family voice'),d:T('Расшифруйте запись разговора с родственником через архивариуса.','Transcribe a recorded conversation with a relative through the archivist.'),m:'aiAudio',goal:1,req:['c_ai'],tip:T('Запишите бабушку на диктофон. Даже короткий разговор даёт несколько карточек.','Record your grandmother. Even a short talk yields several cards.'),cta:['ai','audio',T('Загрузить запись','Upload a recording')]},
    {id:'c_20',br:'chron',tier:3,x:460,y:285,ic:'book',t:T('Летописец','Chronicler'),d:T('Истории у двадцати человек.','Twenty people have stories.'),m:'stories',goal:20,u:U.story,req:['c_full'],tip:T('Две-три фразы на человека уже считаются историей.','Two or three sentences per person already count.'),cta:['edit','bio',T('Написать историю','Write a story')]},
    {id:'c_archive',br:'chron',tier:3,x:740,y:285,ic:'box',t:T('Семейный архив','Family archive'),d:T('50 фотографий и документов в древе.','50 photos and documents in the tree.'),m:'media',goal:50,u:U.file,req:['c_papers'],tip:T('Разберите один семейный альбом целиком.','Go through one family album cover to cover.'),cta:['open','media',T('Загрузить файлы','Upload files')]},
-   {id:'c_faces',br:'chron',tier:4,x:600,y:215,ic:'faces',t:T('Каждое лицо','Every face'),d:T('Портрет у каждого человека в древе, когда в нём хотя бы 25 человек.','Everyone in the tree has a portrait, with at least 25 people.'),m:'faceAll',goal:25,req:['c_20','c_archive'],tip:T('Людям без фото подойдёт портрет брата, сестры или ребёнка с пометкой.','For people without photos, a sibling’s or child’s portrait with a note will do.'),cta:['edit','avatar',T('Добавить портрет','Add a portrait')],
-     fmt:m=>{ const g=Math.max(25,m.n); return L()==='en'?`${m.portraits} of ${g} portraits`:`${m.portraits} из ${g} ${pl(g,U.portrait)}`; }},
+   {id:'c_faces',br:'chron',tier:4,x:600,y:215,ic:'faces',t:T('Настоящий альбом','A real album'),d:T('В древе 25 портретов. Неважно, сколько всего людей: у самых старших фотографий может и не быть.','25 portraits in the tree, however many people there are: the eldest may have no photos at all.'),m:'portraits',goal:25,u:U.portrait,req:[],tip:T('Одно групповое фото можно разрезать на несколько портретов.','One group photo can be cropped into several portraits.'),cta:['edit','avatar',T('Добавить портрет','Add a portrait')]},
 
    {id:'r_born',br:'road',tier:1,x:695,y:620,ic:'pin',t:T('Места рождения','Birthplaces'),d:T('Место рождения указано у пяти человек.','Five people have a birthplace.'),m:'birthPlaces',goal:5,u:U.people,req:['root'],tip:T('Город или село из паспорта, свидетельства или со слов родных.','A town or village from a passport, a certificate or relatives’ words.'),cta:['edit','birthPlace',T('Вписать место рождения','Add a birthplace')]},
    {id:'r_move',br:'road',tier:1,x:770,y:560,ic:'move',t:T('Первый переезд','First move'),d:T('Событие «Переезд» с местом на карте.','A “Move” event with a place on the map.'),m:'moveGeo',goal:1,req:['r_born'],tip:T('Эвакуация, распределение, переезд к супругу — всё это переезды.','Evacuation, a job posting, moving to a spouse — all count.'),cta:['open','events',T('Добавить переезд','Add a move')]},
@@ -150,9 +149,9 @@ export const Progress=(function(){
   const R={1:19,2:22,3:25,4:31};
   const TX=x=>600+(x-600)*.8, TY=y=>620+(y-620)*1.2;
   N.forEach(n=>{ n.x=TX(n.x); n.y=TY(n.y); n.r=R[n.tier]; n.req=n.req||[]; });
-  // off: the archivist is archived, so its goals are hidden; whoever needed them now needs what they needed
-  const OFF=N.filter(n=>n.off), skip=id=>{ const o=OFF.find(n=>n.id===id); return o?o.req.flatMap(skip):[id]; };
-  N.splice(0,N.length,...N.filter(n=>!n.off)); N.forEach(n=>{ n.req=[...new Set(n.req.flatMap(skip))]; });
+  // off: the archivist is archived, so its goals are hidden.
+  // Album (October 2026): every sticker stands on its own — no «opens after», a sticker is earned as soon as its condition is met
+  N.splice(0,N.length,...N.filter(n=>!n.off)); N.forEach(n=>{ n.req=[]; });
   ['kin','chron','road'].forEach(b=>{ BR[b].lx=TX(BR[b].lx); BR[b].ly=TY(BR[b].ly); }); BR.kin.lx-=20; BR.road.lx+=20; BR.kin.ly+=40; BR.road.ly+=40;
   const byN=id=>N.find(n=>n.id===id);
 
@@ -173,12 +172,24 @@ export const Progress=(function(){
   /* ---- achievements bookkeeping (called from commit) ---- */
   function check(quiet){
     const valid=new Set(N.map(n=>n.id)); S.achievements=(S.achievements||[]).filter(id=>valid.has(id)); S.achDates=S.achDates||{}; S.achSeen=(S.achSeen||[]).filter(id=>valid.has(id));
+    // the Album came after the achievements: what the family had already seen counts as pasted
+    if(!Array.isArray(S.achPasted)) S.achPasted=S.achievements.filter(id=>S.achSeen.includes(id));
+    S.achPasted=S.achPasted.filter(id=>valid.has(id));
     evaluate(); const got=N.filter(n=>ST[n.id]==='done'&&!S.achievements.includes(n.id));
-    got.forEach(n=>{ S.achievements.push(n.id); S.achDates[n.id]=new Date().toISOString(); if(quiet) S.achSeen.push(n.id); });
-    if(!quiet&&got.length) toast(got.length===1?t('ach.unlocked',{t:tx(got[0].t)}):t('ach.unlockedN',{n:got.length}),'ach');
+    got.forEach(n=>{ S.achievements.push(n.id); S.achDates[n.id]=new Date().toISOString(); if(quiet){ S.achSeen.push(n.id); S.achPasted.push(n.id); } });
+    if(!quiet&&got.length){ const one=got.length===1;
+      toast(one?t('ach.unlocked',{t:tx(got[0].t)}):t('ach.unlockedN',{n:got.length}),'ach',{sticker:got[0].id,act:{label:t('ach.toAlbum'),run:()=>openSticker(got[0].id)}}); }
     return got.length;
   }
-  const unseen=()=>(S.achievements||[]).filter(id=>!(S.achSeen||[]).includes(id)).length;
+  /** stickers earned but not pasted yet: the number on «Альбом» in the menu */
+  const unseen=()=>(S.achievements||[]).filter(id=>!(S.achPasted||[]).includes(id)).length;
+  const isPasted=id=>(S.achPasted||[]).includes(id);
+  /** the sticker goes into the album (and counts as seen) */
+  function paste(id){ if(!(S.achievements||[]).includes(id)||isPasted(id)) return; S.achPasted=[...(S.achPasted||[]),id]; S.achSeen=[...new Set([...(S.achSeen||[]),id])]; persist(); bump(); }
+  /** the Album section a sticker lives in: Род · Летопись · Странствия · Особые */
+  const secOf=n=>n.br==='root'?'kin':n.br==='link'||n.br==='secret'?'more':n.br;
+  /** open the Album on this sticker's page */
+  function openSticker(id){ const n=byN(id); ui.album.tab=n?secOf(n):'kin'; ui.album.sheet=null; go('progress'); }
 
   /* ---- geometry ---- */
   function hull(pts){ pts=pts.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]); const cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]); const lo=[],up=[];
@@ -217,6 +228,6 @@ export const Progress=(function(){
   }
 
   const earnedDate=n=>{ const d=S.achDates&&S.achDates[n.id]; return d?new Date(d).toLocaleDateString(L()==='en'?'en-GB':'ru-RU',{day:'numeric',month:'long'}):''; };
-  return {N,BR,IC,U,W,w,tx,pl,fill,L,byN,evaluate,check,unseen,ratio,cascade,fmt,hull,act,firstGoal,nearestBirthday,earnedDate,
+  return {N,BR,IC,U,W,w,tx,pl,fill,L,byN,evaluate,check,unseen,isPasted,paste,secOf,openSticker,nf,ratio,cascade,fmt,hull,act,firstGoal,nearestBirthday,earnedDate,
     get ST(){ return ST; }, get M(){ return M; }, title:n=>tx(n.t)};
 })();

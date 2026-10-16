@@ -471,6 +471,8 @@ main{position:relative;min-width:0;overflow:hidden;border-radius:var(--r-card);b
 .th-light .tree-memo .d::before,.th-light .tree-memo .d::after{background:rgba(46,42,68,.55)}
 .th-light .tree-memo .d .m{background:rgba(46,42,68,.08);color:rgba(46,42,68,.7)}
 .th-light .tree-memo .d b{color:#2E2A44}
+/* a dark tree background keeps the dark-theme text colours, even when the app itself is light */
+.tree-wrap:not(.th-light) :is(#treeSvg,.tree-memo,.tree-kin,.empty){--ink:#EEF1F7;--ink-2:#B7BFCF;--muted:#7C8698;--faint:#4B5468;--glass:rgba(255,255,255,.055);--glass-3:rgba(255,255,255,.14);--edge:rgba(255,255,255,.10);--edge-2:rgba(255,255,255,.18);--accent:#F2C879;--accent-2:#FFE0A3;--accent-ink:#1A1206;--accent-soft:rgba(242,200,121,.14);--accent-edge:rgba(242,200,121,.42);--done:#79D9A6;color:var(--ink)}
 .th-light .empty h3,.th-light .empty p{color:#2E2A44}
 /* pencil: tree style */
 .ts-pen.on{border-color:var(--accent-edge);color:var(--accent)}

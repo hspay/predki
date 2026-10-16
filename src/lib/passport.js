@@ -4,15 +4,18 @@ import { S, LANG, byId, parentsOf, fullName, yearOf, generations } from './core'
 import { WORLD, findCity, countryAt } from './world'
 import { familyTitle } from './treeStyle'
 import { Progress } from './progress'
-import { predkiLogo } from './logo'
+import { globeTile } from './globe'
+import { rootPerson } from './treeLayout'
+import { stickerSrc } from './stickers'
 
 export const SIZE = { story: [1080, 1920], post: [1080, 1350] }
 export const DW = 1000, DH = 1480
-const F = { d: '"Onest",system-ui,-apple-system,"Segoe UI",sans-serif', m: '"JetBrains Mono",ui-monospace,Menlo,monospace' }
+// type of the new identity: condensed capitals for headings and big numbers, Plex for words, Plex Mono for labels
+const F = { d: '"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif', m: '"IBM Plex Mono",ui-monospace,Menlo,monospace', h: '"Sofia Sans Extra Condensed","Arial Narrow",sans-serif' }
 let WORLD_P = null
 let logoImg = null
 export function logoReady(cb) {
-  if (!logoImg) { logoImg = new Image(); const svg = predkiLogo().replace('width="100%" height="100%"', 'width="1024" height="1024"'); logoImg.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg))) }
+  if (!logoImg) { logoImg = new Image(); const svg = globeTile(1024); logoImg.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg))) }
   if (logoImg.complete && logoImg.naturalWidth) cb(); else logoImg.addEventListener('load', cb, { once: true })
 }
 
@@ -45,27 +48,33 @@ export const FLAGS = {
 
 // ---------- palettes ----------
 const PAL = {
-  night: { bgA: '#18214A', bgB: '#05070D', cover: '#1C2547', pageA: '#111830', pageB: '#0C1121', ink: '#EEF1F7', ink2: '#C3CADA', muted: '#7C8698', word: '#F2C879',
-    hatch: ['#2F3E6C', '#43588F'], gu: 'rgba(242,200,121,.055)', band: 'rgba(255,255,255,.035)', dot: '#F2C879', ring: '#10162B', arc: 'rgba(242,200,121,.95)', arcA: 'rgba(242,200,121,.25)',
-    strip: ['#F2C879', '#E9A6B8', '#9DB7FF', '#79D9A6'], edge: 'rgba(242,200,121,.22)', foot: '#EEF1F7', footMuted: '#8A93A8', star: '255,255,255', ghost: 'rgba(183,191,207,.4)', pill: 'rgba(242,200,121,.12)', pillInk: '#F2C879', glow: 'rgba(242,200,121,.45)', core: '#FFF8E6' },
-  paper: { bgA: '#EEF1F6', bgB: '#C9D1DF', cover: '#1E2C5C', pageA: '#F7F8FA', pageB: '#ECF0F2', ink: '#1D2B5E', ink2: '#34427A', muted: '#6B76A0', word: '#6474B0',
-    hatch: ['#8FD3C0', '#83BFD8'], gu: 'rgba(40,140,130,.10)', band: 'rgba(29,43,94,.05)', dot: '#C9452B', ring: '#F7F8FA', arc: 'rgba(201,95,40,.95)', arcA: 'rgba(201,95,40,.25)',
-    strip: ['#C4612C', '#C2678F', '#5D7BD6', '#3FA58A'], edge: 'rgba(29,43,94,.14)', foot: '#1D2B5E', footMuted: '#55618C', star: '29,43,94', ghost: 'rgba(29,43,94,.32)', pill: 'rgba(29,43,94,.07)', pillInk: '#1D2B5E', glow: 'rgba(201,69,43,.22)', core: '#FFF1E8' },
+  // night: deep ultramarine-night, paper words, sky accents, warm gold stops and stars on the map (red read as ominous on the dark card)
+  night: { bgA: '#18217A', bgB: '#04061A', cover: '#0E1650', pageA: '#0F1862', pageB: '#080E3E', ink: '#F4F2EC', ink2: '#C6C9DE', muted: '#868DB6', word: '#8C96FF',
+    hatch: ['#2533FF', '#5A66FF'], gu: 'rgba(140,150,255,.07)', band: 'rgba(140,150,255,.06)', dot: '#FFC94D', ring: '#0B1352', arc: 'rgba(244,242,236,.95)', arcA: 'rgba(244,242,236,.22)',
+    strip: ['#F4F2EC', '#8C96FF', '#FFC94D', '#B4BAFF'], edge: 'rgba(140,150,255,.26)', foot: '#F4F2EC', footMuted: '#868DB6', star: '200,208,255', ghost: 'rgba(140,150,255,.42)', pill: 'rgba(37,51,255,.45)', pillInk: '#F4F2EC', glow: 'rgba(255,201,77,.42)', core: '#FFFFFF', sheet: '#F1EFE8', sheetDot: 'rgba(37,51,255,.16)' },
+  // ultramarine: the whole card in the brand blue, paper ink
+  ultra: { bgA: '#3A47FF', bgB: '#0B1352', cover: '#1A27D9', pageA: '#2D3BFF', pageB: '#1E2BE6', ink: '#F4F2EC', ink2: '#E4E3F2', muted: '#B8BEFF', word: '#F4F2EC',
+    hatch: ['rgba(244,242,236,.55)', 'rgba(244,242,236,.38)'], gu: 'rgba(244,242,236,.06)', band: 'rgba(7,11,43,.2)', dot: '#FFD45E', ring: '#2533FF', arc: 'rgba(244,242,236,.95)', arcA: 'rgba(244,242,236,.25)',
+    strip: ['#F4F2EC', '#B4BAFF', '#FFD45E', '#F4F2EC'], edge: 'rgba(244,242,236,.26)', foot: '#F4F2EC', footMuted: 'rgba(244,242,236,.72)', star: '244,242,236', ghost: 'rgba(244,242,236,.42)', pill: 'rgba(7,11,43,.28)', pillInk: '#F4F2EC', glow: 'rgba(255,212,94,.5)', core: '#FFFFFF', sheet: '#F1EFE8', sheetDot: 'rgba(37,51,255,.16)' },
+  // paper: warm paper, Berlin-blue ink, ultramarine lines and stops
+  paper: { bgA: '#F4F2EC', bgB: '#D6D3C9', cover: '#0B1352', pageA: '#F8F6F0', pageB: '#ECE9E0', ink: '#0B1352', ink2: '#24307A', muted: '#5F6596', word: '#2533FF',
+    hatch: ['#2533FF', '#6B76FF'], gu: 'rgba(37,51,255,.07)', band: 'rgba(11,19,82,.05)', dot: '#2533FF', ring: '#F8F6F0', arc: 'rgba(37,51,255,.95)', arcA: 'rgba(37,51,255,.25)',
+    strip: ['#2533FF', '#C98A12', '#0B1352', '#6B76FF'], edge: 'rgba(11,19,82,.14)', foot: '#0B1352', footMuted: '#5F6596', star: '11,19,82', ghost: 'rgba(11,19,82,.3)', pill: 'rgba(37,51,255,.1)', pillInk: '#2533FF', glow: 'rgba(37,51,255,.22)', core: '#FFF1E8', sheet: '#ECE9E0', sheetDot: 'rgba(37,51,255,.14)' },
   uv: { bgA: '#4A1890', bgB: '#0A0520', cover: '#2A1670', pageA: '#BAC4FF', pageMid: '#EBB9F0', pageB: '#A2E9F3', ink: '#22105A', ink2: '#36217F', muted: '#5B4C9C', word: '#6D28D9',
     hatch: ['#E56BD6', '#3FCFE0'], gu: 'rgba(90,40,180,.13)', band: 'rgba(60,20,140,.08)', dot: '#5B21B6', ring: '#EDE6FF', arc: 'rgba(76,29,170,.95)', arcA: 'rgba(76,29,170,.3)',
-    strip: ['#D946EF', '#8B5CF6', '#22B8CF', '#EC4899'], edge: 'rgba(255,255,255,.45)', foot: '#F1E9FF', footMuted: '#BBA7F0', star: '255,255,255', ghost: 'rgba(54,33,127,.38)', pill: 'rgba(91,33,182,.12)', pillInk: '#4C1D95', glow: 'rgba(255,255,255,.6)', core: '#FFFFFF' }
+    strip: ['#D946EF', '#8B5CF6', '#22B8CF', '#EC4899'], edge: 'rgba(255,255,255,.45)', foot: '#F1E9FF', footMuted: '#BBA7F0', star: '255,255,255', ghost: 'rgba(54,33,127,.38)', pill: 'rgba(91,33,182,.12)', pillInk: '#4C1D95', glow: 'rgba(255,255,255,.6)', core: '#FFFFFF', sheet: 'rgba(255,255,255,.55)', sheetDot: 'rgba(91,33,182,.18)' }
+}
+
+// stickers pasted into the Album: the «Наклейки» cover; ready(cb) calls back as each picture arrives
+const stickerImgs = new Map()
+export function stickersReady(ids, cb) {
+  ids.forEach(id => { if (stickerImgs.has(id)) return; const src = stickerSrc(id); if (!src) return; const im = new Image(); im.onload = cb; im.src = src; stickerImgs.set(id, im) })
 }
 
 // ---------- data from the family ----------
 const today = () => { const d = new Date(); return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}` }
 /** «You» on the card: the person created as «me» in the first run, otherwise whoever has the most known ancestors (the youngest on a tie). */
-export function ownerOf() {
-  const me = S.settings.meId && byId(S.settings.meId); if (me) return me
-  const count = (id, seen = new Set()) => { let n = 0; parentsOf(id).forEach(p => { if (!seen.has(p.id)) { seen.add(p.id); n += 1 + count(p.id, seen) } }); return n }
-  let best = null, bs = -1, by = -1
-  S.people.forEach(p => { const c = count(p.id), y = +yearOf(p.birthDate) || 0; if (c > bs || (c === bs && y > by)) { best = p; bs = c; by = y } })
-  return best
-}
+export function ownerOf() { return rootPerson() }
 const placeKey = (lat, lon) => (+lat).toFixed(1) + ',' + (+lon).toFixed(1)
 export function passportData(opts = {}) {
   const T = tx(), owner = ownerOf(), YEAR = new Date().getFullYear()
@@ -97,7 +106,9 @@ export function passportData(opts = {}) {
   const ob2 = owner && findCity(owner.birthPlace)
   return { people: S.people.length, gens: generations(), first, years: first ? YEAR - first : 0, year: YEAR, fam, surnames,
     keeper: (opts.keeper ?? '').trim() || (owner ? fullName(owner) : '—'), place: ob2 ? ob2[LANG === 'en' ? 'en' : 'ru'] : (owner?.birthPlace || '—'),
-    since: S.settings.since || today(), ach: [N.filter(n => ST[n.id] === 'done').length, N.length], anc, cities, arcs, home, countries }
+    since: S.settings.since || today(), ach: [N.filter(n => ST[n.id] === 'done').length, N.length], anc, cities, arcs, home, countries,
+    // the newest pasted stickers first, for the «Наклейки» cover
+    stickers: (S.achPasted || []).filter(id => ST[id] === 'done').slice().sort((a, b) => String(S.achDates?.[b] || '').localeCompare(String(S.achDates?.[a] || ''))) }
 }
 
 // ---------- drawing ----------
@@ -138,8 +149,8 @@ function drawBg({ c, P, st }, W, H) {
 function drawLogo(c, x, y, s) { if (logoImg && logoImg.complete && logoImg.naturalWidth) c.drawImage(logoImg, x, y, s, s); else { rr(c, x, y, s, s, s * .24); c.fillStyle = '#151B2E'; c.fill() } }
 function drawFrame({ c, P, st, T }, W) {
   if (st.fmt === 'story') {
-    font(c, 600, 44, F.d, -.5); const tw = c.measureText('Predki').width; const lx = (W - (64 + 18 + tw)) / 2
-    drawLogo(c, lx, 138, 64); c.fillStyle = P.foot; c.textBaseline = 'middle'; c.fillText('Predki', lx + 82, 171)
+    font(c, 800, 60, F.h, 1); const tw = c.measureText('PREDKI').width; const lx = (W - (64 + 18 + tw)) / 2
+    drawLogo(c, lx, 138, 64); c.fillStyle = P.foot; c.textBaseline = 'middle'; c.fillText('PREDKI', lx + 82, 174)
     c.textAlign = 'center'; c.textBaseline = 'alphabetic'
     font(c, 400, 24, F.m, 0); c.fillStyle = P.footMuted; c.fillText(T.tag, W / 2, 252)
     c.textAlign = 'left'
@@ -176,8 +187,8 @@ function hero(X) {
   const { c, st } = X, W = 880, H = 600, sc = c.getTransform().a
   const oc = document.createElement('canvas'); oc.width = Math.ceil(W * sc); oc.height = Math.ceil(H * sc)
   const o = oc.getContext('2d'); o.scale(sc, sc)
-  if (st.hero === 'stars') heroStars(X, o, W, H); else heroMap(X, o, W, H)
-  const fx = st.hero === 'stars' ? .015 : .07
+  if (st.hero === 'stars') heroStars(X, o, W, H); else if (st.hero === 'stickers') heroStickers(X, o, W, H); else heroMap(X, o, W, H)
+  const fx = st.hero === 'stars' || st.hero === 'stickers' ? .015 : .07
   o.globalCompositeOperation = 'destination-in' // soft edges
   let m = o.createLinearGradient(0, 0, W, 0); m.addColorStop(0, 'rgba(0,0,0,0)'); m.addColorStop(fx, '#000'); m.addColorStop(1 - fx, '#000'); m.addColorStop(1, 'rgba(0,0,0,0)'); o.fillStyle = m; o.fillRect(0, 0, W, H)
   m = o.createLinearGradient(0, 0, 0, H); m.addColorStop(0, 'rgba(0,0,0,0)'); m.addColorStop(.06, '#000'); m.addColorStop(.92, '#000'); m.addColorStop(1, 'rgba(0,0,0,0)'); o.fillStyle = m; o.fillRect(0, 0, W, H)
@@ -242,6 +253,18 @@ function heroStars({ P, D, T }, o, W, H) {
   const [x, y] = pos(1); fit(o, D.keeper, 360, 500, 22, F.d, 0); o.textAlign = 'center'; o.fillStyle = P.ink; o.fillText(D.keeper, x, y + 56)
   font(o, 400, 15, F.m, 2); o.fillStyle = P.muted; o.fillText(T.you, x, y + 82); o.textAlign = 'left'
 }
+/** «Наклейки»: the newest stickers from the Album, lying askew on a paper page with a dot grid */
+function heroStickers({ P, D }, o, W, H) {
+  o.save(); rr(o, 30, 24, W - 60, H - 48, 26); o.clip(); o.fillStyle = P.sheet; o.fillRect(0, 0, W, H)
+  o.fillStyle = P.sheetDot; for (let y = 36; y < H; y += 22) for (let x = 40; x < W; x += 22) { o.beginPath(); o.arc(x, y, 1.6, 0, 7); o.fill() }
+  const ids = D.stickers.slice(0, 8), r = rnd(3)
+  const spots = [[150, 150], [370, 128], [590, 150], [770, 140], [120, 395], [345, 410], [565, 385], [770, 410]]
+  ids.forEach((id, i) => { const im = stickerImgs.get(id); if (!im || !im.complete || !im.naturalWidth) return
+    const [x, y] = spots[i], s = 230, a = (r() - .5) * .3
+    o.save(); o.translate(x, y); o.rotate(a); o.shadowColor = 'rgba(11,19,82,.28)'; o.shadowBlur = 18; o.shadowOffsetY = 8; o.drawImage(im, -s / 2, -s / 2, s, s); o.restore() })
+  if (!ids.length) { font(o, 500, 22, F.m, 2); o.fillStyle = 'rgba(11,19,82,.45)'; o.textAlign = 'center'; o.fillText(LANG === 'en' ? 'PASTE STICKERS IN THE ALBUM' : 'ВКЛЕЙТЕ НАКЛЕЙКИ В АЛЬБОМ', W / 2, H / 2); o.textAlign = 'left' }
+  o.restore()
+}
 function flags({ c, P, D }) {
   const list = D.countries.slice(0, 18), r = 22, step = list.length > 14 ? 32 : 38, w = (list.length - 1) * step, y = 734; let x = DW / 2 - w / 2
   list.forEach(code => { const f = FLAGS[code]
@@ -265,10 +288,11 @@ function flags({ c, P, D }) {
     }
     c.restore(); c.strokeStyle = P.ring; c.lineWidth = 3.5; c.beginPath(); c.arc(x, y, r, 0, 7); c.stroke(); x += step })
 }
+/** the Album mark: an open album with a round sticker */
 function trophy(c, x, y, s, col) { c.save(); c.translate(x, y); c.scale(s / 24, s / 24); c.strokeStyle = col; c.lineWidth = 2; c.lineCap = 'round'; c.lineJoin = 'round'
-  c.stroke(new Path2D('M8 4h8v5a4 4 0 0 1-8 0z')); c.stroke(new Path2D('M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4')); c.stroke(new Path2D('M12 13v4M9 20h6M10 17h4')); c.restore() }
+  c.stroke(new Path2D('M3.5 5.5C6.2 4.4 9 4.5 12 6c3-1.5 5.8-1.6 8.5-.5v13.5c-2.7-1.1-5.5-1-8.5.5-3-1.5-5.8-1.6-8.5-.5zM12 6v13.5')); c.beginPath(); c.arc(16.2, 10.3, 2, 0, 7); c.stroke(); c.restore() }
 function title({ c, P, D, T }) {
-  fit(c, T.title, 560, 600, 40, F.d, 1.5); c.fillStyle = P.ink; c.fillText(T.title, 60, 864)
+  fit(c, T.title, 560, 800, 58, F.h, 1.5); c.fillStyle = P.ink; c.fillText(T.title, 60, 866)
   c.strokeStyle = P.muted; c.lineWidth = 2; rr(c, 60, 885, 24, 17, 4); c.stroke(); c.beginPath(); c.moveTo(66, 891); c.lineTo(78, 891); c.moveTo(66, 896); c.lineTo(74, 896); c.stroke()
   font(c, 500, 17, F.m, 1.5); c.fillStyle = P.muted; c.fillText(T.sub, 96, 900)
   drawLogo(c, 868, 822, 72)
@@ -276,15 +300,15 @@ function title({ c, P, D, T }) {
   rr(c, px, 836, pw, 44, 22); c.fillStyle = P.pill; c.fill(); trophy(c, px + 14, 846, 24, P.pillInk); c.fillStyle = P.pillInk; c.fillText(t, px + 46, 865)
 }
 function body({ c, P, D, T }) {
-  font(c, 600, 160, F.d, -4); c.fillStyle = P.ink; c.fillText(String(D.people), 52, 1084)
-  const wd = plural(D.people, T.people); fit(c, wd, 470, 300, 62, F.d, -1); c.fillStyle = P.word; c.fillText(wd, 58, 1152)
+  font(c, 800, 200, F.h, 0); c.fillStyle = P.ink; c.fillText(String(D.people), 52, 1096)
+  const wd = plural(D.people, T.people).toUpperCase(); fit(c, wd, 470, 800, 64, F.h, 2); c.fillStyle = P.word; c.fillText(wd, 58, 1156)
   const rows = [[T.fam, D.fam], [T.keeper, D.keeper], [T.place, D.place], [T.since, D.since]]
   rows.forEach(([l, v], i) => { const y = 976 + i * 46; font(c, 400, 22, F.d, 0); c.fillStyle = P.muted; c.fillText(l, 560, y)
     const lw = c.measureText(l).width + 10; fit(c, v, 940 - 560 - lw, 500, 22, F.d, 0); c.fillStyle = P.ink2; c.fillText(v, 560 + lw, y) })
 }
 function nums({ c, P, D, T }) {
   const cols = [[T.gens, D.gens], [T.years, D.years || '—'], [T.cities, D.cities.length], [T.countries, D.countries.length]]
-  cols.forEach(([l, v], i) => { const x = 60 + i * 230; fit(c, l, 210, 400, 22, F.d, 0); c.fillStyle = P.muted; c.fillText(l, x, 1218); font(c, 600, 54, F.d, -1); c.fillStyle = P.ink; c.fillText(String(v), x, 1278) })
+  cols.forEach(([l, v], i) => { const x = 60 + i * 230; fit(c, l.toUpperCase(), 210, 500, 17, F.m, 2); c.fillStyle = P.muted; c.fillText(l.toUpperCase(), x, 1216); font(c, 800, 72, F.h, 0); c.fillStyle = P.ink; c.fillText(String(v), x, 1282) })
 }
 function mrz({ c, P, D, T }) {
   c.fillStyle = P.band; c.fillRect(0, 1312, DW, 140)

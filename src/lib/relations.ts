@@ -1,7 +1,7 @@
 // Links between relatives: adding someone new (straight into the form), linking two people already in the tree, removing a link.
 import {
   S, t, byId, fullName, parentsOf, childrenOf, spousesOf, linkedSiblingsOf, siblingsOf, stepParentsOf, stepChildrenOf,
-  addRel, removePerson, commit, openPerson, editPerson, toast, type Person, type RelKind,
+  addRel, removePerson, commit, showNewPerson, editPerson, toast, type Person, type RelKind,
 } from './core'
 
 export const REL_KINDS: RelKind[] = ['parent', 'step', 'spouse', 'child', 'stepchild', 'sibling']
@@ -13,7 +13,7 @@ export function addRelative(id: string, kind: 'parent' | 'spouse' | 'child' | 's
   if (kind === 'spouse') preset.gender = p.gender === 'm' ? 'f' : p.gender === 'f' ? 'm' : ''
   editPerson(null, preset, (other, step) => {
     linkPeople(id, other.id, step ? (kind === 'parent' ? 'step' : kind === 'child' ? 'stepchild' : kind) : kind)
-    commit(); openPerson(other.id)
+    commit(); showNewPerson(other.id)
   })
 }
 

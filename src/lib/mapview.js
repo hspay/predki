@@ -9,7 +9,7 @@ import { FLAGS } from './passport'
 // map colours for the dark and the light app (lines keep their hue, the light set is deeper so it reads on paper)
 const LOOK = {
   dark: { line: ['#F2C879', '#7FB8FF', '#79D9A6', '#F09BC0', '#5FD3D3', '#C9B4FF', '#F0776B', '#A6D86B', '#FFB070', '#8FA9FF', '#E6E6A0', '#FF9FD8'],
-    land: 'rgba(255,255,255,.07)', coast: 'rgba(255,255,255,.2)', border: 'rgba(255,255,255,.24)', ink: '#EEF1F7', halo: '#0B0F17', head: '#FFFFFF', muted: '#7C8698', wed: '#F2C879' },
+    land: 'rgba(200,208,255,.13)', coast: 'rgba(220,226,255,.34)', border: 'rgba(220,226,255,.3)', ink: '#EEF1F7', halo: '#0B0F17', head: '#FFFFFF', muted: '#7C8698', wed: '#F2C879' },
   light: { line: ['#B7860F', '#2F6FCC', '#1F8E5E', '#C0507A', '#14908F', '#6F55C4', '#C8432F', '#5E8F1E', '#C76A12', '#3E5FCC', '#8A8A1C', '#B8448C'],
     land: '#DCE0D8', coast: '#C2C7BE', border: 'rgba(18,21,19,.32)', ink: '#121513', halo: '#F2F3EE', head: '#121513', muted: '#6F756F', wed: '#A9740F' },
 }
@@ -23,8 +23,9 @@ const TX = {
     kmWay: 'км в пути', countries: ['страна', 'страны', 'стран'], ctryLater: 'Страны появятся по ходу истории', starts: 'История начинается…',
     emptyPerson: m => `У этого человека пока нет ${m === 'moves' ? 'переездов' : 'событий'} с датой.`,
     empty: 'Добавьте в анкету события с местом — они появятся на карте и в хронике.', noPlace: 'место не указано',
-    playing: 'идёт история', paused: 'пауза', play: 'Показать историю семьи', pause: 'Пауза', zin: 'Приблизить', zout: 'Отдалить', zfit: 'Вся семья',
+    playing: 'идёт история', paused: 'пауза', play: 'Показать историю семьи', watch: 'Смотреть историю', again: 'Ещё раз', pause: 'Пауза', zin: 'Приблизить', zout: 'Отдалить', zfit: 'Вся семья',
     slider: 'Год на шкале времени', more: n => `и ещё ${n}`, map: 'Карта перемещений семьи', lines: 'Линии родственников',
+    lg: { line: 'путь', one: 'место одного', shared: 'общее место', star: 'рождение', wed: 'свадьба' }, moved: ['переезд', 'переезда', 'переездов'], route: 'Маршрут',
     kind: { birth: 'рождение', move: 'переезд', study: 'учёба', work: 'работа', marriage: 'свадьба', deathF: 'ушла из жизни', deathM: 'ушёл из жизни', other: 'событие' },
   },
   en: {
@@ -33,8 +34,9 @@ const TX = {
     kmWay: 'km travelled', countries: ['country', 'countries'], ctryLater: 'Countries appear as the story unfolds', starts: 'The story begins…',
     emptyPerson: m => `This person has no dated ${m === 'moves' ? 'moves' : 'events'} yet.`,
     empty: 'Add events with a place to a profile — they will appear on the map and in the chronicle.', noPlace: 'no place given',
-    playing: 'playing', paused: 'paused', play: 'Play the family story', pause: 'Pause', zin: 'Zoom in', zout: 'Zoom out', zfit: 'Whole family',
+    playing: 'playing', paused: 'paused', play: 'Play the family story', watch: 'Play the story', again: 'Again', pause: 'Pause', zin: 'Zoom in', zout: 'Zoom out', zfit: 'Whole family',
     slider: 'Year on the timeline', more: n => `and ${n} more`, map: 'Map of family moves', lines: 'Family lines',
+    lg: { line: 'path', one: 'one person', shared: 'shared place', star: 'birth', wed: 'wedding' }, moved: ['move', 'moves'], route: 'Route',
     kind: { birth: 'birth', move: 'move', study: 'study', work: 'work', marriage: 'wedding', deathF: 'passed away', deathM: 'passed away', other: 'event' },
   },
 }
@@ -108,6 +110,7 @@ export function mountMap(root) {
           <button data-r="zin">+</button><button data-r="zout">−</button>
           <button data-r="zfit"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
         </div>
+        <div class="mp-legend" data-r="legend" aria-hidden="true"></div>
         <div class="mp-tip" data-r="tip" hidden></div>
       </div>
       <div class="mp-lines" data-r="lines"></div>
@@ -184,6 +187,14 @@ export function mountMap(root) {
     $('svg').setAttribute('aria-label', t.map); lines.setAttribute('aria-label', t.lines)
     $('zin').setAttribute('aria-label', t.zin); $('zout').setAttribute('aria-label', t.zout); $('zfit').setAttribute('aria-label', t.zfit); $('zfit').title = t.zfit
     $('tlTrack').setAttribute('aria-label', t.slider); $('tl').style.display = M.has ? '' : 'none'
+    // how to read the map: a quiet line of symbols at the bottom of the map
+    const g = t.lg, c0 = K.line[1], c1 = K.line[2]
+    $('legend').style.display = M.travellers.length ? '' : 'none'
+    $('legend').innerHTML = `<span><svg viewBox="0 0 26 10"><path d="M2 8Q13 0 24 8" fill="none" stroke="${c0}" stroke-width="2.2" stroke-linecap="round"/></svg>${g.line}</span>`
+      + `<span><svg viewBox="0 0 12 12"><circle cx="6" cy="6" r="4.2" fill="${c1}" stroke="${K.halo}" stroke-width="1.6"/></svg>${g.one}</span>`
+      + `<span><svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5.6" fill="${K.ink}" stroke="${K.halo}" stroke-width="1.6"/><circle cx="7" cy="7" r="2.3" fill="${K.halo}"/></svg>${g.shared}</span>`
+      + `<span><svg viewBox="0 0 14 14"><path d="M7 1Q7 7 13 7Q7 7 7 13Q7 7 1 7Q7 7 7 1Z" fill="${K.head}"/></svg>${g.star}</span>`
+      + `<span><svg viewBox="0 0 14 14"><path d="M7 1Q7 7 13 7Q7 7 7 13Q7 7 1 7Q7 7 7 1Z" fill="${K.wed}"/></svg>${g.wed}</span>`
   }
 
   // ---------- header stats (they grow while the story plays) ----------
@@ -219,7 +230,13 @@ export function mountMap(root) {
     list.innerHTML = html || `<div class="mp-empty">${an ? t.starts : MV.only ? t.emptyPerson(MV.mode) : t.empty}</div>`
     if (grew && list.scrollHeight > list.clientHeight + 4) list.scrollTo({ top: list.scrollHeight, behavior: reduced() ? 'auto' : 'smooth' })
     const fn = $('fnote'); fn.hidden = !MV.only
-    if (MV.only) fn.innerHTML = `<span>${t.only} <b>${esc(nameOf(MV.only))}</b></span><button data-act="clr">${t.showAll}</button>`
+    if (MV.only) {
+      const tr = M.travellers.find(x => x.p.id === MV.only), chain = []
+      if (tr) tr.geo.forEach(e => { if (e.pl && chain[chain.length - 1] !== e.pl) chain.push(e.pl) })
+      const segs = M.segs.filter(x => x.pid === MV.only), kmP = Math.round(segs.reduce((a, x) => a + x.km, 0)).toLocaleString(LANG === 'en' ? 'en-US' : 'ru-RU')
+      fn.innerHTML = `<div class="fn-top"><span>${t.only} <b>${esc(nameOf(MV.only))}</b></span><button data-act="clr">${t.showAll}</button></div>`
+        + (chain.length > 1 ? `<div class="fn-route" style="--c:${M.colorOf[MV.only]}"><span class="fn-chain">${chain.map(esc).join(' <i>→</i> ')}</span><span class="fn-km">${kmP} ${t.km} · ${segs.length} ${plural(segs.length, t.moved)}</span></div>` : '')
+    }
   }
   function renderChips() {
     const t = L()
@@ -227,6 +244,7 @@ export function mountMap(root) {
     const all = `<button class="mp-chip all${MV.only ? '' : ' on'}" data-p="" style="--c:var(--accent)"><i class="sw"></i>${t.allLines}</button>`
     const row = [all, ...chips], half = Math.ceil(row.length / 2)
     lines.innerHTML = M.travellers.length ? `<div class="mp-row">${row.slice(0, half).join('')}</div><div class="mp-row">${row.slice(half).join('')}</div>` : ''
+    requestAnimationFrame(() => lines.classList.toggle('at-end', lines.scrollLeft + lines.clientWidth >= lines.scrollWidth - 4))
   }
 
   // ---------- view ----------
@@ -238,11 +256,11 @@ export function mountMap(root) {
     const k = Math.max(W / 1000, Math.min(maxK * W / 1000 * 4, (W - 2 * padX) / Math.max(x1 - x0, 6), (H - topBar - 2 * padY) / Math.max(y1 - y0, 4)))
     return { k, tx: W / 2 - (x0 + x1) / 2 * k, ty: topBar + (H - topBar) / 2 - (y0 + y1) / 2 * k }
   }
-  function flyTo(pts, maxK, animate = true) {
+  function flyTo(pts, maxK, animate = true, D = 650) {
     if (!pts.length) { const r = map.getBoundingClientRect(); W = r.width; H = r.height; const k = W / 1000; MV.view = { k, tx: 0, ty: (H - 500 * k) / 2 }; draw(); return }
     const to = viewFor(pts, maxK), from = MV.view
     if (!animate || reduced() || !from) { MV.view = to; draw(); return }
-    cancelAnimationFrame(flyRaf); const t0 = performance.now(), D = 650
+    cancelAnimationFrame(flyRaf); const t0 = performance.now()
     const step = now => { const tt = Math.min(1, (now - t0) / D), e = 1 - Math.pow(1 - tt, 3)
       const k = from.k * Math.pow(to.k / from.k, e)
       const cx0 = (W / 2 - from.tx) / from.k, cy0 = (H / 2 - from.ty) / from.k, cx1 = (W / 2 - to.tx) / to.k, cy1 = (H / 2 - to.ty) / to.k
@@ -252,7 +270,7 @@ export function mountMap(root) {
   }
   function fit(animate) {
     const pts = []; M.travellers.forEach(tr => { if (vis(tr.p.id)) tr.geo.forEach(e => pts.push(e)) })
-    flyTo(pts.length ? pts : [...M.places.values()], 9, animate)
+    flyTo(pts.length ? pts : [...M.places.values()], 2.5, animate)
   }
   const sx = lo => X(lo) * MV.view.k + MV.view.tx, sy = la => Y(la) * MV.view.k + MV.view.ty
 
@@ -333,7 +351,7 @@ export function mountMap(root) {
     // scale bar in real kilometres
     const midLat = 90 - ((H / 2 - ty) / k) / 500 * 180, kmPerPx = .36 * 111.32 * Math.cos(midLat * Math.PI / 180) / k
     const nice = [10, 20, 50, 100, 200, 250, 500, 1000, 2000, 5000].find(v => v / kmPerPx > 70) || 5000, bw = nice / kmPerPx
-    $('deco').innerHTML = `<g transform="translate(18 ${H - 22})" font-family="JetBrains Mono,monospace" font-size="10.5" fill="${K.muted}"><path d="M0 0H${bw}M0 -4V0M${bw} -4V0" stroke="${K.muted}" stroke-width="1" fill="none"/><text x="${bw + 8}" y="3">${nice.toLocaleString(LANG === 'en' ? 'en-US' : 'ru-RU')} ${L().km}</text></g>`
+    $('deco').innerHTML = `<g transform="translate(${W < 600 ? 18 : W - 76 - bw - 64} ${H - 22})" font-family="JetBrains Mono,monospace" font-size="10.5" fill="${K.muted}"><path d="M0 0H${bw}M0 -4V0M${bw} -4V0" stroke="${K.muted}" stroke-width="1" fill="none"/><text x="${bw + 8}" y="3">${nice.toLocaleString(LANG === 'en' ? 'en-US' : 'ru-RU')} ${L().km}</text></g>`
   }
 
   // ---------- timeline & playback ----------
@@ -341,7 +359,7 @@ export function mountMap(root) {
   const pos = y => (y - M.T0) / (M.T1 - M.T0) * 100
   let lastMarkY = null
   function buildTimeline() {
-    $('tlMarks').innerHTML = [...M.evYears].sort().map(y => `<i data-y="${y}" style="left:${pos(y)}%"></i>`).join('')
+    // no event ticks on the timeline (October 2026): they crowded the bar and told little
     lastMarkY = null; lblW = -1; tlLabels()
   }
   // year captions: as many as fit without touching (a caption needs ~44 px), always on round years
@@ -357,9 +375,10 @@ export function mountMap(root) {
     const t = L(), an = A.anim, yf = an ? yearAt(an.t) : M.YE, y = Math.floor(yf)
     $('tlYear').innerHTML = an ? `<b>${y}</b><span>${an.playing ? t.playing : t.paused}</span>` : `<b>${M.Y0}</b><span>— ${M.YE - 1}</span>`
     $('tlFill').style.width = pos(yf) + '%'; $('tlKnob').style.left = pos(yf) + '%'
-    if (y !== lastMarkY) { lastMarkY = y; root.querySelectorAll('.mp-tl-marks i').forEach(i => i.classList.toggle('on', !an || +i.dataset.y <= y)) }
     const playing = an && an.playing, btn = $('tlPlay')
-    btn.innerHTML = playing ? ICON.pause : (an && an.t >= M.TOTAL ? ICON.again : ICON.play); btn.setAttribute('aria-label', playing ? t.pause : t.play)
+    const done = an && an.t >= M.TOTAL, rest = !an || done
+    btn.innerHTML = playing ? ICON.pause : (done ? ICON.again : ICON.play) + (rest ? `<span>${done ? t.again : t.watch}</span>` : ''); btn.setAttribute('aria-label', playing ? t.pause : t.play)
+    btn.classList.toggle('pill', !!rest)
     const tr = $('tlTrack'); tr.setAttribute('aria-valuemin', M.T0); tr.setAttribute('aria-valuemax', M.T1); tr.setAttribute('aria-valuenow', y)
   }
   function syncPanel() {
@@ -370,20 +389,28 @@ export function mountMap(root) {
     sig = s2; renderList(); renderStats()
     // on a phone the chronicle sits below the map, so the latest event is echoed on the map itself
     const nc = $('nowcard'), lastE = an && src.filter(e => (!MV.only || e.pid === MV.only) && e.y != null && an.t >= st(e.y)).pop()
-    nc.classList.toggle('on', !!lastE && W < 600)
-    if (lastE) { nc.style.setProperty('--c', M.colorOf[lastE.pid]); nc.innerHTML = `<i></i><div><b>${lastE.y} · ${esc(nameOf(lastE.pid))}</b><br>${esc(lastE.route)} <span>${lastE.kind}</span></div>` }
+    nc.classList.toggle('on', !!lastE)
+    if (lastE) { nc.style.setProperty('--c', M.colorOf[lastE.pid]); nc.innerHTML = `<i></i><div><b>${lastE.y} · ${esc(nameOf(lastE.pid))}</b> <span>${lastE.kind}</span><br>${esc(lastE.route)}${lastE.km ? ` <span>· ${Math.round(lastE.km).toLocaleString(LANG === 'en' ? 'en-US' : 'ru-RU')} ${L().km}</span>` : ''}</div>` }
   }
-  function frame() { draw(); tlRender(); syncPanel() }
+  let followSig = ''
+  function follow() {
+    const an = A.anim; if (!an || !an.playing || !A.follow) return
+    const pts = []; M.places.forEach(pl => { if (pl.visits.some(v => vis(v.pid) && v.ev.y != null && st(v.ev.y) <= an.t)) pts.push(pl) })
+    const s2 = pts.map(p => p.key).join(';'); if (!pts.length || s2 === followSig) return
+    followSig = s2; flyTo(pts, 1.6, true, 1100)
+  }
+  function frame() { follow(); draw(); tlRender(); syncPanel() }
   function tick(now) {
     const an = A.anim; if (!an || !an.playing) return
     an.t += Math.min(64, now - last); last = now
     if (an.t >= M.TOTAL) { an.t = M.TOTAL; an.playing = false; frame()
-      endTimer = setTimeout(() => { if (A.anim && !A.anim.playing && A.anim.t >= M.TOTAL) { A.anim = null; frame() } }, 1800); return }
+      endTimer = setTimeout(() => { if (A.anim && !A.anim.playing && A.anim.t >= M.TOTAL) { A.anim = null; frame(); fit(true) } }, 1800); return }
     frame(); raf = requestAnimationFrame(tick)
   }
   function play() {
     clearTimeout(endTimer)
-    if (!A.anim || A.anim.t >= M.TOTAL) { A.anim = { t: 0, playing: false }; shown = new Set(); A.pin = null; fit(true) }
+    if (!A.anim || A.anim.t >= M.TOTAL) { A.anim = { t: 0, playing: false }; shown = new Set(); A.pin = null }
+    A.follow = true; followSig = ''
     A.anim.playing = true; last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(tick); frame()
   }
   function pause() { if (A.anim) A.anim.playing = false; cancelAnimationFrame(raf); frame() }
@@ -412,6 +439,8 @@ export function mountMap(root) {
     draw()
   })
   function setOnly(id) { MV.only = MV.only === id ? null : id; A.pin = null; sig = ''; renderChips(); frame(); fit(true) }
+  const edge = () => lines.classList.toggle('at-end', lines.scrollLeft + lines.clientWidth >= lines.scrollWidth - 4)
+  on(lines, 'scroll', edge, { passive: true })
   on(lines, 'click', e => { const b = e.target.closest('.mp-chip'); if (b) setOnly(b.dataset.p || null) })
   on(lines, 'pointerover', e => { const b = e.target.closest('.mp-chip'); A.preview = b && b.dataset.p ? b.dataset.p : null; draw() })
   on(lines, 'pointerleave', () => { A.preview = null; draw() })
@@ -419,7 +448,7 @@ export function mountMap(root) {
   // pan, zoom, pinch; a tap on a single person's station opens their card
   const ptrs = new Map(); let drag = null, pinch = null, moved = false, downStn = null
   const zoomAt = (cx, cy, f) => { const v = MV.view, k = Math.min(W / 1000 * 40, Math.max(W / 1000, v.k * f)), r = k / v.k; MV.view = { k, tx: cx - (cx - v.tx) * r, ty: cy - (cy - v.ty) * r }; draw() }
-  on(map, 'wheel', e => { e.preventDefault(); const r = map.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * .0016)) }, { passive: false })
+  on(map, 'wheel', e => { e.preventDefault(); A.follow = false; const r = map.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * .0016)) }, { passive: false })
   on(map, 'pointerdown', e => { if (e.target.closest('.mp-ctrls, .mp-tl')) return; ptrs.set(e.pointerId, [e.clientX, e.clientY]); map.setPointerCapture(e.pointerId); moved = false
     downStn = e.target.closest('.mp-stn')
     if (ptrs.size === 1) drag = { x: e.clientX, y: e.clientY, tx: MV.view.tx, ty: MV.view.ty }
@@ -428,7 +457,7 @@ export function mountMap(root) {
     if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, [e.clientX, e.clientY])
     const r = map.getBoundingClientRect()
     if (pinch && ptrs.size === 2) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); zoomAt((a[0] + b[0]) / 2 - r.left, (a[1] + b[1]) / 2 - r.top, (pinch.k * d / pinch.d) / MV.view.k); moved = true; return }
-    if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) { moved = true; map.classList.add('drag') } if (moved) { MV.view = { ...MV.view, tx: drag.tx + dx, ty: drag.ty + dy }; draw(); tip.hidden = true } return }
+    if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) { moved = true; map.classList.add('drag') } if (moved) { A.follow = false; cancelAnimationFrame(flyRaf); MV.view = { ...MV.view, tx: drag.tx + dx, ty: drag.ty + dy }; draw(); tip.hidden = true } return }
     const s = e.target.closest && e.target.closest('.mp-stn'); if (!s) { tip.hidden = true; return }
     const t = L(), pl = M.places.get(s.dataset.k), vs = pl.visits.filter(v => vis(v.pid)).slice().sort((a, b) => (a.ev.y ?? 9999) - (b.ev.y ?? 9999))
     tip.innerHTML = `<b>${esc(pl.name)}</b> <span class="m">${pl.c ? esc(cname(pl.c)) : ''}</span>` + vs.slice(0, 7).map(v => `<div class="r"><i style="background:${M.colorOf[v.pid]}"></i>${esc(nameOf(v.pid))} <span class="m">${t.kind[v.ev.t] || ''} ${v.ev.y ?? ''}</span></div>`).join('') + (vs.length > 7 ? `<div class="m">${t.more(vs.length - 7)}</div>` : '')

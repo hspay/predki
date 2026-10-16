@@ -1,9 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react'
 import {
   ui, S, t, LANG, byId, fullName, spousesOf, yearOf, fillPercent, formerNames,
-  closePanel, openPerson, editPerson, editEvent, openModal, commit, refresh, toast, removePerson, pickFile, uid, addPerson,
+  closePanel, openPerson, showNewPerson, editPerson, editEvent, openModal, commit, refresh, toast, removePerson, pickFile, uid, addPerson,
   avatarSrc, surnameFor, normDate, dateValid, bindDateMask, syncLifeEvents, ensureFathers, type Person, type EvType, type FormerName, type RelKind,
 } from '../lib/core'
+import { rootPerson } from '../lib/treeLayout'
+import { kinship } from '../lib/kinship'
 import { addRelative, relativesOf, unlinkPeople } from '../lib/relations'
 import { frameSvg } from '../lib/frames'
 import { CITIES, findCity } from '../lib/world'
@@ -19,12 +21,12 @@ const CameraIcon = () => <svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11
 const FrameIcon = () => <svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3" /><rect x="8" y="7" width="8" height="10" rx="4" /></svg>
 const ImageIcon = () => <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2" /><circle cx="8.5" cy="10" r="1.5" /><path d="m21 15-5-5-9 9" /></svg>
 
-function Frame({ title, children, foot }: { title: string; children: React.ReactNode; foot?: React.ReactNode }) {
+function Frame({ title, children, foot, swap }: { title: string; children: React.ReactNode; foot?: React.ReactNode; swap?: string }) {
   return <>
-    <div className="panel-head"><h3 id="panelTitle">{title}</h3>
+    <div className="panel-head"><h3 id="panelTitle" key={swap}>{title}</h3>
       <button className="btn icon ghost" id="panelClose" onClick={closePanel} aria-label="close"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
     </div>
-    <div className="panel-body" id="panelBody">{children}</div>
+    <div className="panel-body" id="panelBody"><div className="pn-in" key={swap}>{children}</div></div>
     {foot && <div className="panel-foot" id="panelFoot">{foot}</div>}
   </>
 }
@@ -71,15 +73,22 @@ function Family({ id }: { id: string }) {
 
 function ViewPerson({ id }: { id: string }) {
   const p = byId(id); if (!p) return null
+  // the caption on the portrait: birth year · place · ФОТО
+  const cap = [yearOf(p.birthDate), p.birthPlace, p.avatar ? t('cl.photoTag') : ''].filter(Boolean).join(' · ')
+  // «КАРТОЧКА · МАМА»: how the person is related to you
+  const me = S.settings.kin === false ? null : rootPerson(), kl = me && me.id !== p.id ? kinship(me.id).label[p.id] : me && me.id === p.id ? t('cl.you') : ''
+  const head = t('cl.card') + (kl ? ' · ' + kl : '')
   const setPhoto = () => pickFile('image/*', data => { p.avatar = data; commit(); toast(t('toast.photo')) })
   const removePhoto = () => { if (confirm(t('p.photo.remove.confirm'))) { p.avatar = ''; commit(); toast(t('p.photo.removed')) } }
   const addMedia = (kind: 'photo' | 'doc') => pickFile(kind === 'photo' ? 'image/*' : 'image/*,application/pdf', (data, name) => { p.media = p.media || []; p.media.push({ id: uid(), type: kind, name, data }); commit(); toast(t('toast.photo')) })
   const body = (
     <div>
       <div className="profile-hero">
-        <div className="halo" style={{ backgroundImage: `url(${avatarSrc(p)})` }} />
         {ui.frameEdit && <FramePreview p={p} />}
-        <div className={'ph-ava' + (ui.frameEdit ? ' fe-hide' : '')}><Avatar p={p} size={120} />
+        <div className={'ph-ava ph-portrait' + (ui.frameEdit ? ' fe-hide' : '')}>
+          <img className={'ph-img' + (p.avatar ? ' photo' : '')} src={avatarSrc(p)} alt="" />
+          <i className="cm a" /><i className="cm b" /><i className="cm c" /><i className="cm d" />
+          {cap && <span className="ph-cap">{cap}</span>}
           {p.avatar
             ? <button type="button" className="ph-cam rm" aria-label={t('p.photo.remove')} title={t('p.photo.remove')} onClick={removePhoto}><CrossIcon /></button>
             : <button type="button" className="ph-cam" aria-label={t('p.photo.add')} title={t('p.photo.add')} onClick={setPhoto}><CameraIcon /></button>}</div>
@@ -90,6 +99,7 @@ function ViewPerson({ id }: { id: string }) {
         {p.job && <div className="mono">{p.job}</div>}
       </div>
       {ui.frameEdit ? <FrameEditor p={p} /> : <>
+      <Clarity p={p} setPhoto={setPhoto} />
       <Family id={id} />
       <div className="quick-add">
         {(['parent', 'spouse', 'child', 'sibling'] as const).map(k => <button key={k} className="btn sm" onClick={() => addRelative(id, k)}>{t('p.add.' + k)}</button>)}
@@ -98,7 +108,6 @@ function ViewPerson({ id }: { id: string }) {
         <dt>{t('p.birth')}</dt><dd>{[p.birthDate, p.birthPlace].filter(Boolean).join(' · ') || '—'}</dd>
         {(p.deathDate || p.deathPlace) && <><dt>{t(deathLabel(p.gender))}</dt><dd>{[p.deathDate, p.deathPlace].filter(Boolean).join(' · ')}</dd></>}
         {p.edu && <><dt>{t('p.edu')}</dt><dd>{p.edu}</dd></>}
-        <dt>{t('p.profile')}</dt><dd><span className={'chip ' + (fillPercent(p) === 100 ? 'done' : 'accent')}>{t('p.filled', { n: fillPercent(p) })}</span></dd>
       </dl>
       {p.bio && <><div className="section-t"><h3>{t('p.bio')}</h3></div><p className="story">{p.bio}</p></>}
       <div className="section-t"><h3>{t('p.events')}</h3><button className="btn sm ghost" onClick={() => editEvent(id, null)}>{t('ev.add')}</button></div>
@@ -128,7 +137,34 @@ function ViewPerson({ id }: { id: string }) {
     <button className="btn ghost danger" onClick={() => { if (confirm(t('p.delete.confirm', { name: fullName(p) }))) { removePerson(id); commit(); toast(t('toast.deleted')); closePanel() } }}>{t('p.delete')}</button>
     <button className="btn" onClick={() => editPerson(id)}>{t('p.edit')}</button>
   </>
-  return <Frame title={fullName(p)} foot={ui.frameEdit ? undefined : foot}>{body}</Frame>
+  return <Frame title={head} swap={id} foot={ui.frameEdit ? undefined : foot}>{body}</Frame>
+}
+
+/** «Известно 75%»: how full the card is (8 checks), and the missing facts as quick ways to fill them in */
+function Clarity({ p, setPhoto }: { p: Person; setPhoto: () => void }) {
+  const pc = fillPercent(p), left = Math.max(0, 8 - Math.round(pc / 12.5))
+  const ru = LANG !== 'en', pl = (n: number, f: string[]) => { const a = n % 10, b = n % 100; return f[(a === 1 && b !== 11) ? 0 : (a >= 2 && a <= 4 && (b < 12 || b > 14)) ? 1 : 2] }
+  const hint = pc >= 100 || !left ? t('cl.full') : ru ? `Ещё ${left} ${pl(left, ['факт', 'факта', 'фактов'])} — и карточка заполнена` : `${left} more ${left === 1 ? 'fact' : 'facts'} to complete the card`
+  // open the form on the missing field
+  const edit = (name: string) => { editPerson(p.id); setTimeout(() => { const el = document.querySelector<HTMLInputElement>(`#panel [name="${name}"]`); if (el) { el.focus(); el.scrollIntoView({ block: 'center', behavior: 'smooth' }) } }, 160) }
+  const miss: [string, () => void][] = []
+  if (!p.first || !p.last) miss.push([t(!p.first ? 'p.first' : 'p.last'), () => edit(!p.first ? 'first' : 'last')])
+  if (!p.gender) miss.push([t('p.gender'), () => edit('first')])
+  if (!p.birthDate) miss.push([t('cl.birthDate'), () => edit('birthDate')])
+  if (!p.birthPlace) miss.push([t('cl.birthPlace'), () => edit('birthPlace')])
+  if (!p.avatar) miss.push([t('cl.photo'), setPhoto])
+  if (!p.bio) miss.push([t('cl.bio'), () => edit('bio')])
+  if (!(p.events || []).length) miss.push([t('cl.event'), () => editEvent(p.id, null)])
+  return <>
+    <div className="clar" aria-label={t('cl.known', { n: pc })}>
+      <span className="dots" aria-hidden="true"><i style={{ width: pc + '%' }} /></span>
+      <span><b>{t('cl.known', { n: pc })}</b><small>{hint}</small></span>
+    </div>
+    {miss.length > 0 && <div className="clar-more">
+      <span className="eyebrow">{t('cl.more')}</span>
+      <div className="clar-chips">{miss.map(([l, run]) => <button key={l} type="button" className="clar-chip" onClick={run}>+ {l}</button>)}</div>
+    </div>}
+  </>
 }
 
 function EditPerson({ id, preset, after }: { id: string | null; preset?: Partial<Person> & { _title?: string; _rel?: RelKind }; after?: (p: Person, step: boolean) => void }) {
@@ -167,7 +203,7 @@ function EditPerson({ id, preset, after }: { id: string | null; preset?: Partial
     let target: Person
     if (id) { target = byId(id)!; Object.assign(target, data); if (!kept.length) delete target.names } else { target = addPerson(data); if (p.events) target.events = p.events }
     delete target.auto; syncLifeEvents(target); commit(); toast(t('toast.saved'))
-    if (after) after(target, step); else openPerson(target.id)
+    if (after) after(target, step); else if (id) openPerson(target.id); else showNewPerson(target.id)
     const made = ensureFathers([target.id]); if (made.length) { commit(); toast(t('auto.father', { name: made.map(fullName).join(', ') })) }
   }
   const F = (k: keyof Person, label: string, ph?: string) => <div className="field"><label>{t(label)}</label><input name={k} type="text" defaultValue={String(p[k] || '')} placeholder={ph || ''} /></div>

@@ -111,29 +111,35 @@ export function rootPerson(){
   const me=S.settings.meId&&byId(S.settings.meId); if(me) return me;
   const anc=id=>{ const seen=new Set(), st=[id]; while(st.length){ const x=st.pop(); parentsOf(x).forEach(p=>{ if(!seen.has(p.id)){ seen.add(p.id); st.push(p.id); } }); } return seen.size; };
   let root=null, bestN=-1; S.people.filter(p=>!childrenOf(p.id).length).forEach(p=>{ const n=anc(p.id); if(n>bestN||(n===bestN&&(yearOf(p.birthDate)||'0')>(yearOf(root.birthDate)||'0'))){ bestN=n; root=p; } });
+  // no «me» yet (a sample family, an import): the guess is kept as «me», so a newborn added later does not become «you»
+  if(root) S.settings.meId=root.id;
   return root;
 }
 export function familyColors(light){
-  const col={}, fam={}, lineage=new Set(), root=rootPerson();
-  if(root){ col[root.id]=GOLD; fam[root.id]='g'; lineage.add(root.id);
+  // br: the branch a person belongs to, for the soft colour fields behind the tree — g (me, parents, siblings), ff/fm (father's father's
+  // and father's mother's lines), mf/mm (mother's), far (families who married in)
+  const col={}, fam={}, br={}, lineage=new Set(), root=rootPerson();
+  if(root){ col[root.id]=GOLD; fam[root.id]='g'; br[root.id]='g'; lineage.add(root.id);
     const split=ps=>{ let f=ps.find(p=>p.gender==='m'), m=ps.find(p=>p.gender==='f'); const rest=ps.filter(p=>p!==f&&p!==m); if(!f) f=rest.shift(); if(!m) m=rest.shift(); return [f,m]; };
-    const walk=(p,a,b,d,side)=>{ if(!p||col[p.id]) return; const mid=(a+b)/2; col[p.id]={l:Math.max(.66,.82-.035*(d-1)),c:Math.max(.1,.165-.014*(d-1)),h:((mid%360)+360)%360}; fam[p.id]=side; lineage.add(p.id);
-      const [f,m]=split(parentsOf(p.id)); walk(f,a,mid,d+1,side); walk(m,mid,b,d+1,side); };
-    const [dad,mom]=split(parentsOf(root.id)); walk(dad,192,300,1,'f'); walk(mom,340,422,1,'m'); }
+    const walk=(p,a,b,d,side,branch)=>{ if(!p||col[p.id]) return; const mid=(a+b)/2; col[p.id]={l:Math.max(.66,.82-.035*(d-1)),c:Math.max(.1,.165-.014*(d-1)),h:((mid%360)+360)%360}; fam[p.id]=side; br[p.id]=branch; lineage.add(p.id);
+      const [f,m]=split(parentsOf(p.id)); walk(f,a,mid,d+1,side,d===1?side+'f':branch); walk(m,mid,b,d+1,side,d===1?side+'m':branch); };
+    const [dad,mom]=split(parentsOf(root.id)); walk(dad,192,300,1,'f','g'); walk(mom,340,422,1,'m','g'); }
   // uncles, aunts, cousins… : down from anyone coloured
   const fade=c=>({l:Math.min(.88,c.l+.035),c:Math.max(.05,c.c-.03),h:c.h});
   let ch=true; while(ch){ ch=false; S.people.forEach(p=>{ if(col[p.id]) return; const ps=parentsOf(p.id).filter(x=>col[x.id]); if(!ps.length) return;
     let sib=null; for(const x of ps){ sib=childrenOf(x.id).find(k=>lineage.has(k.id)); if(sib) break; }
-    if(sib){ col[p.id]={...col[sib.id]}; fam[p.id]=fam[sib.id]; } else { col[p.id]=fade(col[ps[0].id]); fam[p.id]=fam[ps[0].id]; } ch=true; }); }
+    if(sib){ col[p.id]={...col[sib.id]}; fam[p.id]=fam[sib.id]; br[p.id]=br[sib.id]==='g'&&(fam[sib.id]==='f'||fam[sib.id]==='m')?fam[sib.id]:br[sib.id]; } else { col[p.id]=fade(col[ps[0].id]); fam[p.id]=fam[ps[0].id]; br[p.id]=br[ps[0].id]; } ch=true; }); }
   // families who married in: every connected group of the rest gets its own green
   const FAR=[150,126,170,138,160,116], rest=new Set(S.people.filter(p=>!col[p.id]).map(p=>p.id)), done=new Set(); let fi=0;
   S.people.forEach(p=>{ if(!rest.has(p.id)||done.has(p.id)) return; const comp=[], st=[p.id];
     while(st.length){ const x=st.pop(); if(done.has(x)) continue; done.add(x); comp.push(x); S.rels.forEach(r=>{ if(r.a===x&&rest.has(r.b)) st.push(r.b); if(r.b===x&&rest.has(r.a)) st.push(r.a); }); }
-    const h=FAR[fi++%FAR.length]; comp.forEach(id=>{ col[id]={l:.8,c:.12,h}; fam[id]='far'; }); });
+    const h=FAR[fi++%FAR.length]; comp.forEach(id=>{ col[id]={l:.8,c:.12,h}; fam[id]='far'; br[id]='far'; }); });
   const css=id=>okc(col[id]||GOLD,light);
   return {
     /** the line from the parents down to this person */
     kin:id=>css(id),
+    /** which colour field (behind the tree) the person stands in */
+    branch:id=>br[id]||'g',
     /** a marriage: gold for «me»; an ancestors' couple takes the colour of the line it continues; otherwise the relative's colour */
     mar:r=>{ if(root&&(r.a===root.id||r.b===root.id)) return okc(GOLD,light);
       const kid=childrenOf(r.a).find(k=>lineage.has(k.id)&&childrenOf(r.b).some(x=>x.id===k.id)); if(kid) return css(kid.id);

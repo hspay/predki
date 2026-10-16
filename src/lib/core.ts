@@ -45,7 +45,8 @@ export interface Settings {
   /** last look picked for the family passport */
   share?: { theme?: string; hero?: string; fmt?: string; uv?: boolean; fam?: string; keeper?: string }
 }
-export interface Data { people: Person[]; rels: Rel[]; achievements: string[]; achDates?: Record<string, string>; achSeen?: string[]; settings: Settings }
+/** achPasted: stickers the family has pasted into the Album (an earned achievement waits there until it is pasted) */
+export interface Data { people: Person[]; rels: Rel[]; achievements: string[]; achDates?: Record<string, string>; achSeen?: string[]; achPasted?: string[]; settings: Settings }
 
 // ---------- utils ----------
 export function uid() { return Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3) }
@@ -121,7 +122,7 @@ export type Panel =
 /** how someone is related to the person whose profile is open */
 export type RelKind = 'parent' | 'step' | 'spouse' | 'child' | 'stepchild' | 'sibling'
 export type Modal = { kind: 'link'; id: string } | null
-export interface Toast { id: string; msg: string; kind?: 'ach' }
+export interface Toast { id: string; msg: string; kind?: 'ach'; sticker?: string; act?: { label: string; run: () => void } }
 export interface Draft {
   id: string; first: string; last: string; patronymic: string; maiden: string; gender: string; rel: string
   birthYear: number | ''; birthDate: string; birthPlace: string; deathYear: number | ''; deathPlace: string; job: string
@@ -137,6 +138,8 @@ export const ui = {
   onboarding: false, firstRun: false, loaded: false, treeRefit: 0, mapRefit: 0, share: false,
   /** «Календарь семьи» is open over the page */
   calendar: false,
+  /** the Album: open section and the sticker whose card is open */
+  album: { tab: 'kin', sheet: null as string | null },
   ai: { mode: 'text' as 'text' | 'audio' | 'photo', drafts: [] as Draft[], busy: false, transcript: '', text: '', ran: false, simulating: false },
 }
 
@@ -215,15 +218,20 @@ export function go(page: Page) { ui.page = page; ui.panel = null; bump() }
 const LANG_KEY = 'predki:lang'
 function pickedLang(): 'ru' | 'en' { try { return localStorage.getItem(LANG_KEY) === 'en' ? 'en' : 'ru' } catch { return 'ru' } }
 export function setLang(l: 'ru' | 'en') { try { localStorage.setItem(LANG_KEY, l) } catch { /* private mode */ } setLangValue(l); S.settings.lang = l; document.documentElement.lang = l; persist(); bump() }
-export function toast(msg: string, kind?: 'ach') {
-  const id = uid(); ui.toasts = [...ui.toasts, { id, msg, kind }]; bump()
-  setTimeout(() => { ui.toasts = ui.toasts.filter(x => x.id !== id); bump() }, kind === 'ach' ? 4000 : 2900) // an achievement stays a bit longer
+export function toast(msg: string, kind?: 'ach', extra?: Pick<Toast, 'sticker' | 'act'>) {
+  const id = uid(); ui.toasts = [...ui.toasts, { id, msg, kind, ...extra }].slice(-3); bump()
+  setTimeout(() => dropToast(id), kind === 'ach' ? 5200 : 2900) // a new sticker stays a bit longer
 }
+export function dropToast(id: string) { if (ui.toasts.some(x => x.id === id)) { ui.toasts = ui.toasts.filter(x => x.id !== id); bump() } }
 let panelKey = 0
 export function openPerson(id: string) { if (!byId(id)) return; if (ui.panel?.mode !== 'view' || ui.panel.id !== id) ui.relEdit = false; ui.panel = { mode: 'view', id }; bump() }
 export function editPerson(id: string | null, preset?: Partial<Person> & { _title?: string; _rel?: RelKind }, after?: (p: Person, step: boolean) => void) { ui.panel = { mode: 'edit', id, preset, after, key: ++panelKey }; bump() }
 export function editEvent(id: string, eventId: string | null) { ui.panel = { mode: 'event', id, eventId, key: ++panelKey }; bump() }
 export function closePanel() { ui.panel = null; ui.frameEdit = false; ui.relEdit = false; bump() }
+/** a person was just added: on a phone the form closes and the Tree shows the new branch growing (everything was just typed in, the card would only hide it); on a wide screen the card opens beside the Tree */
+export function showNewPerson(id: string) {
+  if (typeof matchMedia === 'function' && matchMedia('(max-width:860px)').matches) closePanel(); else openPerson(id)
+}
 export function openModal(m: Modal) { ui.modal = m; bump() }
 export function closeModal() { ui.modal = null; bump() }
 
@@ -299,8 +307,10 @@ export function assignPresets() {
   })
   return changed
 }
-/** What to show in the round portrait: the family photo, else the default silhouette. */
-export function avatarSrc(p: Partial<Person>) { return p.avatar ? mediaUrl(p.avatar) : PRESET_SRC[(p.id && byId(p.id) === p && p.preset) || previewPreset(p)] }
+/** the default portrait key of a saved person (or a stable preview for a form) */
+export function presetOf(p: Partial<Person>) { return (p.id && byId(p.id) === p && p.preset) || previewPreset(p) }
+/** What to show in the round portrait: the family photo, else the default colour silhouette (picked by gender and age). */
+export function avatarSrc(p: Partial<Person>) { return p.avatar ? mediaUrl(p.avatar) : PRESET_SRC[presetOf(p)] }
 export function avatarTint(p: { gender?: string }) { return p.gender === 'f' ? { background: 'rgba(255,205,225,.16)', color: '#F6D3E2' } : p.gender === 'm' ? { background: 'rgba(170,205,255,.16)', color: '#CFE0FA' } : {} }
 /** Profile completeness: 8 checks (occupation is optional, files are not counted). */
 export function fillPercent(p: Person) { const f = ['first', 'last', 'gender', 'birthDate', 'birthPlace', 'bio', 'avatar'] as const; let n = 0; f.forEach(k => { if (p[k]) n++ }); if (p.events && p.events.length) n++; return Math.round(n / 8 * 100) }
@@ -367,7 +377,7 @@ export function ensureFathers(ids?: string[]) {
 }
 
 // ---------- data actions ----------
-export function loadSample() { const d = migrateDates(sampleData()); S.people = d.people; S.rels = d.rels; S.achievements = []; ui.treeRefit++; ui.mapRefit++; commit(true) }
+export function loadSample() { const d = migrateDates(sampleData()); S.people = d.people; S.rels = d.rels; S.achievements = []; S.achPasted = []; ui.treeRefit++; ui.mapRefit++; commit(true) }
 export function finishOnboarding(how?: 'sample' | 'blank' | null) {
   ui.onboarding = false; S.settings.onboarded = true
   if (how === 'sample') loadSample()
@@ -376,11 +386,11 @@ export function finishOnboarding(how?: 'sample' | 'blank' | null) {
 }
 export function importData(d: Partial<Data>) {
   if (!Array.isArray(d.people)) throw new Error('bad json')
-  migrateDates(d as Data); S.people = d.people; S.rels = d.rels || []; S.achievements = d.achievements || []; S.achDates = d.achDates || {}
+  migrateDates(d as Data); S.people = d.people; S.rels = d.rels || []; S.achievements = d.achievements || []; S.achDates = d.achDates || {}; S.achPasted = Array.isArray(d.achPasted) ? d.achPasted : undefined
   const made = ensureFathers(); if (made.length) setTimeout(() => toast(t('auto.father', { name: made.map(fullName).join(', ') })), 900)
   ui.treeRefit++; ui.mapRefit++; commit(true)
 }
-export function clearData() { S.people = []; S.rels = []; S.achievements = []; S.achDates = {}; S.achSeen = []; delete S.settings.familyName; delete S.settings.theme; delete S.settings.meId; ui.firstRun = true; commit() }
+export function clearData() { S.people = []; S.rels = []; S.achievements = []; S.achDates = {}; S.achSeen = []; S.achPasted = []; delete S.settings.familyName; delete S.settings.theme; delete S.settings.meId; ui.firstRun = true; commit() }
 /** First run of an empty family: you, your parents, the tree's look. */
 export function completeFirstRun(d: { theme: string; familyName: string; me: Partial<Person>; mom: { first: string; last: string }; dad: { first: string; last: string } }) {
   S.settings.theme = d.theme; S.settings.familyName = d.familyName; S.settings.ghosts = true

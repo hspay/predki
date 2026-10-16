@@ -5,6 +5,7 @@ import { layout } from '../lib/treeLayout'
 import { kinship } from '../lib/kinship'
 import { question, question2, familyGaps, type Gap } from '../lib/gaps'
 import { fetchShared, submitAnswer, type Snapshot, type Item } from '../lib/invites'
+import { globeSvg } from '../lib/globe'
 
 // The page a relative opens from a «Попросить заполнить» link: a light, read-only view of the family
 // and a short form per person. Nothing is saved on this device except the name the relative typed.
@@ -35,6 +36,8 @@ const TX = {
     kinds: { parent: 'Мама или папа', child: 'Сын или дочь', spouse: 'Муж или жена', sibling: 'Брат или сестра' }, note: 'Что вы о нём или о ней знаете',
     noteH: (o: O) => `Сообщение для ${o.g}`, forOwner: (o: O) => `для ${o.g}`, notePh: 'Что угодно: поправка, вопрос, история о семье',
     till: (y: string) => `по ${y}`,
+    people: ['человек', 'человека', 'человек'], gens: ['поколение', 'поколения', 'поколений'], since: 'история с',
+    how: (o: O) => [['Выберите человека', 'Себя, родителей, бабушку — любого, о ком что-то знаете.'], ['Напишите, что помните', 'Даты, города, истории. Можно коротко, можно примерно.'], [`${o.n} проверит`, 'И добавит всё в древо. Регистрироваться не нужно.']],
   },
   en: {
     loading: 'Opening the tree…', closedH: 'This link no longer works', closedP: 'It was closed or 30 days have passed. Ask whoever sent it for a new one.',
@@ -62,6 +65,8 @@ const TX = {
     kinds: { parent: 'Mother or father', child: 'Son or daughter', spouse: 'Husband or wife', sibling: 'Brother or sister' }, note: 'What you know about them',
     noteH: (o: O) => `Message for ${o.n}`, forOwner: (o: O) => `to ${o.n}`, notePh: 'Anything: a correction, a question, a family story',
     till: (y: string) => `until ${y}`,
+    people: ['person', 'people', 'people'], gens: ['generation', 'generations', 'generations'], since: 'history since',
+    how: (o: O) => [['Pick a person', 'Yourself, your parents, a grandmother — anyone you know something about.'], ['Write what you remember', 'Dates, towns, stories. Short or approximate is fine.'], [`${o.n} checks it`, 'And adds it to the tree. No sign-up needed.']],
   },
 }
 type T_ = typeof TX.ru
@@ -76,6 +81,7 @@ function nameCase(n: string, c: 'g' | 'd', gender?: string) {
   if (/[бвгджзклмнпрстфхцчшщ]$/i.test(n)) return n + (c === 'g' ? 'а' : 'у')
   return n
 }
+const pl = (n: number, f: string[]) => { if (LANG === 'en') return n === 1 ? f[0] : f[1]; const a = n % 10, b = n % 100; return f[(a === 1 && b !== 11) ? 0 : (a >= 2 && a <= 4 && (b < 12 || b > 14)) ? 1 : 2] }
 const NAME_KEY = 'predki:guestName', WHO_KEY = 'predki:guestWho:'
 const store = { get: (k: string) => { try { return localStorage.getItem(k) || '' } catch { return '' } }, set: (k: string, v: string) => { try { localStorage.setItem(k, v) } catch { /* private mode */ } } }
 const NOW = new Date().getFullYear()
@@ -152,18 +158,21 @@ export default function GuestApp({ token }: { token: string }) {
     </div></div>
   )
 
+  const ys = S.people.map(p => +yearOf(p.birthDate)).filter(Boolean), since = ys.length ? String(Math.min(...ys)) : ''
   const missing = (p: Person) => [!p.birthDate && T.miss.birth, p.birthDate && !p.birthPlace && T.miss.place].filter(Boolean).join(' · ')
   const sent = (ids: string[]) => { setDone(d => new Set([...d, ...ids])); setSheet(null); setBanner(T.thanks(O)); setTimeout(() => setBanner(''), 6000) }
 
   return (
     <div className="gs">
       <div className="gs-wrap">
-        <header className="gs-top"><span className="gs-logo">Predki</span></header>
+        <header className="gs-top"><span className="gs-logo"><span className="gs-mark" dangerouslySetInnerHTML={{ __html: globeSvg('#F4F2EC', 18) }} />PREDKI</span></header>
         <section className="gs-hero">
           <span className="eyebrow">{T.eyebrow}</span>
           <h1>{snap.family || owner}</h1>
+          <p className="gs-stats">{[`${S.people.length} ${pl(S.people.length, T.people)}`, `${gens.length} ${pl(gens.length, T.gens)}`, since ? `${T.since} ${since}` : ''].filter(Boolean).map(x => <span key={x}>{x}</span>)}</p>
           <p>{T.asks(O)}</p>
         </section>
+        <ol className="gs-how">{T.how(O).map(([h, d], i) => <li key={i}><b>{i + 1}</b><span><strong>{h}</strong>{d}</span></li>)}</ol>
 
         {picking ? <WhoPicker T={T} ownerId={snap.ownerId} onPick={pickWho} />
          : who && <p className="gs-me"><img src={avatarSrc(byId(who)!)} alt="" /><span>{T.you}: <b>{fullName(byId(who)!)}</b></span><button type="button" onClick={() => setPicking(true)}>{T.notYou}</button></p>}
@@ -171,14 +180,14 @@ export default function GuestApp({ token }: { token: string }) {
         {gap && <section className="gs-card gs-q">
           <span className="eyebrow">{T.qEyebrow(O)}</span>
           <p className="q">{question(gap, who)}{question2(gap, who) ? ' ' + question2(gap, who) : ''}</p>
-          <button type="button" className="btn primary" onClick={() => setSheet({ kind: 'person', id: gap.id, gap })}>{T.answer}</button>
+          <button type="button" className="btn go" onClick={() => setSheet({ kind: 'person', id: gap.id, gap })}>{T.answer}</button>
         </section>}
         {starts.length > 0 && <section className="gs-start">
           <h2 className="gs-h">{T.startH}</h2>
           <p className="gs-muted">{T.startP(O)}</p>
           <ul>{starts.map(g => { const p = byId(g.id)!; return (
             <li key={g.id + g.a}><img src={avatarSrc(p)} alt="" /><span className="q">{question(g, who)}</span>
-              <button type="button" className="btn sm" onClick={() => setSheet({ kind: 'person', id: g.id, gap: g })}>{T.answer}</button></li>) })}</ul>
+              <button type="button" className="btn sm go-o" onClick={() => setSheet({ kind: 'person', id: g.id, gap: g })}>{T.answer}</button></li>) })}</ul>
         </section>}
 
         <h2 className="gs-h">{T.listH}</h2>
@@ -189,7 +198,7 @@ export default function GuestApp({ token }: { token: string }) {
             <div className="gs-people">{row.people.map(p => { const k = kinLabel(p.id), m = missing(p); return (
               <button key={p.id} type="button" className={'gs-person' + (done.has(p.id) ? ' done' : '')} onClick={() => setSheet({ kind: 'person', id: p.id })}>
                 <img src={avatarSrc(p)} alt="" />
-                <span className="tx"><b>{fullName(p)}</b><span>{[yearsOf(p), k].filter(Boolean).join(' · ')}</span>{done.has(p.id) ? <em className="ok">✓ {T.sent}</em> : m && <em>{m}</em>}</span>
+                <span className="tx"><b>{fullName(p)}</b><span>{[yearsOf(p), k].filter(Boolean).join(' · ')}</span>{done.has(p.id) ? <em className="ok">✓ {T.sent}</em> : m && <em className="miss">{m}</em>}</span>
               </button>) })}</div>
           </div>
         ))}
@@ -333,7 +342,7 @@ function GuestSheet({ sheet, T, O, who, token, kinLabel, onClose, onSent }: { sh
         </>}
         {!(who && byId(who)) && <label className="gs-full gs-name">{T.name}<input value={name} placeholder={T.namePh} onChange={e => { setName(e.target.value); setErr('') }} /></label>}
         {err && <p className="gs-err" role="alert">{err}</p>}
-        <div className="gs-acts"><button type="button" className="btn ghost" onClick={onClose}>{T.cancel}</button><button type="button" className="btn primary" disabled={busy} onClick={send}>{T.send(O)}</button></div>
+        <div className="gs-acts"><button type="button" className="btn ghost" onClick={onClose}>{T.cancel}</button><button type="button" className="btn go" disabled={busy} onClick={send}>{T.send(O)}</button></div>
       </div>
     </div>
   )

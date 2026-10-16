@@ -1,14 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { S, ui, bump, persist, toast, LANG } from '../lib/core'
-import { renderCard, passportData, cardLayout, SIZE, DW, DH, logoReady } from '../lib/passport'
+import { renderCard, passportData, cardLayout, SIZE, DW, DH, logoReady, stickersReady } from '../lib/passport'
 
 // «Паспорт семьи»: preview the card, pick its look and share it as a picture.
 const TX = {
-  ru: { h: 'Паспорт семьи', sub: 'Посмотреть и поделиться', close: 'Закрыть', look: 'Оформление', night: 'Ночь', paper: 'Бумага', uv: 'УФ-свет', cover: 'Обложка', map: 'Карта переездов', stars: 'Созвездие рода',
+  ru: { h: 'Паспорт семьи', sub: 'Посмотреть и поделиться', close: 'Закрыть', look: 'Оформление', night: 'Ночь', ultra: 'Ультрамарин', paper: 'Бумага', uv: 'УФ-свет', cover: 'Обложка', map: 'Карта', stars: 'Созвездие', stickers: 'Наклейки',
     fmt: 'Формат', story: 'Сториз 9:16', post: 'Пост 4:5', labels: 'Подписи', fam: 'Род', keeper: 'Хранитель', save: 'Сохранить', toStory: 'В сториз', send: 'Отправить', copy: 'Копировать',
     saved: 'Картинка сохранена', copied: 'Картинка скопирована, её можно вставить в чат', noCopy: 'Браузер не дал скопировать картинку. Сохраните её и отправьте файлом',
     noShare: 'Картинка сохранена. Добавьте её в сториз из галереи', aria: 'Карточка «Паспорт семьи»', share: 'Мой род в Predki' },
-  en: { h: 'Family passport', sub: 'View and share', close: 'Close', look: 'Look', night: 'Night', paper: 'Paper', uv: 'UV light', cover: 'Cover', map: 'Map of moves', stars: 'Family constellation',
+  en: { h: 'Family passport', sub: 'View and share', close: 'Close', look: 'Look', night: 'Night', ultra: 'Ultramarine', paper: 'Paper', uv: 'UV light', cover: 'Cover', map: 'Map', stars: 'Constellation', stickers: 'Stickers',
     fmt: 'Format', story: 'Story 9:16', post: 'Post 4:5', labels: 'Captions', fam: 'Family', keeper: 'Keeper', save: 'Save', toStory: 'To story', send: 'Send', copy: 'Copy',
     saved: 'Picture saved', copied: 'Picture copied, paste it into a chat', noCopy: 'The browser did not allow copying. Save the picture and send it as a file',
     noShare: 'Picture saved. Add it to your story from the gallery', aria: 'Family passport card', share: 'My family in Predki' },
@@ -36,9 +36,10 @@ export default function ShareSheet() {
 
   // the card is drawn with Onest and JetBrains Mono, so wait for them (and the logo) once
   useEffect(() => {
-    let alive = true; const fonts = ['600 40px Onest', '300 40px Onest', '400 20px Onest', '500 20px Onest', '500 20px "JetBrains Mono"'].map(f => document.fonts?.load(f))
+    let alive = true; const fonts = ['800 40px "Sofia Sans Extra Condensed"', '400 20px "IBM Plex Sans"', '500 20px "IBM Plex Sans"', '500 20px "IBM Plex Mono"'].map(f => document.fonts?.load(f))
     Promise.race([Promise.all(fonts), new Promise(r => setTimeout(r, 2500))]).then(() => alive && setReady(v => v + 1))
     logoReady(() => alive && setReady(v => v + 1))
+    stickersReady(auto.stickers.slice(0, 8), () => alive && setReady(v => v + 1))
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') close() }
     addEventListener('keydown', key); const rs = () => setReady(v => v + 1); addEventListener('resize', rs)
     return () => { alive = false; removeEventListener('keydown', key); removeEventListener('resize', rs) }
@@ -98,11 +99,11 @@ export default function ShareSheet() {
           </div>
           <div className="ps-panel">
             <div className="ps-sec"><span className="eyebrow">{T.look}</span>
-              <div className="ps-row">{seg('theme', [['night', T.night], ['paper', T.paper]])}
+              <div className="ps-row">{seg('theme', [['night', T.night], ['ultra', T.ultra], ['paper', T.paper]])}
                 <button type="button" className="ps-uv" aria-pressed={st.uv} onClick={() => set({ uv: !st.uv })}><svg viewBox="0 0 24 24"><path d="M9 3h6l-1 6h-4z" /><path d="M10 9v3a2 2 0 0 0 4 0V9" /><path d="M12 16v5M7 18l-2 2M17 18l2 2" /></svg>{T.uv}</button>
               </div>
             </div>
-            <div className="ps-sec"><span className="eyebrow">{T.cover}</span>{seg('hero', [['map', T.map], ['stars', T.stars]])}</div>
+            <div className="ps-sec"><span className="eyebrow">{T.cover}</span>{seg('hero', [['map', T.map], ['stars', T.stars], ['stickers', T.stickers]])}</div>
             <div className="ps-sec"><span className="eyebrow">{T.fmt}</span>{seg('fmt', [['story', T.story], ['post', T.post]])}</div>
             <div className="ps-sec"><span className="eyebrow">{T.labels}</span>
               <label className="ps-field"><span>{T.fam}</span><input className="input" value={st.fam} maxLength={28} onChange={e => set({ fam: e.target.value })} /></label>

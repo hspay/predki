@@ -1,9 +1,5 @@
-import { useEffect, useRef } from 'react'
-import { Sky } from '../lib/sky'
-
-/** Ambient starfield behind the whole app (canvas, ~24 fps). */
+/** Background behind the whole app: deep ultramarine-night with a fine grid of grey dots (drawn in CSS, no animation loop).
+ *  The old starfield (lib/sky.js) still lives on the welcome landing. */
 export default function SkyBackground() {
-  const ref = useRef<HTMLCanvasElement>(null)
-  useEffect(() => Sky.start(ref.current), [])
-  return <div id="sky"><canvas id="skyCanvas" ref={ref} /></div>
+  return <div id="sky" aria-hidden="true" />
 }

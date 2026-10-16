@@ -25,7 +25,7 @@ const TX = {
     androidSteps: ['Нажмите на скачанный файл. Если телефон предложит календарь (например, Samsung), подтвердите импорт.', 'Если файл не открывается: на компьютере зайдите на calendar.google.com → шестерёнка → «Настройки» → «Импорт и экспорт» → выберите файл → «Импорт».', 'Через пару минут даты появятся в Google Календаре на телефоне.'],
     desktopSteps: ['Mac: дважды щёлкните по файлу, выберите календарь в приложении «Календарь» → «ОК».', 'Google Календарь: calendar.google.com → шестерёнка → «Настройки» → «Импорт и экспорт» → «Импорт».', 'Outlook: «Файл» → «Открыть и экспортировать» → «Импорт и экспорт» → файл .ics.'],
     snapshot: 'Это даты на сегодня. Когда добавите родных или уточните даты, скачайте файл ещё раз.',
-    again: 'Скачать ещё раз', ok: 'Понятно',
+    again: 'Скачать ещё раз', ok: 'Понятно', lg: { birth: 'день рождения', memorial: 'со дня рождения', death: 'день памяти', wedding: 'свадьба' },
   },
   en: {
     h: 'Family calendar', close: 'Close', prev: 'Previous month', next: 'Next month', toToday: 'Back to today',
@@ -45,7 +45,7 @@ const TX = {
     androidSteps: ['Tap the downloaded file. If the phone offers a calendar app (for example, Samsung), confirm the import.', 'If it does not open: on a computer go to calendar.google.com → gear → Settings → Import & export → choose the file → Import.', 'In a couple of minutes the dates appear in Google Calendar on the phone.'],
     desktopSteps: ['Mac: double-click the file, choose a calendar in the Calendar app → OK.', 'Google Calendar: calendar.google.com → gear → Settings → Import & export → Import.', 'Outlook: File → Open & Export → Import/Export → the .ics file.'],
     snapshot: 'These are today’s dates. When you add relatives or fix dates, download the file again.',
-    again: 'Download again', ok: 'Got it',
+    again: 'Download again', ok: 'Got it', lg: { birth: 'birthday', memorial: 'years since birth', death: 'day of remembrance', wedding: 'wedding' },
   },
 }
 function pl(n: number, f: string[]) { const a = n % 10, b = n % 100; return f[(a === 1 && b !== 11) ? 0 : (a >= 2 && a <= 4 && (b < 12 || b > 14)) ? 1 : 2] }
@@ -92,7 +92,7 @@ export default function FamilyCalendar() {
           <button className="ps-x" type="button" onClick={close} aria-label={T.close}><svg viewBox="0 0 16 16"><path d="M3 3l10 10M13 3 3 13" /></svg></button>
           <div className="cal-t"><h2>{T.h}</h2><p>{T.sub(events.length)}</p></div>
           <div className="cal-get">
-            <button className="btn primary" type="button" onClick={get} disabled={!events.length}><CalendarAddIcon />{T.add}</button>
+            <button className="btn cal-add" type="button" onClick={get} disabled={!events.length}><CalendarAddIcon />{T.add}</button>
             <small>{T.what.replace('{n}', String(events.length))}</small>
           </div>
         </header>
@@ -135,13 +135,14 @@ export default function FamilyCalendar() {
             {inMonth.length ? <ul className="cal-list">
               {inMonth.map(e => { const k = kin && e.kind !== 'wedding' ? kin.label[e.id] : ''; return (
                 <li key={e.key}>
-                  <button type="button" className={'cal-item' + (isPast(e.day) ? ' past' : '') + (isToday(e.day) ? ' today' : '')} onClick={() => open(e)}>
+                  <button type="button" className={'cal-item k-' + e.kind + (isPast(e.day) ? ' past' : '') + (isToday(e.day) ? ' today' : '')} onClick={() => open(e)}>
                     <span className="dt"><b>{e.day}</b><span>{dateOf(e.day).toLocaleDateString(loc, { weekday: 'short' }).replace('.', '')}</span></span>
                     <Avatars e={e} />
                     <span className="tx"><span className="nm">{e.title}{isToday(e.day) && <em>{T.today}</em>}</span><span className="ln">{line(e)}</span>{k && k !== 'Вы' && k !== 'You' && <span className="kn">{k}</span>}</span>
                   </button>
                 </li>) })}
             </ul> : <p className="cal-empty">{T.empty}</p>}
+            <p className="cal-lg" aria-hidden="true">{(['birth', 'memorial', 'death', 'wedding'] as const).map(k => <span key={k} className={'k-' + k}><i />{T.lg[k]}</span>)}</p>
             {undated > 0 && <p className="cal-note">{T.undated(undated)}</p>}
           </aside>
         </div>

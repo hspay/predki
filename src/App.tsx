@@ -13,7 +13,7 @@ import ShareSheet from './components/ShareSheet'
 import FamilyCalendar from './components/FamilyCalendar'
 import TreePage from './pages/TreePage'
 import MapPage from './pages/MapPage'
-import ProgressPage from './pages/ProgressPage'
+import AlbumPage from './pages/AlbumPage' // «Альбом» (former «Прогресс»: pages/ProgressPage.tsx)
 import GapsPage from './pages/GapsPage'
 import SettingsPage from './pages/SettingsPage'
 
@@ -40,7 +40,7 @@ export default function App() {
         <main id="main">
           {p === 'tree' && <TreePage />}
           {p === 'map' && <MapPage />}
-          {p === 'progress' && <ProgressPage />}
+          {p === 'progress' && <AlbumPage />}
           {p === 'gaps' && <GapsPage />}
           {p === 'settings' && <SettingsPage />}
           <PersonPanel />

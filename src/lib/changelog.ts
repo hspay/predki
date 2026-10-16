@@ -3,6 +3,23 @@ export interface Release { date: string; items: { ru: string; en: string }[] }
 
 export const CHANGELOG: Release[] = [
   {
+    date: '2026-10-16',
+    items: [
+      { ru: 'Обновлены Настройки и Календарь', en: 'Settings and Calendar updated' },
+      { ru: 'У светлой темы исправлена вёрстка', en: 'Light theme layout fixed' },
+      { ru: 'Фикс багов в мобильной вёрстке', en: 'Mobile layout bug fixes' },
+    ],
+  },
+  {
+    date: '2026-10-15',
+    items: [
+      { ru: 'Редизайн и новый лого', en: 'Redesign and a new logo' },
+      { ru: 'Новый Альбом и Наклейки', en: 'New Album and stickers' },
+      { ru: 'Обновлены Карта и Пробелы', en: 'Map and Gaps updated' },
+      { ru: 'Фикс багов в мобильной вёрстке', en: 'Mobile layout bug fixes' },
+    ],
+  },
+  {
     date: '2026-10-12',
     items: [
       { ru: 'Добавили Пробелы — раздел для заполнения пробелов в истории семьи.', en: 'Added Gaps — a section for filling in the gaps in your family history.' },

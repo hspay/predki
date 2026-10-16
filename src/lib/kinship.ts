@@ -5,7 +5,7 @@ import { S, LANG, byId, fullName, parentsOf, spousesOf, stepParentsOf, type Pers
 
 type G = 'm' | 'f' | ''
 type AB = { a: number; b: number; s: number; c: string }
-export interface Kinship { label: Record<string, string>; blood: Record<string, boolean>; chain: (id: string) => string[] }
+export interface Kinship { label: Record<string, string>; blood: Record<string, boolean>; chain: (id: string) => string[]; linked: (id: string) => boolean }
 
 /** gender used for the wording: their own, otherwise the opposite of a spouse whose gender is known */
 function gOf(p: Person): G {
@@ -84,9 +84,13 @@ export function kinship(meId: string): Kinship {
   const closest = (list: Person[]) => list.filter(x => AB[x.id] && x.id !== meId).sort((x, y) => AB[x.id].s - AB[y.id].s)[0]
   const relName = (x: Person) => name(AB[x.id].a, AB[x.id].b, gOf(x), AB[x.id].c)
   const spouse = spousesOf(meId)[0], upSp = spouse ? ups(spouse.id) : null
+  // everyone reachable from me through any links; the rest are not related to me in the tree at all
+  const linked = new Set([meId]), lq = [meId]
+  while (lq.length) { const x = lq.shift()!; S.rels.forEach(r => { const o = r.a === x ? r.b : r.b === x ? r.a : null; if (o && !linked.has(o)) { linked.add(o); lq.push(o) } }) }
 
   S.people.forEach(p => {
     const id = p.id, g = gOf(p)
+    if (!linked.has(id)) return
     if (AB[id]) { label[id] = name(AB[id].a, AB[id].b, g, AB[id].c); blood[id] = true; return }
     if (spousesOf(meId).some(s => s.id === id)) { label[id] = ru ? N('муж', 'жена', g) : N('husband', 'wife', g); return }
     // married to one of my blood relatives
@@ -119,7 +123,7 @@ export function kinship(meId: string): Kinship {
     }
     label[id] = ru ? N('свойственник', 'свойственница', g) : 'in-law'
   })
-  return { label, blood, chain: id => chainTo(meId, id) }
+  return { label, blood, chain: id => chainTo(meId, id), linked: id => linked.has(id) }
 }
 
 /** the shortest chain of people from me to id, through any links */

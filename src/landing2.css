@@ -1,0 +1,171 @@
+/* ==========================================================================================================
+   Predki · welcome landing (October 2026). Screens alternate like a printed poster: white on ultramarine,
+   ultramarine on paper. Fonts and the brand colours come from design.css (Sofia Sans Extra Condensed, IBM Plex Sans / Mono).
+   ========================================================================================================== */
+#lp{
+  --ln-ultra:#2533FF; --ln-berlin:#0B1352; --ln-paper:#F4F2EC; --ln-white:#FFFFFF; --ln-green:#8FE3B8; --ln-green-d:#3E9C70; --ln-gold:#FFC94D;
+  --ln-head:"Sofia Sans Extra Condensed","Arial Narrow",system-ui,sans-serif; --ln-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --ln-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  position:fixed;inset:0;z-index:50;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+  font-family:var(--ln-body);font-size:16px;line-height:1.55;-webkit-font-smoothing:antialiased;background:var(--ln-ultra);color:var(--ln-white)}
+#lp *{box-sizing:border-box}
+:where(#lp) :where(h1,h2,h3,p){margin:0}
+:where(#lp) button{font:inherit;color:inherit;border:0;background:none;padding:0;cursor:pointer}
+#lp :focus-visible{outline:2px solid currentColor;outline-offset:3px;border-radius:6px}
+#lp section{padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
+
+/* the two looks: each screen picks one and everything inside reads its tokens */
+#lp .blue{--fg:var(--ln-white);--fg2:rgba(255,255,255,.84);--mut:rgba(255,255,255,.64);--edge:rgba(255,255,255,.32);background-color:var(--ln-ultra);color:var(--fg)}
+#lp .paper{--fg:var(--ln-ultra);--fg2:#2E3670;--mut:#5C6396;--edge:rgba(37,51,255,.3);background-color:var(--ln-paper);color:var(--ln-berlin)}
+
+/* ---------- top bar: sits on the first blue screen and scrolls away with it ---------- */
+.lp-top{position:absolute;top:0;left:0;right:0;z-index:5;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px max(20px,env(safe-area-inset-right,0px)) 16px max(20px,env(safe-area-inset-left,0px));padding-top:max(16px,env(safe-area-inset-top,0px))}
+.lp-brand{display:inline-flex;align-items:center;gap:10px;font:800 24px/1 var(--ln-head);letter-spacing:.04em;color:var(--ln-white)}
+.lp-brand .mk{display:grid;place-items:center}
+.lp-brand .mk svg{width:22px;height:auto;display:block}
+.lp-lang{display:flex;gap:2px;padding:3px;border-radius:9px;border:1.5px solid rgba(255,255,255,.4)}
+.lp-lang button{padding:5px 10px;border-radius:6px;font:600 12px var(--ln-mono);letter-spacing:.06em;color:rgba(255,255,255,.7)}
+.lp-lang button[aria-pressed="true"]{background:var(--ln-white);color:var(--ln-ultra)}
+
+/* ---------- buttons: always the opposite of the screen they sit on ---------- */
+.lp-acts{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:center}
+.lp-btn{display:inline-flex;align-items:center;justify-content:center;height:52px;padding:0 28px;border-radius:10px;font:800 20px/1 var(--ln-head);letter-spacing:.05em;text-transform:uppercase;transition:filter .2s,transform .1s,box-shadow .1s}
+.lp-btn.white{background:var(--ln-white);color:var(--ln-ultra);box-shadow:0 4px 0 rgba(11,19,82,.5)}
+.lp-btn.blue{background:var(--ln-ultra);color:var(--ln-white);box-shadow:0 4px 0 var(--ln-berlin)}
+.lp-btn:hover{filter:brightness(1.07)}
+.lp-btn.white:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(11,19,82,.5)}
+.lp-btn.blue:active{transform:translateY(3px);box-shadow:0 1px 0 var(--ln-berlin)}
+.lp-acts.big .lp-btn{height:60px;padding:0 34px;font-size:23px}
+
+/* ---------- 1 · hero: the headline and the split-flap board, white on ultramarine ---------- */
+.lp-hero{position:relative;min-height:max(100svh,600px);display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;gap:26px;padding-block:96px 84px;
+  background-image:radial-gradient(42% 36% at 50% 46%,rgba(255,255,255,.16),transparent 78%),radial-gradient(rgba(255,255,255,.1) 1.2px,transparent 1.5px);background-size:100% 100%,22px 22px}
+.lp-hero h1{--cw:min(76px,calc((100vw - 40px - 7 * 5px) / 8));display:flex;flex-direction:column;align-items:center;gap:12px;font:800 calc(var(--cw) * 1.42)/.9 var(--ln-head);letter-spacing:.01em;text-transform:uppercase}
+.lp-hero .l2{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:10px 18px}
+.lp-hero .from{color:var(--ln-white)}
+.lp-sub{white-space:nowrap;font-size:clamp(13px,3.6vw,22px);line-height:1.4;color:var(--fg2)}
+.lp-scroll{position:absolute;left:50%;transform:translateX(-50%);bottom:22px;display:flex;flex-direction:column;align-items:center;gap:8px;font:500 11px var(--ln-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mut)}
+.lp-scroll i{width:1.5px;height:28px;background:linear-gradient(var(--mut),transparent)}
+
+/* the board: black tiles, a hinge line across the middle; a flap falls from top to bottom when the letter changes */
+.sf{display:inline-flex;gap:5px;perspective:520px}
+.sf-c{--d:70ms;position:relative;width:var(--cw);height:calc(var(--cw) * 1.36);border-radius:calc(var(--cw) * .1);background:#0C0C0F;box-shadow:inset 0 0 0 1px rgba(255,255,255,.07),0 14px 26px -12px rgba(5,8,60,.75);
+  font:800 calc(var(--cw) * 1.12)/1 var(--ln-head);color:var(--ln-white)}
+.sf-h{position:absolute;left:0;right:0;height:50%;overflow:hidden;backface-visibility:hidden;-webkit-backface-visibility:hidden}
+.sf-h b{position:absolute;left:0;right:0;height:200%;display:flex;align-items:center;justify-content:center;font:inherit;line-height:1;padding-top:.06em}
+.sf-top,.sf-ft{top:0;border-radius:calc(var(--cw) * .1) calc(var(--cw) * .1) 0 0;background:#18181C}
+.sf-top b,.sf-ft b{top:0}
+.sf-bot,.sf-fb{bottom:0;border-radius:0 0 calc(var(--cw) * .1) calc(var(--cw) * .1);background:#111114}
+.sf-bot b,.sf-fb b{top:-100%}
+.sf-c::after{content:"";position:absolute;left:0;right:0;top:calc(50% - .75px);height:1.5px;background:#000;z-index:3}
+.sf-ft{transform-origin:50% 100%;z-index:2;transform:rotateX(0deg);visibility:hidden}
+.sf-fb{transform-origin:50% 0%;z-index:2;transform:rotateX(90deg);visibility:hidden}
+.sf-c.go .sf-ft{visibility:visible;animation:sfTop var(--d) ease-in forwards}
+.sf-c.go .sf-fb{visibility:visible;animation:sfBot var(--d) ease-out var(--d) forwards}
+@keyframes sfTop{0%{transform:rotateX(0deg);filter:brightness(1)}100%{transform:rotateX(-90deg);filter:brightness(.55)}}
+@keyframes sfBot{0%{transform:rotateX(90deg);filter:brightness(1.4)}100%{transform:rotateX(0deg);filter:brightness(1)}}
+
+/* ---------- 2 · the tree grows by itself, ultramarine on paper ---------- */
+.lp-grow{position:relative}
+.lp-grow-in{min-height:min(100svh,980px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:32px;max-width:1120px;margin:0 auto;padding-block:96px 96px}
+.lp-tree{width:min(860px,100%);height:auto;max-height:66svh;overflow:visible}
+.lp-br{fill:none;stroke:var(--ln-ultra);stroke-width:2.4;stroke-linecap:round;stroke-dasharray:1}
+.lp-card rect{fill:var(--ln-white);stroke:var(--ln-ultra);stroke-width:1.6}
+.lp-card .av-bg{fill:var(--ln-ultra)}
+.lp-card .nm{font:800 17px var(--ln-head);letter-spacing:.03em;fill:var(--ln-berlin)}
+.lp-card .yr{font:500 11px var(--ln-mono);fill:#5C6396}
+.lp-grow-h{font:800 clamp(30px,3.8vw,48px)/.98 var(--ln-head);text-transform:uppercase;letter-spacing:.01em;text-align:center;max-width:24ch;text-wrap:balance;color:var(--ln-ultra)}
+
+/* ---------- 3 · and also: a bento grid, white on ultramarine ---------- */
+.lp-more-in{max-width:1120px;margin:0 auto;padding-block:120px 120px;display:flex;flex-direction:column;gap:22px}
+.lp-h2{font:800 clamp(44px,6vw,80px)/.95 var(--ln-head);text-transform:uppercase;letter-spacing:.01em;text-align:center;margin-bottom:18px}
+.lp-bento{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:14px}
+.lp-t{position:relative;min-width:0;display:flex;flex-direction:column;gap:18px;padding:24px;border-radius:16px;border:1.5px solid var(--edge);background:rgba(11,19,82,.2);overflow:hidden}
+.lp-t .tx{display:flex;flex-direction:column;gap:8px;max-width:48ch}
+.lp-t h3{font:800 32px/1 var(--ln-head);text-transform:uppercase;letter-spacing:.02em}
+.lp-t p{font-size:15.5px;line-height:1.5;color:var(--fg2)}
+.t-map{grid-column:span 7;padding:0;gap:0}
+.t-map .tx{padding:24px 24px 20px}
+.t-gaps{grid-column:span 5}
+.t-cal{grid-column:span 5}
+.t-album{grid-column:span 7;background:var(--ln-paper);border-color:transparent;color:var(--ln-ultra);
+  background-image:radial-gradient(rgba(37,51,255,.16) 1.1px,transparent 1.4px);background-size:16px 16px;justify-content:flex-start}
+
+/* map: the routes connect the cities one person after another */
+.lp-map{display:block;width:100%;flex:1;min-height:280px;background:rgba(11,19,82,.34);border-top:1.5px solid var(--edge)}
+.lp-map .land{fill:rgba(255,255,255,.2);stroke:rgba(255,255,255,.36);stroke-width:.25}
+.lp-map .rt{fill:none;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1;stroke-dashoffset:1;transition:stroke-dashoffset 1.6s cubic-bezier(.65,0,.35,1)}
+.lp-map.on .rt{stroke-dashoffset:0}
+.lp-map .st{opacity:0;transition:opacity .5s}
+.lp-map.on .st{opacity:1}
+.lp-map .st circle{fill:var(--ln-white);stroke:#1520A8;stroke-width:.8}
+.lp-map .st text{font:600 5.6px var(--ln-body);fill:var(--ln-white);paint-order:stroke;stroke:#1520A8;stroke-width:1.4px;stroke-linejoin:round}
+
+/* gap: a lifeline with a hole in it and the question that goes to a relative */
+.lp-gap{display:flex;flex-direction:column;gap:6px;margin-top:auto}
+.lp-gap .life{position:relative;height:16px}
+.lp-gap .life::before{content:"";position:absolute;left:0;right:0;top:7px;height:2px;background:rgba(255,255,255,.5)}
+.lp-gap .life i{position:absolute;top:3px;height:10px;border-radius:5px}
+.lp-gap .life i.k{background:var(--ln-green)}
+.lp-gap .life i.g{top:0;height:16px;border:1.4px solid var(--ln-white);background:repeating-linear-gradient(45deg,transparent 0 3px,rgba(255,255,255,.55) 3px 4.5px)}
+.lp-gap .yrs{display:flex;justify-content:space-between;font:500 11px var(--ln-mono);color:var(--mut)}
+.lp-gap .yrs .g{color:var(--fg)}
+.lp-gap .bub{margin-top:10px;display:flex;flex-direction:column;gap:12px;align-items:flex-start;padding:14px 16px;border-radius:14px 14px 14px 4px;background:var(--ln-paper);color:var(--ln-berlin)}
+.lp-gap .bub p{font-size:17px;color:var(--ln-berlin);font-weight:500}
+.lp-gap .ans{padding:8px 16px;border-radius:8px;background:var(--ln-ultra);color:var(--ln-white);font-weight:600;font-size:14px;box-shadow:0 3px 0 var(--ln-berlin)}
+
+/* dates */
+.lp-dates{list-style:none;margin:auto 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+.lp-dates li{display:flex;align-items:center;gap:14px;padding:10px 14px;border-radius:12px;border:1.5px solid var(--edge);border-left:4px solid var(--ln-green);background:rgba(255,255,255,.07)}
+.lp-dates li.k-m{border-left-color:var(--ln-white)}
+.lp-dates li.k-w{border-left-color:var(--ln-gold)}
+.lp-dates .dt{display:flex;flex-direction:column;align-items:center;min-width:34px;font:500 10px var(--ln-mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mut)}
+.lp-dates .dt b{font:800 26px/1 var(--ln-head);color:var(--fg)}
+.lp-dates li>span:last-child{display:flex;flex-direction:column;font-size:13px;color:var(--mut);line-height:1.35}
+.lp-dates li>span:last-child b{font-size:14.5px;color:var(--fg);font-weight:600}
+
+/* album: ten stickers in two rows, filling the tile; the three rarest shimmer */
+.lp-stk{flex:1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));align-content:center;gap:6px 2px;padding:4px 0 8px}
+.lp-stk .art{position:relative;display:block;width:112%;margin-left:-6%;aspect-ratio:1;filter:drop-shadow(0 12px 10px rgba(11,19,82,.26)) drop-shadow(0 2px 2px rgba(11,19,82,.2));transition:transform .3s}
+.lp-stk .art:hover{z-index:2}
+.lp-stk img{width:100%;height:100%;display:block}
+.lp-stk .holo{position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,rgba(255,255,255,0) 30%,rgba(255,130,200,.62) 40%,rgba(255,226,130,.66) 46%,rgba(150,255,220,.6) 52%,rgba(130,170,255,.66) 58%,rgba(255,255,255,0) 68%);
+  background-size:300% 300%;mix-blend-mode:hard-light;opacity:.85;-webkit-mask-size:100% 100%;mask-size:100% 100%;animation:lpHolo 4.2s ease-in-out infinite alternate}
+@keyframes lpHolo{0%{background-position:0% 50%}100%{background-position:100% 50%}}
+
+/* ---------- 4 · the end: one clear start over the big ultramarine globe, on paper ---------- */
+.lp-end{position:relative;overflow:hidden;min-height:max(100svh,720px);display:flex;flex-direction:column;align-items:center;text-align:center;padding-block:120px max(28px,env(safe-area-inset-bottom,0px))}
+.lp-globe{position:absolute;inset:0;width:100%;height:100%}
+.lp-end-in{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:18px}
+.lp-end h2{font:800 clamp(56px,10vw,128px)/.88 var(--ln-head);text-transform:uppercase;letter-spacing:.01em;color:var(--ln-ultra)}
+.lp-end-in>p{font-size:clamp(18px,2vw,22px);color:var(--fg2);margin-top:-10px}
+.lp-end .lp-acts{margin-top:8px}
+.lp-foot{position:relative;z-index:1;margin-top:auto;display:flex;flex-wrap:wrap;justify-content:center;gap:6px 20px;font:500 12px var(--ln-mono)}
+.lp-foot a{color:rgba(255,255,255,.8)}
+
+/* ---------- phone ---------- */
+@media (max-width:900px){
+  .t-map,.t-gaps,.t-cal,.t-album{grid-column:span 12}
+}
+@media (max-width:600px){
+  #lp section{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+  .lp-hero h1{--cw:calc((100vw - 32px - 7 * 4px) / 8);gap:10px}
+  .sf{gap:4px}
+  .lp-hero{gap:20px;padding-bottom:90px}
+  .lp-acts{width:100%;flex-direction:column;align-items:stretch}
+  .lp-btn{height:54px}
+  .lp-grow-in{gap:22px;padding-inline:0;padding-block:72px}
+  .lp-card .nm{font-size:19px}
+  .lp-more-in{padding-block:80px 80px}
+  .lp-t{padding:18px}
+  .t-map{padding:0}
+  .t-map .tx{padding:18px 18px 16px}
+  .lp-map{flex:none;min-height:0;height:auto;aspect-ratio:420/250}
+  .lp-map .st text{font-size:9px;stroke-width:2px}
+  .lp-map .st circle{r:3px}
+  .lp-map .rt{stroke-width:2.2}
+  .lp-stk{gap:4px 0}
+}
+@media (prefers-reduced-motion:reduce){
+  .lp-stk .holo{animation:none}
+  .lp-map .rt{transition:none}
+}
