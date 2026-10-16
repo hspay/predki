@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
-import { S, ui, t, LANG, byId, yearOf, parentsOf, childrenOf, yearsOf, avatarSrc, fullName, fillPercent, generations, openPerson, closePanel, editPerson, bump, type Person } from '../lib/core'
+import { S, ui, t, LANG, byId, yearOf, parentsOf, childrenOf, yearsOf, avatarSrc, fullName, fillPercent, generations, openPerson, openPet, closePanel, editPerson, bump, type Person } from '../lib/core'
 import { addRelative } from '../lib/relations'
 import { frameOf, frameArt } from '../lib/frames'
+import { petsOf, petSpot, petIcon, petYears, kindName, PET_R } from '../lib/pets'
 import { themeOf } from '../lib/treeStyle'
 import TreeStyle from '../components/TreeStyle'
 import { openCalendar } from '../components/FamilyCalendar'
@@ -73,6 +74,7 @@ function Spark({ d, color, n, rev }: { d: string; color: string; n: number; rev?
 export default function TreePage() {
   const svgRef = useRef<SVGSVGElement>(null), gRef = useRef<SVGGElement>(null)
   const sel = ui.panel && ui.panel.mode === 'view' ? ui.panel.id : null
+  const selPet = ui.panel && ui.panel.mode === 'pet' ? ui.panel.id : null
   const lay = layout(() => NH)
   // the family's look: title above the tree, dashed places for the parents of the oldest relatives
   const st = S.settings, theme = themeOf(st.theme)
@@ -154,7 +156,7 @@ export default function TreePage() {
     const wheel = (e: WheelEvent) => { e.preventDefault(); const r = svg.getBoundingClientRect(); zoomBy(Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top) }
     const down = (e: PointerEvent) => {
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); svg.setPointerCapture(e.pointerId)
-      if (pts.size === 1) { drag = { x: e.clientX, y: e.clientY, vx: TV.view.x, vy: TV.view.y, node: (e.target as Element).closest('.node, .ghost') }; moved = false }
+      if (pts.size === 1) { drag = { x: e.clientX, y: e.clientY, vx: TV.view.x, vy: TV.view.y, node: (e.target as Element).closest('.petb, .node, .ghost') }; moved = false }
       else if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), k: TV.view.k }; drag = null }
     }
     const move = (e: PointerEvent) => {
@@ -164,7 +166,7 @@ export default function TreePage() {
     }
     const up = (e: PointerEvent) => {
       pts.delete(e.pointerId); if (pts.size < 2) pinch = null
-      if (pts.size === 0) { svg.classList.remove('dragging'); if (!moved) { const n = drag && drag.node as SVGGElement | null; if (n && n.dataset.ghost) addRelative(n.dataset.ghost, 'parent'); else if (n && n.dataset.id) openPerson(n.dataset.id); else closePanel() } drag = null }
+      if (pts.size === 0) { svg.classList.remove('dragging'); if (!moved) { const n = drag && drag.node as SVGGElement | null; if (n && n.dataset.ghost) addRelative(n.dataset.ghost, 'parent'); else if (n && n.dataset.pet) openPet(n.dataset.pet); else if (n && n.dataset.id) openPerson(n.dataset.id); else closePanel() } drag = null }
     }
     const resize = () => setTimeout(fit, 50)
     svg.addEventListener('wheel', wheel, { passive: false }); svg.addEventListener('pointerdown', down); svg.addEventListener('pointermove', move); svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up); window.addEventListener('resize', resize)
@@ -235,6 +237,7 @@ export default function TreePage() {
           <defs><clipPath id="avClip" clipPathUnits="objectBoundingBox"><circle cx=".5" cy=".5" r=".5" /></clipPath>
             <filter id="frShadow" x="-20%" y="-20%" width="140%" height="145%"><feDropShadow dx="0" dy="3" stdDeviation="3" floodColor="#000" floodOpacity=".4" /></filter>
             <filter id="ndGlow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="14" /></filter>
+            <linearGradient id="petBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stopColor="#F6C9A8" /><stop offset="1" stopColor="#B9A3E0" /></linearGradient>
             <radialGradient id="frGlow"><stop offset="0" stopColor="#8C96FF" stopOpacity=".5" /><stop offset="1" stopColor="#8C96FF" stopOpacity="0" /></radialGradient>
           </defs>
           <g id="treeView" ref={gRef}>
@@ -268,6 +271,13 @@ export default function TreePage() {
                       <Portrait p={p} yrs={yrs} kin={!!k} />
                     </g>
                     {art && <g className="frm" filter="url(#frShadow)" dangerouslySetInnerHTML={{ __html: `<defs>${art.defs}</defs>${art.body}` }} />}
+                    {petsOf(p.id).map((pt, i) => { const [x, y] = petSpot(i), ir = PET_R * 1.12; return (
+                      <g key={pt.id} className={'petb' + (selPet === pt.id ? ' sel' : '')} data-pet={pt.id}>
+                        <title>{[pt.name, kindName(pt.kind), petYears(pt)].filter(Boolean).join(' · ')}</title>
+                        <circle className="pb-c" cx={x} cy={y} r={PET_R} />
+                        <circle cx={x} cy={y} r={PET_R - 4} fill="url(#petBg)" />
+                        <svg className="pb-i" x={x - ir / 2} y={y - ir / 2} width={ir} height={ir} viewBox="0 0 24 24" dangerouslySetInnerHTML={{ __html: petIcon(pt.kind) }} />
+                      </g>) })}
                   </g>
                 </g>
               )

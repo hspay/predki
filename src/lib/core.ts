@@ -46,7 +46,9 @@ export interface Settings {
   share?: { theme?: string; hero?: string; fmt?: string; uv?: boolean; fam?: string; keeper?: string }
 }
 /** achPasted: stickers the family has pasted into the Album (an earned achievement waits there until it is pasted) */
-export interface Data { people: Person[]; rels: Rel[]; achievements: string[]; achDates?: Record<string, string>; achSeen?: string[]; achPasted?: string[]; settings: Settings }
+/** pets (lib/pets.ts): a badge on the owner's card in the Tree; name, kind, years */
+export interface Pet { id: string; name: string; kind: string; born: string; died: string; owner: string }
+export interface Data { people: Person[]; rels: Rel[]; pets?: Pet[]; achievements: string[]; achDates?: Record<string, string>; achSeen?: string[]; achPasted?: string[]; settings: Settings }
 
 // ---------- utils ----------
 export function uid() { return Math.random().toString(36).slice(2, 9) + Date.now().toString(36).slice(-3) }
@@ -117,6 +119,8 @@ export function continueWithoutAccount() { setSkipped(true); bump() }
 export type Page = 'tree' | 'map' | 'progress' | 'gaps' | 'settings' // 'ai' (Архивариус) is archived: _backup/archivist-page
 export type Panel =
   | { mode: 'view'; id: string }
+  | { mode: 'pet'; id: string }
+  | { mode: 'petEdit'; id: string | null; owner: string; key: number }
   | { mode: 'edit'; id: string | null; preset?: Partial<Person> & { _title?: string; _rel?: RelKind }; after?: (p: Person, step: boolean) => void; key: number }
   | { mode: 'event'; id: string; eventId: string | null; key: number }
 /** how someone is related to the person whose profile is open */
@@ -227,6 +231,8 @@ let panelKey = 0
 export function openPerson(id: string) { if (!byId(id)) return; if (ui.panel?.mode !== 'view' || ui.panel.id !== id) ui.relEdit = false; ui.panel = { mode: 'view', id }; bump() }
 export function editPerson(id: string | null, preset?: Partial<Person> & { _title?: string; _rel?: RelKind }, after?: (p: Person, step: boolean) => void) { ui.panel = { mode: 'edit', id, preset, after, key: ++panelKey }; bump() }
 export function editEvent(id: string, eventId: string | null) { ui.panel = { mode: 'event', id, eventId, key: ++panelKey }; bump() }
+export function openPet(id: string) { ui.panel = { mode: 'pet', id }; bump() }
+export function editPet(id: string | null, owner: string) { ui.panel = { mode: 'petEdit', id, owner, key: ++panelKey }; bump() }
 export function closePanel() { ui.panel = null; ui.frameEdit = false; ui.relEdit = false; bump() }
 /** a person was just added: on a phone the form closes and the Tree shows the new branch growing (everything was just typed in, the card would only hide it); on a wide screen the card opens beside the Tree */
 export function showNewPerson(id: string) {
@@ -328,7 +334,7 @@ export function addRel(type: Rel['type'], a: string, b: string, from?: string, s
   if (S.rels.some(r => r.type === type && ((r.a === a && r.b === b) || (sym && r.a === b && r.b === a)))) return
   S.rels.push(step ? { id: uid(), type, a, b, from: from || '', step: true } : { id: uid(), type, a, b, from: from || '' })
 }
-export function removePerson(id: string) { S.people = S.people.filter(p => p.id !== id); S.rels = S.rels.filter(r => r.a !== id && r.b !== id) }
+export function removePerson(id: string) { S.people = S.people.filter(p => p.id !== id); S.rels = S.rels.filter(r => r.a !== id && r.b !== id); if (S.pets) S.pets = S.pets.filter(p => p.owner !== id) }
 /** Birth/death fields on the card double as map events. */
 export function syncLifeEvents(p: Person) {
   p.events = p.events || []
@@ -388,6 +394,7 @@ export function importData(d: Partial<Data>) {
   if (!Array.isArray(d.people)) throw new Error('bad json')
   migrateDates(d as Data); S.people = d.people; S.rels = d.rels || []; S.achievements = d.achievements || []; S.achDates = d.achDates || {}
   // an older backup has no Album: everything earned counts as pasted, so the stickers do not all come back as new
+  S.pets = Array.isArray(d.pets) ? d.pets.filter(p => p && p.owner && d.people!.some(x => x.id === p.owner)) : []
   S.achPasted = Array.isArray(d.achPasted) ? d.achPasted : [...S.achievements]; S.achSeen = Array.isArray(d.achSeen) ? d.achSeen : [...S.achievements]
   // «you», the title above the tree, its look and the first day come back too (an older backup has none of them)
   if (d.settings) { const keep = ['meId', 'since', 'familyName', 'theme', 'lines', 'kin', 'ghosts', 'share'] as const; keep.forEach(k => { if (d.settings![k] !== undefined) (S.settings as Record<string, unknown>)[k] = d.settings![k] }) }
@@ -395,7 +402,7 @@ export function importData(d: Partial<Data>) {
   const made = ensureFathers(); if (made.length) setTimeout(() => toast(t('auto.father', { name: made.map(fullName).join(', ') })), 900)
   ui.treeRefit++; ui.mapRefit++; commit(true)
 }
-export function clearData() { S.people = []; S.rels = []; S.achievements = []; S.achDates = {}; S.achSeen = []; S.achPasted = []; delete S.settings.familyName; delete S.settings.theme; delete S.settings.meId; ui.firstRun = true; commit() }
+export function clearData() { S.people = []; S.rels = []; S.pets = []; S.achievements = []; S.achDates = {}; S.achSeen = []; S.achPasted = []; delete S.settings.familyName; delete S.settings.theme; delete S.settings.meId; ui.firstRun = true; commit() }
 /** First run of an empty family: you, your parents, the tree's look. */
 export function completeFirstRun(d: { theme: string; familyName: string; me: Partial<Person>; mom: { first: string; last: string }; dad: { first: string; last: string } }) {
   S.settings.theme = d.theme; S.settings.familyName = d.familyName; S.settings.ghosts = true

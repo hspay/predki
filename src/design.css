@@ -826,3 +826,28 @@ main{border-radius:var(--r-card);background:var(--mainbg);border-color:var(--edg
 .fp-tile.locked svg{opacity:.45;filter:grayscale(.5)}
 @media (max-width:560px){.fp-tile svg{width:72px;height:74px}}
 .node.framed .frm{pointer-events:none}
+
+/* pets (October 2026): round badges on the owner's card, a small profile, the form */
+.petb{cursor:pointer}
+.petb .pb-c{fill:rgba(14,22,80,.96);stroke:rgba(244,242,236,.82);stroke-width:1.5;transition:stroke .2s,stroke-width .2s}
+.petb:hover .pb-c{stroke:var(--paper);stroke-width:2.2}
+.petb.sel .pb-c{stroke:var(--paper);stroke-width:3}
+.petb .pb-i{fill:none;stroke:#0B1352;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.th-light .petb .pb-c{fill:#fff;stroke:rgba(11,19,82,.62)}
+.th-light .petb:hover .pb-c,.th-light .petb.sel .pb-c{stroke:var(--ultra)}
+.pet-face{display:inline-grid;place-items:center;flex:none;border-radius:50%;background:linear-gradient(140deg,#F6C9A8,#B9A3E0);box-shadow:0 0 0 1.5px var(--edge-2)}
+.pet-face svg{width:60%;height:60%;fill:none;stroke:#0B1352;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.pet-list{display:grid;gap:8px;margin-bottom:6px}
+.pet-row{display:flex;align-items:center;gap:12px;width:100%;padding:8px 12px 8px 8px;border-radius:12px;border:1.5px solid var(--edge);background:none;color:var(--ink);text-align:left;cursor:pointer;font:inherit}
+.pet-row:hover{border-color:var(--edge-2)}
+.pet-row b{display:block;font-weight:600}.pet-row small{display:block;color:var(--muted);font-size:12.5px}
+.pet-none{margin:0 0 8px}
+.pet-head{display:flex;align-items:center;gap:18px;margin:4px 0 18px}
+.pet-name{margin:0;font-family:var(--f-head);font-weight:800;font-size:42px;line-height:.92;text-transform:uppercase;overflow-wrap:anywhere}
+.pet-owner{display:inline-flex;align-items:center;gap:8px;padding:3px 12px 3px 3px;border-radius:999px;border:1.5px solid var(--edge);background:none;color:var(--ink);font:inherit;cursor:pointer}
+.pet-owner:hover{border-color:var(--accent)}
+.pet-kinds{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}
+.pet-kinds button{display:grid;justify-items:center;gap:4px;padding:10px 4px 8px;border-radius:10px;border:1.5px solid var(--edge);background:none;color:var(--ink-2);font:inherit;font-size:12.5px;line-height:1.2;text-align:center;cursor:pointer}
+.pet-kinds button svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.pet-kinds button[aria-checked="true"]{border-color:var(--accent);color:var(--ink);box-shadow:0 0 0 1.5px var(--accent) inset}
+.pet-err{margin:0;color:var(--danger);font-size:13.5px}

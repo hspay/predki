@@ -45,7 +45,7 @@ export default function SettingsPage() {
       await Promise.all([...new Set(refs)].map(r => refToInline(r).then(d => { got.set(r, d) }).catch(() => {})))
       people.forEach(p => { if (got.has(p.avatar)) p.avatar = got.get(p.avatar)!; (p.media || []).forEach(m => { if (got.has(m.data)) m.data = got.get(m.data)! }) })
     }
-    const blob = new Blob([JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), people, rels: S.rels, achievements: S.achievements, achDates: S.achDates, achSeen: S.achSeen, achPasted: S.achPasted, settings: backupSettings() }, null, 2)], { type: 'application/json' })
+    const blob = new Blob([JSON.stringify({ version: 2, exportedAt: new Date().toISOString(), people, rels: S.rels, achievements: S.achievements, achDates: S.achDates, achSeen: S.achSeen, achPasted: S.achPasted, pets: S.pets || [], settings: backupSettings() }, null, 2)], { type: 'application/json' })
     const u = URL.createObjectURL(blob); const l = document.createElement('a'); l.href = u; l.download = 'predki-' + new Date().toISOString().slice(0, 10) + '.json'; l.click(); setTimeout(() => URL.revokeObjectURL(u), 1000)
     toast(t('set.exported'))
   }

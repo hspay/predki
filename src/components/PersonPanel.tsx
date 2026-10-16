@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import {
   ui, S, t, LANG, byId, fullName, spousesOf, yearOf, fillPercent, formerNames,
-  closePanel, openPerson, showNewPerson, editPerson, editEvent, openModal, commit, refresh, toast, removePerson, pickFile, uid, addPerson,
+  closePanel, openPerson, openPet, editPet, showNewPerson, editPerson, editEvent, openModal, commit, refresh, toast, removePerson, pickFile, uid, addPerson,
   avatarSrc, yearsOf, surnameFor, normDate, dateValid, bindDateMask, syncLifeEvents, ensureFathers, type Person, type EvType, type FormerName, type RelKind,
 } from '../lib/core'
 import { rootPerson } from '../lib/treeLayout'
@@ -13,6 +13,7 @@ import { CITIES, findCity } from '../lib/world'
 import { mediaUrl } from '../lib/media'
 import Avatar from './Avatar'
 import FrameEditor from './FrameEditor'
+import { KINDS, kindName, petIcon, petsOf, petById, petYears, savePet, removePet } from '../lib/pets'
 
 const EV_TYPES: EvType[] = ['birth', 'move', 'study', 'work', 'marriage', 'death', 'other']
 const DocIcon = () => <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5M9 13h6M9 17h6" /></svg>
@@ -41,6 +42,8 @@ export default function PersonPanel() {
       {panel?.mode === 'view' && <ViewPerson id={panel.id} />}
       {panel?.mode === 'edit' && <EditPerson key={panel.key} id={panel.id} preset={panel.preset} after={panel.after} />}
       {panel?.mode === 'event' && <EditEvent key={panel.key} pid={panel.id} eid={panel.eventId} />}
+      {panel?.mode === 'pet' && <ViewPet id={panel.id} />}
+      {panel?.mode === 'petEdit' && <EditPet key={panel.key} id={panel.id} owner={panel.owner} />}
     </div>
   )
 }
@@ -105,6 +108,7 @@ function ViewPerson({ id }: { id: string }) {
       <div className="quick-add">
         {(['parent', 'spouse', 'child', 'sibling'] as const).map(k => <button key={k} className="btn sm" onClick={() => addRelative(id, k)}>{t('p.add.' + k)}</button>)}
       </div>
+      <PetList id={id} />
       <dl className="kv">
         <dt>{t('p.birth')}</dt><dd>{[p.birthDate, p.birthPlace].filter(Boolean).join(' · ') || '—'}</dd>
         {(p.deathDate || p.deathPlace) && <><dt>{t(deathLabel(p.gender))}</dt><dd>{[p.deathDate, p.deathPlace].filter(Boolean).join(' · ')}</dd></>}
@@ -297,3 +301,69 @@ function EditEvent({ pid, eid }: { pid: string; eid: string | null }) {
   </Frame>
 }
 type LifeEventDraft = { id: string; type: EvType; year: number | ''; place: string; lat: number | null; lon: number | null; note: string; date?: string; with?: string }
+
+// ---------- pets ----------
+const PetFace = ({ kind, size }: { kind: string; size: number }) =>
+  <span className="pet-face" style={{ width: size, height: size }}><svg viewBox="0 0 24 24" aria-hidden="true" dangerouslySetInnerHTML={{ __html: petIcon(kind) }} /></span>
+
+/** «Питомцы» in a person's profile: their pets and «+ Питомец» */
+function PetList({ id }: { id: string }) {
+  const list = petsOf(id)
+  return <>
+    <div className="section-t"><h3>{t('p.pets')}</h3><button className="btn sm ghost" onClick={() => editPet(null, id)}>{t('pet.add')}</button></div>
+    {list.length ? <div className="pet-list">{list.map(pt => <button key={pt.id} type="button" className="pet-row" onClick={() => openPet(pt.id)}>
+      <PetFace kind={pt.kind} size={36} /><span><b>{pt.name}</b><small>{[kindName(pt.kind), petYears(pt)].filter(Boolean).join(' · ')}</small></span></button>)}</div>
+      : <p className="muted pet-none">{t('pet.none')}</p>}
+  </>
+}
+
+/** the pet's own small profile: name, kind, years, owner */
+function ViewPet({ id }: { id: string }) {
+  const pt = petById(id); if (!pt) return null
+  const o = byId(pt.owner)
+  const foot = <>
+    <button className="btn ghost danger" onClick={() => { if (confirm(t('pet.del.confirm', { name: pt.name }))) { removePet(pt.id); toast(t('pet.deleted')); if (o) openPerson(o.id); else closePanel() } }}>{t('p.delete')}</button>
+    <button className="btn" onClick={() => editPet(pt.id, pt.owner)}>{t('p.edit')}</button>
+  </>
+  return <Frame title={t('pet.title')} foot={foot} swap={id}>
+    <div className="pet-head"><PetFace kind={pt.kind} size={96} /><div><h2 className="pet-name">{pt.name}</h2><div className="muted">{kindName(pt.kind)}</div></div></div>
+    <dl className="kv">
+      <dt>{t('pet.years')}</dt><dd>{petYears(pt) || t('pet.years.none')}</dd>
+      {o && <><dt>{t('pet.owner')}</dt><dd><button type="button" className="pet-owner" onClick={() => openPerson(o.id)}><Avatar p={o} size={24} />{fullName(o)}</button></dd></>}
+    </dl>
+  </Frame>
+}
+
+/** add or change a pet: name, kind from the list, years */
+function EditPet({ id, owner }: { id: string | null; owner: string }) {
+  const pt = id ? petById(id) : undefined, o = byId(owner)
+  const [name, setName] = useState(pt?.name || ''), [kind, setKind] = useState(pt?.kind || 'dog')
+  const [born, setBorn] = useState(pt?.born || ''), [died, setDied] = useState(pt?.died || ''), [err, setErr] = useState('')
+  const save = () => {
+    const n = name.trim(); if (!n) { setErr(t('pet.err.name')); return }
+    if (born && died && +died < +born) { setErr(t('pet.err.years')); return }
+    const saved = savePet({ id: pt?.id, name: n, kind, born, died, owner }); toast(t('pet.saved'))
+    // on a phone the Tree shows the new badge right away; on a wide screen the pet's profile opens beside it
+    if (!pt && typeof matchMedia === 'function' && matchMedia('(max-width:860px)').matches) closePanel(); else openPet(saved.id)
+  }
+  const foot = <>
+    <button className="btn ghost" onClick={() => pt ? openPet(pt.id) : openPerson(owner)}>{t('p.cancel')}</button>
+    <button className="btn primary" onClick={save}>{t('p.save')}</button>
+  </>
+  const year = (v: string) => v.replace(/\D/g, '').slice(0, 4)
+  return <Frame title={pt ? t('pet.edit') : o ? t('pet.new.for', { name: fullName(o) }) : t('pet.new')} foot={foot}>
+    <form className="form" onSubmit={e => { e.preventDefault(); save() }}>
+      <div className="field"><label htmlFor="petName">{t('pet.name')}</label><input id="petName" type="text" value={name} placeholder={t('pet.name.ph')} autoFocus onChange={e => { setName(e.target.value); setErr('') }} /></div>
+      <div className="field"><label>{t('pet.kind')}</label>
+        <div className="pet-kinds" role="radiogroup" aria-label={t('pet.kind')}>
+          {KINDS.map(([k]) => <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)}><svg viewBox="0 0 24 24" aria-hidden="true" dangerouslySetInnerHTML={{ __html: petIcon(k) }} />{kindName(k)}</button>)}
+        </div></div>
+      <div className="row">
+        <div className="field"><label htmlFor="petBorn">{t('pet.born')}</label><input id="petBorn" type="text" inputMode="numeric" maxLength={4} placeholder="2015" value={born} onChange={e => { setBorn(year(e.target.value)); setErr('') }} /></div>
+        <div className="field"><label htmlFor="petDied">{t('pet.died')}</label><input id="petDied" type="text" inputMode="numeric" maxLength={4} placeholder={t('pet.died.ph')} value={died} onChange={e => { setDied(year(e.target.value)); setErr('') }} /></div>
+      </div>
+      {err && <p className="pet-err" role="alert">{err}</p>}
+      <button type="submit" hidden />
+    </form>
+  </Frame>
+}
