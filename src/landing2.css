@@ -139,6 +139,12 @@
 .lp-end h2{font:800 clamp(56px,10vw,128px)/.88 var(--ln-head);text-transform:uppercase;letter-spacing:.01em;color:var(--ln-ultra)}
 .lp-end-in>p{font-size:clamp(18px,2vw,22px);color:var(--fg2);margin-top:-10px}
 .lp-end .lp-acts{margin-top:8px}
+/* «Смотреть пример древа»: a quieter second button under the main one */
+.lp-end .lp-acts.big{flex-direction:column;gap:14px}
+.lp-btn.ghost{height:48px;padding:0 24px;font-size:18px;background:transparent;color:var(--ln-ultra);box-shadow:inset 0 0 0 2px var(--ln-ultra)}
+.lp-acts.big .lp-btn.ghost{height:48px;padding:0 24px;font-size:18px}
+.lp-btn.ghost:hover{filter:none;background:rgba(37,51,255,.08)}
+.lp-btn.ghost:active{transform:translateY(1px)}
 .lp-foot{position:relative;z-index:1;margin-top:auto;display:flex;flex-wrap:wrap;justify-content:center;gap:6px 20px;font:500 12px var(--ln-mono)}
 .lp-foot a{color:rgba(255,255,255,.8)}
 

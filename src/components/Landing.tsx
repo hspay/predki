@@ -19,6 +19,7 @@ import stRoots from '../assets/stickers/x_roots.webp'
 import stCentury from '../assets/stickers/r_century.webp'
 import stName from '../assets/stickers/s_name.webp'
 import '../landing2.css'
+import { demo } from '../lib/core'
 
 // The welcome landing (October 2026). Screens alternate: white on ultramarine, ultramarine on paper.
 // A calm first screen with a split-flap board of cities, a tree that grows by itself
@@ -28,7 +29,7 @@ type L = 'ru' | 'en'
 const TX = {
   ru: {
     l1: 'Мои предки', from: 'из', cities: ['Ташкента', 'Москвы', 'Токио', 'Читы', 'Берлина', 'Пензы', 'Риги', 'Казани', 'Одессы', 'Тбилиси'],
-    sub: 'Конструктор семейного древа и карта миграции', start: 'Построить древо', back: 'Вернуться к древу', scroll: 'Листайте',
+    sub: 'Конструктор семейного древа и карта миграции', start: 'Построить древо', demo: 'Смотреть пример древа', back: 'Вернуться к древу', scroll: 'Листайте',
     grow: 'Построй древо семьи за пару минут',
     tree: [['Ренесми', 'Каллен', '2006'], ['Эдвард', 'Каллен', '1901'], ['Белла', 'Свон', '1987'], ['Карлайл', 'Каллен', '1640'], ['Эсми', 'Каллен', '1895'], ['Чарли', 'Свон', '1964'], ['Рене', 'Дуайер', '1966']],
     moreH: 'А ещё',
@@ -43,7 +44,7 @@ const TX = {
   },
   en: {
     l1: 'My ancestors', from: 'are from', cities: ['Tashkent', 'Moscow', 'Tokyo', 'Chita', 'Berlin', 'Penza', 'Riga', 'Kazan', 'Odesa', 'Tbilisi'],
-    sub: 'A family tree builder and a migration map', start: 'Build the tree', back: 'Back to the tree', scroll: 'Scroll',
+    sub: 'A family tree builder and a migration map', start: 'Build the tree', demo: 'See a sample tree', back: 'Back to the tree', scroll: 'Scroll',
     grow: 'Build your family tree in a couple of minutes',
     tree: [['Renesmee', 'Cullen', '2006'], ['Edward', 'Cullen', '1901'], ['Bella', 'Swan', '1987'], ['Carlisle', 'Cullen', '1640'], ['Esme', 'Cullen', '1895'], ['Charlie', 'Swan', '1964'], ['Renée', 'Dwyer', '1966']],
     moreH: 'And also',
@@ -249,11 +250,13 @@ function Globe() {
 }
 
 // ---------------------------------------------------------------- the page
-export default function Landing({ lang, hasData, onStart, onLang }: { lang: L; hasData: boolean; onStart: (how: 'blank' | null) => void; onLang: (l: L) => void }) {
+export default function Landing({ lang, hasData, onStart, onLang, onDemo }: { lang: L; hasData: boolean; onStart: (how: 'blank' | null) => void; onLang: (l: L) => void; onDemo?: () => void }) {
   const T = TX[lang], root = useRef<HTMLDivElement>(null)
-  useEffect(() => { root.current?.scrollTo(0, 0) }, [])
+  // back from the sample tree: the landing opens where its button was, at the end
+  useEffect(() => { const r = root.current; if (!r) return; if (demo.backToEnd) { demo.backToEnd = false; r.scrollTo(0, r.scrollHeight) } else r.scrollTo(0, 0) }, [])
   const go = () => onStart(hasData ? null : 'blank')
-  const Start = ({ big }: { big?: boolean }) => <div className={'lp-acts' + (big ? ' big' : '')}><button type="button" className={'lp-btn ' + (big ? 'blue' : 'white')} onClick={go}>{hasData ? T.back : T.start}</button></div>
+  const Start = ({ big }: { big?: boolean }) => <div className={'lp-acts' + (big ? ' big' : '')}><button type="button" className={'lp-btn ' + (big ? 'blue' : 'white')} onClick={go}>{hasData ? T.back : T.start}</button>
+    {big && onDemo && <button type="button" className="lp-btn ghost" onClick={onDemo}>{T.demo}</button>}</div>
   return (
     <div id="lp" ref={root}>
       <header className="lp-top">

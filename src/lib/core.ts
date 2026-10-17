@@ -30,8 +30,16 @@ export interface Person {
   names?: FormerName[]
 }
 export interface FormerName { id: string; first: string; last: string; patronymic: string; until: string }
-/** parent: a → b (step = stepfather / stepmother); spouse: a ↔ b; sibling: a ↔ b when they have no shared parent in the tree */
-export interface Rel { id: string; type: 'parent' | 'spouse' | 'sibling'; a: string; b: string; from: string; step?: boolean }
+/** parent: a → b (step = stepfather / stepmother, adopt = adoptive parent); spouse: a ↔ b (a marriage, or partners); sibling: a ↔ b when they have no shared parent in the tree */
+export interface Rel { id: string; type: 'parent' | 'spouse' | 'sibling'; a: string; b: string
+  /** a marriage: the wedding date (ДД.ММ.ГГГГ or a year); partners: the year they got together */
+  from: string; step?: boolean
+  /** an adoptive parent: a parent in every way (siblings, the layout), labelled «приёмный» and drawn dotted */
+  adopt?: boolean
+  /** a couple who never married: «партнёр / партнёрша», a dashed line */
+  partner?: boolean
+  /** the marriage (or partnership) is over: «бывший муж», a break in the line; to = the year or date it ended */
+  ex?: boolean; to?: string }
 export interface Settings {
   lang?: 'ru' | 'en'; onboarded?: boolean; aiUsed?: boolean; aiAudio?: boolean
   /** tree look: background theme, title above the tree, dashed places for unknown ancestors */
@@ -57,6 +65,8 @@ function debounce<A extends unknown[]>(fn: (...a: A) => void, ms: number) { let 
 
 // ---------- state & storage ----------
 export let S: Data = { people: [], rels: [], achievements: [], settings: {} }
+/** «Смотреть пример древа» (lib/demo.ts): while a demo family is on screen nothing is saved, synced or awarded */
+export const demo = { on: false, backToEnd: false }
 export function replaceData(d: Data) { S = d }
 const KEY = 'predki:tree'
 export async function loadState(): Promise<Data | null> {
@@ -64,6 +74,7 @@ export async function loadState(): Promise<Data | null> {
 }
 const KEY_AT = 'predki:savedAt', KEY_OWNER = 'predki:owner'
 export const persist = debounce(async () => {
+  if (demo.on) return
   try { await idbSet(KEY, S); await idbSet(KEY_AT, Date.now()) } catch { try { localStorage.setItem('predki', JSON.stringify(S)) } catch { /* storage unavailable */ } }
   pushSoon()
 }, 300)
@@ -79,6 +90,7 @@ const pushSoon = debounce(async () => {
 }, 1200)
 /** Pull the account's tree and reconcile it with this browser. soft = a quiet re-check when the tab comes back. */
 export function syncFromCloud(soft = false) {
+  if (demo.on) return Promise.resolve()
   if (!syncing) { if (!soft && !cloud.synced) { cloud.busy = true; bump() } syncing = doSync(soft).finally(() => { syncing = null; if (cloud.busy) { cloud.busy = false; bump() } }) }
   return syncing
 }
@@ -121,11 +133,13 @@ export type Panel =
   | { mode: 'view'; id: string }
   | { mode: 'pet'; id: string }
   | { mode: 'petEdit'; id: string | null; owner: string; key: number }
-  | { mode: 'edit'; id: string | null; preset?: Partial<Person> & { _title?: string; _rel?: RelKind }; after?: (p: Person, step: boolean) => void; key: number }
+  | { mode: 'edit'; id: string | null; preset?: Partial<Person> & { _title?: string; _rel?: RelKind }; after?: (p: Person, v: RelVariant) => void; key: number }
   | { mode: 'event'; id: string; eventId: string | null; key: number }
 /** how someone is related to the person whose profile is open */
-export type RelKind = 'parent' | 'step' | 'spouse' | 'child' | 'stepchild' | 'sibling'
-export type Modal = { kind: 'link'; id: string } | null
+export type RelKind = 'parent' | 'adopt' | 'step' | 'spouse' | 'partner' | 'ex' | 'child' | 'adoptchild' | 'stepchild' | 'sibling'
+/** how a new relative from «+ Родитель», «+ Супруг(а)», «+ Ребёнок» is related: by birth (or married), adopted, a step-relative, a partner */
+export type RelVariant = 'own' | 'adopt' | 'step' | 'partner'
+export type Modal = { kind: 'link'; id: string } | { kind: 'pair'; a: string; b: string } | null
 export interface Toast { id: string; msg: string; kind?: 'ach'; sticker?: string; act?: { label: string; run: () => void } }
 export interface Draft {
   id: string; first: string; last: string; patronymic: string; maiden: string; gender: string; rel: string
@@ -142,6 +156,8 @@ export const ui = {
   onboarding: false, firstRun: false, loaded: false, treeRefit: 0, mapRefit: 0, share: false,
   /** «Календарь семьи» is open over the page */
   calendar: false,
+  /** the demo tree is open (lib/demo.ts): which family, and when the page opened (0 = no growth animation) */
+  demo: null as null | { fam: string; intro: number },
   /** the Album: open section and the sticker whose card is open */
   album: { tab: 'kin', sheet: null as string | null },
   ai: { mode: 'text' as 'text' | 'audio' | 'photo', drafts: [] as Draft[], busy: false, transcript: '', text: '', ran: false, simulating: false },
@@ -154,7 +170,7 @@ const subscribe = (l: () => void) => { listeners.add(l); return () => { listener
 export function bump() { version++; listeners.forEach(l => l()) }
 export function useStore() { return useSyncExternalStore(subscribe, () => version) }
 
-export function commit(quiet = false) { assignPresets(); forgetRemovedFiles(); persist(); Progress.check(quiet); bump() }
+export function commit(quiet = false) { if (demo.on) { bump(); return } assignPresets(); forgetRemovedFiles(); persist(); Progress.check(quiet); bump() }
 onMediaReady(bump)
 
 // ---------- photos & documents in Supabase Storage (lib/media.ts) ----------
@@ -229,7 +245,7 @@ export function toast(msg: string, kind?: 'ach', extra?: Pick<Toast, 'sticker' |
 export function dropToast(id: string) { if (ui.toasts.some(x => x.id === id)) { ui.toasts = ui.toasts.filter(x => x.id !== id); bump() } }
 let panelKey = 0
 export function openPerson(id: string) { if (!byId(id)) return; if (ui.panel?.mode !== 'view' || ui.panel.id !== id) ui.relEdit = false; ui.panel = { mode: 'view', id }; bump() }
-export function editPerson(id: string | null, preset?: Partial<Person> & { _title?: string; _rel?: RelKind }, after?: (p: Person, step: boolean) => void) { ui.panel = { mode: 'edit', id, preset, after, key: ++panelKey }; bump() }
+export function editPerson(id: string | null, preset?: Partial<Person> & { _title?: string; _rel?: RelKind }, after?: (p: Person, v: RelVariant) => void) { ui.panel = { mode: 'edit', id, preset, after, key: ++panelKey }; bump() }
 export function editEvent(id: string, eventId: string | null) { ui.panel = { mode: 'event', id, eventId, key: ++panelKey }; bump() }
 export function openPet(id: string) { ui.panel = { mode: 'pet', id }; bump() }
 export function editPet(id: string | null, owner: string) { ui.panel = { mode: 'petEdit', id, owner, key: ++panelKey }; bump() }
@@ -284,7 +300,9 @@ export function migrateDates(st: Data) { (st.people || []).forEach(p => { p.birt
 export const byId = (id: string) => S.people.find(p => p.id === id)
 export function fullName(p?: Person | null) { if (!p) return ''; const n = [p.first, p.last].filter(Boolean).join(' '); return n || t('p.unknown') }
 export function initials(p: { first?: string; last?: string }) { return ((p.first || '')[0] || '') + ((p.last || '')[0] || '') || '?' }
-export function yearsOf(p: Person) { const b = yearOf(p.birthDate), d = yearOf(p.deathDate); if (!b && !d) return ''; return `${b || '…'} – ${d || ''}`.replace(/ – $/, '') }
+/** «0284» → «284»: years before 1000 (the Westeros calendar of a demo family) are stored with leading zeros */
+export const showYear = (y: string) => y.replace(/^0+(?=\d)/, '')
+export function yearsOf(p: Person) { const b = showYear(yearOf(p.birthDate)), d = showYear(yearOf(p.deathDate)); if (!b && !d) return ''; return `${b || '…'} – ${d || ''}`.replace(/ – $/, '') }
 // parents / children are by birth (or adoption); stepfathers and stepmothers are kept apart
 export function parentsOf(id: string) { return S.rels.filter(r => r.type === 'parent' && !r.step && r.b === id).map(r => byId(r.a)).filter(Boolean) as Person[] }
 export function childrenOf(id: string) { return S.rels.filter(r => r.type === 'parent' && !r.step && r.a === id).map(r => byId(r.b)).filter(Boolean) as Person[] }
@@ -292,6 +310,14 @@ export function stepParentsOf(id: string) { return S.rels.filter(r => r.type ===
 export function stepChildrenOf(id: string) { return S.rels.filter(r => r.type === 'parent' && r.step && r.a === id).map(r => byId(r.b)).filter(Boolean) as Person[] }
 /** brothers and sisters linked directly (no shared parent in the tree yet) */
 export function linkedSiblingsOf(id: string) { return S.rels.filter(r => r.type === 'sibling' && (r.a === id || r.b === id)).map(r => byId(r.a === id ? r.b : r.a)).filter(Boolean) as Person[] }
+/** the marriage or partnership link between two people */
+export function coupleRel(a: string, b: string) { return S.rels.find(r => r.type === 'spouse' && ((r.a === a && r.b === b) || (r.a === b && r.b === a))) }
+/** spouses and partners the person is still with (not the former ones) */
+export function currentSpousesOf(id: string) { return S.rels.filter(r => r.type === 'spouse' && !r.ex && (r.a === id || r.b === id)).map(r => byId(r.a === id ? r.b : r.a)).filter(Boolean) as Person[] }
+export function adoptParentsOf(id: string) { return S.rels.filter(r => r.type === 'parent' && r.adopt && r.b === id).map(r => byId(r.a)).filter(Boolean) as Person[] }
+export function adoptChildrenOf(id: string) { return S.rels.filter(r => r.type === 'parent' && r.adopt && r.a === id).map(r => byId(r.b)).filter(Boolean) as Person[] }
+/** «1978 – 1991»: the years of a couple (an ended one gets its end too) */
+export function coupleYears(r: Rel) { const a = showYear(yearOf(r.from)), b = showYear(yearOf(r.to)); return r.ex ? (a || b ? `${a || '…'} – ${b || '…'}` : '') : a }
 export function spousesOf(id: string) { return S.rels.filter(r => r.type === 'spouse' && (r.a === id || r.b === id)).map(r => byId(r.a === id ? r.b : r.a)).filter(Boolean) as Person[] }
 export function siblingsOf(id: string) { const ps = parentsOf(id).map(p => p.id); const set = new Set<string>(); ps.forEach(pid => childrenOf(pid).forEach(c => { if (c.id !== id) set.add(c.id) })); linkedSiblingsOf(id).forEach(x => set.add(x.id)); return [...set].map(byId).filter(Boolean) as Person[] }
 /** «Голышев Иван (до 1946)» — earlier names in one line */
@@ -329,10 +355,10 @@ export function addPerson(data?: Partial<Person>): Person {
   const p: Person = Object.assign({ id: uid(), first: '', last: '', maiden: '', patronymic: '', gender: '', birthDate: '', birthPlace: '', deathDate: '', deathPlace: '', job: '', edu: '', bio: '', avatar: '', media: [], events: [] }, data || {})
   S.people.push(p); return p
 }
-export function addRel(type: Rel['type'], a: string, b: string, from?: string, step?: boolean) {
+export function addRel(type: Rel['type'], a: string, b: string, from?: string, step?: boolean, extra?: Partial<Pick<Rel, 'adopt' | 'partner' | 'ex' | 'to'>>) {
   if (a === b) return; const sym = type !== 'parent'
   if (S.rels.some(r => r.type === type && ((r.a === a && r.b === b) || (sym && r.a === b && r.b === a)))) return
-  S.rels.push(step ? { id: uid(), type, a, b, from: from || '', step: true } : { id: uid(), type, a, b, from: from || '' })
+  S.rels.push(Object.assign(step ? { id: uid(), type, a, b, from: from || '', step: true } : { id: uid(), type, a, b, from: from || '' }, extra || {}))
 }
 export function removePerson(id: string) { S.people = S.people.filter(p => p.id !== id); S.rels = S.rels.filter(r => r.a !== id && r.b !== id); if (S.pets) S.pets = S.pets.filter(p => p.owner !== id) }
 /** Birth/death fields on the card double as map events. */

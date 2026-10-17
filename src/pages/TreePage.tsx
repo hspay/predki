@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
-import { S, ui, t, LANG, byId, yearOf, parentsOf, childrenOf, yearsOf, avatarSrc, fullName, fillPercent, generations, openPerson, openPet, closePanel, editPerson, bump, type Person } from '../lib/core'
+import { S, ui, t, LANG, byId, yearOf, showYear, parentsOf, childrenOf, yearsOf, avatarSrc, fullName, fillPercent, generations, openPerson, openPet, closePanel, editPerson, bump, type Person } from '../lib/core'
 import { addRelative } from '../lib/relations'
 import { frameOf, frameArt } from '../lib/frames'
 import { petsOf, petSpot, petIcon, petYears, kindName, PET_R } from '../lib/pets'
@@ -9,6 +9,14 @@ import { openCalendar } from '../components/FamilyCalendar'
 import { layout, familyColors, rootPerson, NW, NH, PG } from '../lib/treeLayout'
 import { kinship, chainName } from '../lib/kinship'
 import { Progress } from '../lib/progress'
+import { distances, FRIEND } from '../lib/demo'
+
+/** The demo tree («Смотреть пример древа»): no page header, no adding, labels from the demo family, growth from the face on first open */
+export interface DemoView { labels: Record<string, string>; face: string; intro: number }
+/** growth on the demo's first open: each step away from the face starts a little later */
+export const INTRO_START = .4
+/** a big dynasty grows faster per step, so the whole growth stays within about seven seconds */
+export const introStep = (maxD: number) => Math.min(.5, 6.5 / Math.max(1, maxD))
 
 /** «39 человек · 6 поколений» — full words, with the right Russian plural. */
 function treeSub(n: number, g: number) {
@@ -31,7 +39,7 @@ function fitText(s: string, max: number, font = NM_FONT, track = 0) {
 const up = (s: string) => s.toLocaleUpperCase(LANG === 'en' ? 'en' : 'ru')
 type View = { x: number; y: number; k: number }
 // pan/zoom survive switching pages, like in the prototype
-const TV = { view: { x: 0, y: 0, k: 1 } as View, fitted: false, lastN: -1, lastSz: '', refit: -1, lastTop: -1 }
+const TV = { view: { x: 0, y: 0, k: 1 } as View, fitted: false, lastN: -1, lastSz: '', refit: -1, lastTop: -1, introAt: 0 }
 // growth: who has just appeared in the tree (their branch draws, the card blooms)
 const GROW = { known: null as Set<string> | null, refit: -1, ids: new Set<string>(), until: 0, n: 0, timer: 0 as ReturnType<typeof setTimeout> | 0 }
 const GROW_MS = 4700
@@ -71,7 +79,7 @@ function Spark({ d, color, n, rev }: { d: string; color: string; n: number; rev?
   </circle>
 }
 
-export default function TreePage() {
+export default function TreePage({ demo: dv, children }: { demo?: DemoView; children?: React.ReactNode } = {}) {
   const svgRef = useRef<SVGSVGElement>(null), gRef = useRef<SVGGElement>(null)
   const sel = ui.panel && ui.panel.mode === 'view' ? ui.panel.id : null
   const selPet = ui.panel && ui.panel.mode === 'pet' ? ui.panel.id : null
@@ -91,10 +99,16 @@ export default function TreePage() {
     return rows.size > 1 && list.length ? { x: minX - 28, list } : null
   })()
   const SC = scale ? 130 : 0
-  const memo = Progress.nearestBirthday()
+  const memo = dv ? null : Progress.nearestBirthday()
   // «бабушка», «тёща»… under the names, relative to «you»; the chain of relatives for the selected person
   const me = st.kin === false ? null : rootPerson()
   const kin = me ? kinship(me.id) : null
+  if (kin && dv) Object.assign(kin.label, dv.labels)
+  // demo, first open: how many steps each person is from the face (the order of growth)
+  const intro = dv && dv.intro ? distances(dv.face) : null
+  const maxD = intro ? Math.max(0, ...Object.values(intro)) : 0, INTRO_STEP = introStep(maxD)
+  const dl = (id: string) => INTRO_START + (intro && intro[id] != null ? intro[id] : 0) * INTRO_STEP
+  const introEnd = intro ? INTRO_START + maxD * INTRO_STEP + .9 : 0
 
   // ---- who is new: a person or two added by hand grows in; a sample, an import or the first render does not
   const now = Date.now(), ids = new Set(S.people.map(p => p.id))
@@ -107,15 +121,24 @@ export default function TreePage() {
   const growing = GROW.until > now ? GROW.ids : new Set<string>()
   useEffect(() => { if (!growing.size) return; clearTimeout(GROW.timer as ReturnType<typeof setTimeout>); GROW.timer = setTimeout(bump, GROW.until - Date.now() + 50) }, [GROW.n])
 
-  const apply = (anim?: boolean) => { const g = gRef.current; if (!g) return; const v = TV.view; if (anim) { g.style.transition = 'transform .9s cubic-bezier(.22,.61,.36,1)'; setTimeout(() => { g.style.transition = '' }, 950) } g.setAttribute('transform', `translate(${v.x},${v.y}) scale(${v.k})`); g.style.setProperty('--tk', String(v.k)) }
-  const fit = (anim?: boolean) => {
-    const svg = svgRef.current; if (!svg) return; const W = svg.clientWidth || 800, H = svg.clientHeight || 600; const pad = Progress.nearestBirthday() ? 64 : 0
-    const lw = (lay.w || NW) + SC, lh = (lay.h || NH) + TOP; const k = Math.min(1.1, Math.max(.25, Math.min((W - 80) / lw, (H - 80 - pad) / lh)))
-    TV.view = { k, x: (W - lw * k) / 2 + SC * k, y: (H - pad - lh * k) / 2 + TOP * k }; apply(anim)
+  const apply = (anim?: boolean, ms = 900) => { const g = gRef.current; if (!g) return; const v = TV.view; if (anim) { g.style.transition = `transform ${ms}ms cubic-bezier(${ms > 900 ? '.5,.05,.25,1' : '.22,.61,.36,1'})`; setTimeout(() => { g.style.transition = '' }, ms + 50) } g.setAttribute('transform', `translate(${v.x},${v.y}) scale(${v.k})`); g.style.setProperty('--tk', String(v.k)) }
+  const fitView = (): View | null => {
+    const svg = svgRef.current; if (!svg) return null; const W = svg.clientWidth || 800, H = svg.clientHeight || 600; const pad = memo ? 64 : dv ? 120 : 0
+    // the demo shows the whole family at once, even when the cards get small on a phone
+    const lw = (lay.w || NW) + SC, lh = (lay.h || NH) + TOP; const k = Math.min(1.1, Math.max(dv ? .16 : .25, Math.min((W - (dv ? 32 : 80)) / lw, (H - 80 - pad) / lh)))
+    return { k, x: (W - lw * k) / 2 + SC * k, y: (H - pad - lh * k) / 2 + TOP * k }
+  }
+  const fit = (anim?: boolean) => { const v = fitView(); if (v) { TV.view = v; apply(anim) } }
+  /** demo, first open: the camera starts close on the face and pulls back to the whole family while it grows */
+  const startIntro = () => {
+    const svg = svgRef.current, P = dv && lay.pos[dv.face], end = fitView(); if (!svg || !P || !end) { fit(); return }
+    const W = svg.clientWidth || 800, H = svg.clientHeight || 600, k = Math.max(end.k, Math.min(1, W / 520))
+    TV.view = { k, x: W / 2 - (P.x + NW / 2) * k, y: H / 2 - (P.y + P.h / 2) * k }; apply()
+    setTimeout(() => { if (TV.introAt !== dv!.intro) return; TV.view = end; apply(true, Math.round((introEnd - .2) * 1000)) }, 500)
   }
   /** a new relative: the camera moves in on them and the relatives they are linked to, so the growth is seen up close */
   const focus = (who: Set<string>) => {
-    const svg = svgRef.current; if (!svg) return; const H = svg.clientHeight || 600; const pad = Progress.nearestBirthday() ? 64 : 0
+    const svg = svgRef.current; if (!svg) return; const H = svg.clientHeight || 600; const pad = memo ? 64 : 0
     // the profile panel covers the right side on a wide screen: centre in what is left
     const W = (svg.clientWidth || 800) - (ui.panel && window.innerWidth > 860 ? 420 : 0)
     const near = new Set(who)
@@ -141,12 +164,13 @@ export default function TreePage() {
   // fit on first show, when the number of people or the size changes, or when asked (sample loaded, drafts approved)
   useLayoutEffect(() => {
     const svg = svgRef.current; if (!svg) return; const sz = svg.clientWidth + 'x' + svg.clientHeight
+    if (intro && TV.introAt !== dv!.intro) { TV.introAt = dv!.intro; TV.fitted = true; TV.lastN = S.people.length; TV.lastSz = sz; TV.refit = ui.treeRefit; TV.lastTop = TOP; startIntro(); return }
     if (!TV.fitted || TV.lastN !== S.people.length || TV.lastSz !== sz || TV.refit !== ui.treeRefit || TV.lastTop !== TOP) { if (TV.fitted && TV.lastN !== S.people.length && growing.size > 0 && TV.lastSz === sz) focus(growing); else fit(); TV.fitted = true; TV.lastN = S.people.length; TV.lastSz = sz; TV.refit = ui.treeRefit; TV.lastTop = TOP } else apply()
   })
   // keep the selected card in view when the profile panel opens
   useEffect(() => {
     const svg = svgRef.current; if (!sel || !svg || !lay.pos[sel]) return
-    const W = svg.clientWidth, H = svg.clientHeight, v = TV.view, p = lay.pos[sel]; const sx = p.x * v.k + v.x, sy = p.y * v.k + v.y; const panelW = W > 860 ? 400 : 0
+    const W = svg.clientWidth, H = svg.clientHeight, v = TV.view, p = lay.pos[sel]; const sx = p.x * v.k + v.x, sy = p.y * v.k + v.y; const panelW = W > 860 && !dv ? 400 : 0
     if (sx < 40 || sx > W - panelW - NW * v.k - 40 || sy < 40 || sy > H - 100) { TV.view = { ...v, x: (W - panelW) / 2 - (p.x + NW / 2) * v.k, y: H / 2 - (p.y + p.h / 2) * v.k }; apply(true) }
   }, [sel])
   // wheel zoom, drag pan, pinch zoom, tap to open
@@ -183,25 +207,51 @@ export default function TreePage() {
   const grows = (...who: string[]) => growing.size > 0 && who.some(id => growing.has(id))
   /** the path is drawn from `from` to `to`: true when only the far end is new, so it has to grow backwards */
   const back = (from: string[], to: string[]) => from.some(id => growing.has(id)) && !to.some(id => growing.has(id))
-  const lk = (key: string, cls: string, d: string, color: string, grow: boolean, rev = false) => {
+  const lk = (key: string, cls: string, d: string, color: string, grow: boolean, rev = false, ends?: [string[], string[]]) => {
+    if (intro && ends) { // demo growth: the line draws from the side nearer to the face, once its first card is there
+      const near = (ids: string[]) => Math.min(...ids.map(id => intro[id] ?? 99)), a = near(ends[0]), b = near(ends[1])
+      const dashed = cls.includes('partner') || cls.includes('adopt') || cls.includes(' ex')
+      links.push(<path key={key} className={'link ' + cls + (dashed ? ' in-fade' : ' in' + (b < a ? ' rev' : ''))} style={{ stroke: color, '--dl': (INTRO_START + Math.min(a, b) * INTRO_STEP + .15) + 's' } as React.CSSProperties} d={d} pathLength={dashed ? undefined : 1} />)
+      return
+    }
     if (grow && !spark.cur && !cls.includes('marriage')) spark.cur = { d, color, rev }
-    links.push(<path key={key} className={'link ' + cls + (grow ? ' grow' + (rev ? ' rev' : '') : '')} style={{ stroke: color }} d={d} pathLength={grow ? 1 : undefined} />)
+    // a marriage that ended has a break in the middle: drawn with a dash pattern in parts of the line's length
+    const brk = cls.includes(' ex') && !cls.includes('partner')
+    links.push(<path key={key} className={'link ' + cls + (grow ? ' grow' + (rev ? ' rev' : '') : '')} style={{ stroke: color }} d={d} pathLength={grow || brk ? 1 : undefined} />)
+  }
+  /** a couple who split up: the genealogists' «//» over a break in the line */
+  const exMark = (id: string, x: number, y: number, color: string, near: string) => {
+    links.push(<g key={'x' + id} className="ex-mark" style={{ '--dl': dl(near) + .6 + 's' } as React.CSSProperties}>
+      <path d={`M${x - 5.5} ${y + 6}L${x - 1.5} ${y - 6}M${x + 1.5} ${y + 6}L${x + 5.5} ${y - 6}`} style={{ stroke: color }} />
+    </g>)
   }
   S.rels.filter(r => r.type === 'spouse' && lay.pos[r.a] && lay.pos[r.b]).forEach(r => {
     const A = box(r.a), B = box(r.b)
-    const color = col.mar(r)
+    const color = col.mar(r), mcls = 'marriage' + (r.partner ? ' partner' : '') + (r.ex ? ' ex' : '')
     if (A.g === B.g) {
       const l = A.cx < B.cx ? A : B, rr = A.cx < B.cx ? B : A
       // spouses not side by side (a third marriage): an arc under the cards instead of a line through someone else
       const apart = Math.abs(lay.pos[r.a].x - lay.pos[r.b].x) > NW + PG + 1, yb = Math.max(l.bot, rr.bot)
       const lid = A.cx < B.cx ? r.a : r.b, rid = lid === r.a ? r.b : r.a
-      lk('m' + r.id, 'marriage', apart ? `M${l.cx} ${yb}C${l.cx} ${yb + 44} ${rr.cx} ${yb + 44} ${rr.cx} ${yb}` : `M${l.r} ${l.mid}H${rr.l}`, color, grows(r.a, r.b), back([lid], [rid]))
-      if (r.from && !apart) links.push(<text key={'mt' + r.id} className="mar-yr" x={(l.r + rr.l) / 2} y={l.mid - 7} textAnchor="middle" style={{ fill: color }}>{yearOf(r.from) || r.from}</text>)
+      lk('m' + r.id, mcls, apart ? `M${l.cx} ${yb}C${l.cx} ${yb + 44} ${rr.cx} ${yb + 44} ${rr.cx} ${yb}` : `M${l.r} ${l.mid}H${rr.l}`, color, grows(r.a, r.b), back([lid], [rid]), [[lid], [rid]])
+      const yst = { fill: color, '--dl': dl(lid) + .6 + 's' } as React.CSSProperties, x = (l.r + rr.l) / 2
+      // the wedding year above the line; for a couple who split up, the year it ended right under it (still above the line:
+      // the children's line starts from the middle of it and goes down)
+      const end = r.ex && r.to && !apart
+      if (r.from && !apart) links.push(<text key={'mt' + r.id} className="mar-yr" x={x} y={l.mid - (end ? 19 : 7)} textAnchor="middle" style={yst}>{showYear(yearOf(r.from)) || r.from}</text>)
+      if (end) links.push(<text key={'me' + r.id} className="mar-yr ex" x={x} y={l.mid - 7} textAnchor="middle" style={yst}>{showYear(yearOf(r.to)) || r.to}</text>)
+      if (r.ex) exMark(r.id, apart ? (l.cx + rr.cx) / 2 : x, apart ? yb + 33 : l.mid, color, lid)
     }
-    else { const my = (A.bot + B.top) / 2; lk('m' + r.id, 'marriage', `M${A.cx} ${A.bot}C${A.cx} ${my} ${B.cx} ${my} ${B.cx} ${B.top}`, color, grows(r.a, r.b), back([r.a], [r.b])) }
+    else { const my = (A.bot + B.top) / 2; lk('m' + r.id, mcls, `M${A.cx} ${A.bot}C${A.cx} ${my} ${B.cx} ${my} ${B.cx} ${B.top}`, color, grows(r.a, r.b), back([r.a], [r.b]), [[r.a], [r.b]]); if (r.ex) exMark(r.id, (A.cx + B.cx) / 2, my, color, r.a) }
   })
+  // parents → child: by birth a solid line; adoptive parents a dotted one (their own line when the birth parents are in the tree too)
+  const adoptedBy = (p: string, c: string) => S.rels.some(r => r.type === 'parent' && r.adopt && r.a === p && r.b === c)
   S.people.forEach(ch => {
-    const ps = parentsOf(ch.id).filter(p => lay.pos[p.id]); if (!ps.length) return; const C = { x: box(ch.id).cx, y: box(ch.id).top }
+    const all = parentsOf(ch.id).filter(p => lay.pos[p.id]), bio = all.filter(p => !adoptedBy(p.id, ch.id)), ad = all.filter(p => adoptedBy(p.id, ch.id))
+    if (bio.length) kidLine(ch.id, bio, ''); if (ad.length) kidLine(ch.id, ad, ' adopt')
+  })
+  function kidLine(chId: string, ps: Person[], extra: string) {
+    const ch = byId(chId)!, C = { x: box(ch.id).cx, y: box(ch.id).top }
     let sx: number, sy: number, y0: number
     const a = lay.pos[ps[0].id], b = ps[1] && lay.pos[ps[1].id]
     if (b && a.g === b.g && Math.abs(a.x - b.x) < NW + PG + 2) { sx = (a.x + b.x + NW) / 2; sy = a.top + a.rh / 2; y0 = Math.max(box(ps[0].id).bot, box(ps[1].id).bot) + 6 }
@@ -210,29 +260,35 @@ export default function TreePage() {
     let d: string
     if (straight) { const bus = Math.max(y0, lay.pos[ch.id].top - 26); d = `M${sx} ${sy}V${bus}H${C.x}V${C.y}` }
     else { const y1 = C.y - 8, k = (y1 - y0) * .55; d = `M${sx} ${sy}V${y0}C${sx} ${y0 + k} ${C.x} ${y1 - k} ${C.x} ${y1}V${C.y}` }
-    lk('k' + ch.id, 'kin', d, color, grows(ch.id, ...ps.map(p => p.id)), back(ps.map(p => p.id), [ch.id]))
-    dots.push(<circle key={'d' + ch.id} className="cdot" cx={sx} cy={sy} r="3.5" fill={color} />)
-  })
+    lk('k' + extra + ch.id, 'kin' + extra, d, color, grows(ch.id, ...ps.map(p => p.id)), back(ps.map(p => p.id), [ch.id]), [ps.map(p => p.id), [ch.id]])
+    dots.push(<circle key={'d' + extra + ch.id} className="cdot" cx={sx} cy={sy} r="3.5" fill={color} style={intro ? { '--dl': Math.min(...ps.map(p => dl(p.id))) + .3 + 's' } as React.CSSProperties : undefined} />)
+  }
   // stepfather / stepmother → stepchild: a dashed line
   S.rels.filter(r => r.type === 'parent' && r.step && lay.pos[r.a] && lay.pos[r.b]).forEach(r => {
     const A = box(r.a), C = box(r.b), sy = A.bot, y1 = C.top - 8, k = (y1 - sy) * .55
     const d = straight ? `M${A.cx} ${sy}V${Math.max(sy + 6, lay.pos[r.b].top - 18)}H${C.cx}V${C.top}` : `M${A.cx} ${sy}C${A.cx} ${sy + k} ${C.cx} ${y1 - k} ${C.cx} ${y1}V${C.top}`
-    links.push(<path key={'s' + r.id} className="link kin step" style={{ stroke: col.kin(r.b) }} d={d} />)
+    links.push(<path key={'s' + r.id} className={'link kin step' + (intro ? ' in-fade' : '')} style={{ stroke: col.kin(r.b), '--dl': Math.min(dl(r.a), dl(r.b)) + .2 + 's' } as React.CSSProperties} d={d} />)
+  })
+  // demo only: two families who are friends (Charlie Swan and Billy Black) — a dotted arc over the cards with a small «друзья»
+  if (dv) S.rels.filter(r => r.type === FRIEND && lay.pos[r.a] && lay.pos[r.b]).forEach(r => {
+    const A = box(r.a), B = box(r.b), y = Math.min(A.top, B.top) - 58, st = { '--dl': Math.min(dl(r.a), dl(r.b)) + .3 + 's' } as React.CSSProperties
+    links.push(<path key={'fr' + r.id} className={'link friend' + (intro ? ' in-fade' : '')} style={st} d={`M${A.cx} ${A.top}C${A.cx} ${y} ${B.cx} ${y} ${B.cx} ${B.top}`} />)
+    links.push(<text key={'frt' + r.id} className="friend-t" x={(A.cx + B.cx) / 2} y={y + 12} textAnchor="middle" style={st}>{LANG === 'en' ? 'friends' : 'друзья'}</text>)
   })
   // brothers and sisters with no parent in the tree yet: a bracket above the cards
   S.rels.filter(r => r.type === 'sibling' && lay.pos[r.a] && lay.pos[r.b] && lay.pos[r.a].g === lay.pos[r.b].g).forEach(r => {
     const A = box(r.a), B = box(r.b), y = Math.min(A.top, B.top) - 22
-    lk('b' + r.id, 'sib', `M${A.cx} ${A.top}V${y}H${B.cx}V${B.top}`, col.kin(r.a), grows(r.a, r.b), back([r.a], [r.b]))
+    lk('b' + r.id, 'sib', `M${A.cx} ${A.top}V${y}H${B.cx}V${B.top}`, col.kin(r.a), grows(r.a, r.b), back([r.a], [r.b]), [[r.a], [r.b]])
   })
 
 
   return (
     <section className="page active" data-page="tree">
-      <div className="topbar">
+      {!dv && <div className="topbar">
         <h2><span>{t('nav.tree')}</span><span className="sub" id="treeSub">{S.people.length ? treeSub(S.people.length, generations()) : ''}</span></h2>
         <button className="btn sm add" id="btnAddPerson" onClick={() => editPerson(null)}><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg><span className="full">{t('tree.add')}</span><span className="short">{t('tree.add.short')}</span></button>
-      </div>
-      <div className={'tree-wrap th-' + theme.k + (theme.light ? ' th-light' : '')}>
+      </div>}
+      <div className={'tree-wrap th-' + theme.k + (theme.light ? ' th-light' : '') + (intro ? ' intro' : '')} style={intro ? { '--end': introEnd - .5 + 's' } as React.CSSProperties : undefined}>
         <svg id="treeSvg" ref={svgRef}>
           <defs><clipPath id="avClip" clipPathUnits="objectBoundingBox"><circle cx=".5" cy=".5" r=".5" /></clipPath>
             <filter id="frShadow" x="-20%" y="-20%" width="140%" height="145%"><feDropShadow dx="0" dy="3" stdDeviation="3" floodColor="#000" floodOpacity=".4" /></filter>
@@ -260,7 +316,7 @@ export default function TreePage() {
               const art = look ? frameArt(look, 'fr' + p.id.replace(/[^A-Za-z0-9]/g, '')) : null
               const cls = 'node' + (sel === p.id ? ' selected' : '') + (fillPercent(p) === 100 ? ' complete' : '') + (look ? ' framed' : '') + (isMe ? ' me' : '') + (growing.has(p.id) ? ' grow' : '')
               return (
-                <g key={p.id} className={cls} data-id={p.id} transform={`translate(${P.x},${P.y})`}>
+                <g key={p.id} className={cls} data-id={p.id} transform={`translate(${P.x},${P.y})`} style={intro ? { '--dl': dl(p.id) + 's' } as React.CSSProperties : undefined}>
                   <title>{fullName(p) + (k ? ' — ' + k : '')}</title>
                   <g className="nd-in">
                     {sel === p.id && <rect className="nd-glow" x="-10" y="-10" width={NW + 20} height={NH + 20} rx="18" filter="url(#ndGlow)" />}
@@ -284,7 +340,7 @@ export default function TreePage() {
             })}
           </g>
         </svg>
-        {kin && sel && me && sel !== me.id && byId(sel) && (() => {
+        {!dv && kin && sel && me && sel !== me.id && byId(sel) && (() => {
           const chain = kin.chain(sel)
           return <div className="tree-kin" key={sel} aria-live="polite">
             {kin.label[sel] && <span className="k" style={{ color: col.kin(sel) }}>{kin.label[sel]}</span>}
@@ -304,6 +360,7 @@ export default function TreePage() {
           <button className="btn icon" title="fit" onClick={() => fit()}><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg></button>
         </div>
         {memo && <Memo />}
+        {children}
       </div>
     </section>
   )

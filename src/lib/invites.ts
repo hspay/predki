@@ -46,7 +46,7 @@ export function buildSnapshot(to: string | null, gap: Gap | null): Snapshot {
       job: '', edu: '', bio: '', avatar: '', media: [],
     } as Person
   })
-  const rels = S.rels.map(r => ({ id: r.id, type: r.type, a: r.a, b: r.b, from: yearOf(r.from), ...(r.step ? { step: true } : {}) }) as Rel)
+  const rels = S.rels.map(r => ({ id: r.id, type: r.type, a: r.a, b: r.b, from: yearOf(r.from), ...(r.step ? { step: true } : {}), ...(r.adopt ? { adopt: true } : {}), ...(r.partner ? { partner: true } : {}), ...(r.ex ? { ex: true } : {}) }) as Rel)
   return {
     v: 1, lang: LANG, made: new Date().toISOString(), owner: me ? me.first || fullName(me) : '', ownerId: me ? me.id : null,
     family: (S.settings.familyName || '').trim() || (me ? familyTitle(me.last) : ''), to, gap: gap ? { id: gap.id, a: gap.a, b: gap.b, kind: gap.kind } : null, people, rels,

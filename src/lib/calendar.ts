@@ -42,7 +42,7 @@ export function familyEvents(year = new Date().getFullYear()) {
   })
   // weddings: only when the marriage has a full date
   const me = rootPerson(), kin = me ? kinship(me.id) : null
-  S.rels.filter(r => r.type === 'spouse').forEach(r => {
+  S.rels.filter(r => r.type === 'spouse' && !r.ex && !r.partner).forEach(r => { // anniversaries of marriages that last
     const w = parseDate(r.from); const A = byId(r.a), B = byId(r.b); if (!valid(w) || !A || !B || w!.y > year) return
     const steps = (x: Person) => (kin ? kin.chain(x.id).length || 99 : 99)
     const near = steps(A) <= steps(B) ? A : B

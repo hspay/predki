@@ -252,7 +252,7 @@ function GuestSheet({ sheet, T, O, who, token, kinLabel, onClose, onSent }: { sh
   const need = p ? {
     bDate: fix || !(full(p.birthDate) || bdHidden), bPlace: fix || !p.birthPlace,
     dead: !!(p.deathDate || '').trim(), dDate: fix || !full(p.deathDate), dPlace: fix || !p.deathPlace,
-    wed: spouses.filter(s => !S.rels.some(r => r.type === 'spouse' && ((r.a === p.id && r.b === s.id) || (r.b === p.id && r.a === s.id)) && r.from)),
+    wed: spouses.filter(s => !S.rels.some(r => r.type === 'spouse' && ((r.a === p.id && r.b === s.id) || (r.b === p.id && r.a === s.id)) && (r.from || r.partner))),
   } : null
   useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }; addEventListener('keydown', k); return () => removeEventListener('keydown', k) }, [])
 

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react'
 import {
   ui, S, t, LANG, byId, fullName, spousesOf, yearOf, fillPercent, formerNames,
   closePanel, openPerson, openPet, editPet, showNewPerson, editPerson, editEvent, openModal, commit, refresh, toast, removePerson, pickFile, uid, addPerson,
-  avatarSrc, yearsOf, surnameFor, normDate, dateValid, bindDateMask, syncLifeEvents, ensureFathers, type Person, type EvType, type FormerName, type RelKind,
+  avatarSrc, yearsOf, surnameFor, normDate, dateValid, bindDateMask, syncLifeEvents, ensureFathers, coupleRel, coupleYears, type Person, type EvType, type FormerName, type RelKind, type RelVariant,
 } from '../lib/core'
 import { rootPerson } from '../lib/treeLayout'
 import { kinship } from '../lib/kinship'
@@ -18,6 +18,8 @@ import { KINDS, kindName, petIcon, petsOf, petById, petYears, savePet, removePet
 const EV_TYPES: EvType[] = ['birth', 'move', 'study', 'work', 'marriage', 'death', 'other']
 const DocIcon = () => <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5M9 13h6M9 17h6" /></svg>
 const deathLabel = (g?: string) => g === 'f' ? 'p.death.f' : g === 'm' ? 'p.death.m' : 'p.death'
+const PenIcon = () => <svg viewBox="0 0 24 24"><path d="M5 19h3.5L18 9.5a2.5 2.5 0 0 0-3.5-3.5L5 15.5z" /></svg>
+const couple = (k: RelKind) => k === 'spouse' || k === 'partner' || k === 'ex'
 const CrossIcon = () => <svg viewBox="0 0 24 24"><path d="M7 7l10 10M17 7L7 17" /></svg>
 const CameraIcon = () => <svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z" /><circle cx="12" cy="13" r="3.5" /></svg>
 const FrameIcon = () => <svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="3" /><rect x="8" y="7" width="8" height="10" rx="4" /></svg>
@@ -65,10 +67,12 @@ function Family({ id }: { id: string }) {
       {(groups.length > 0 || edit) && <button className="btn sm ghost" onClick={() => { ui.relEdit = !edit; refresh() }}>{edit ? t('rel.done') : t('rel.edit')}</button>}</div>
     {groups.map(g => <div key={g.kind}>
       <div className="section-t" style={{ margin: '12px 0 6px' }}><span className="eyebrow">{t(g.label)}</span></div>
-      <div className="fam-chips">{g.list.map(({ p: r, own }) => <span key={r.id} className={'chip fam' + (edit ? ' editing' : '')}>
-        <button type="button" onClick={() => openPerson(r.id)}><Avatar p={r} size={18} />{fullName(r)}</button>
+      <div className="fam-chips">{g.list.map(({ p: r, own }) => { const cr = couple(g.kind) ? coupleRel(id, r.id) : undefined, yrs = cr && cr.ex ? coupleYears(cr) : ''
+        return <span key={r.id} className={'chip fam' + (edit ? ' editing' : '')}>
+        <button type="button" onClick={() => openPerson(r.id)}><Avatar p={r} size={18} />{fullName(r)}{yrs && <small className="fam-yr">{yrs}</small>}</button>
+        {edit && cr && <button type="button" className="fam-x fam-ed" aria-label={t('pair.edit')} title={t('pair.edit')} onClick={() => openModal({ kind: 'pair', a: id, b: r.id })}><PenIcon /></button>}
         {edit && own && <button type="button" className="fam-x" aria-label={t('rel.unlink')} title={t('rel.unlink')} onClick={() => drop(r, g.kind)}><CrossIcon /></button>}
-      </span>)}</div>
+      </span> })}</div>
     </div>)}
     {edit && groups.some(g => g.kind === 'sibling' && g.list.some(x => !x.own)) && <p className="fam-note">{t('rel.sib.note')}</p>}
     {(edit || !groups.length) && <button type="button" className="btn sm fam-link" onClick={() => openModal({ kind: 'link', id })}>{t('rel.link.btn')}</button>}
@@ -172,13 +176,18 @@ function Clarity({ p, setPhoto }: { p: Person; setPhoto: () => void }) {
   </>
 }
 
-function EditPerson({ id, preset, after }: { id: string | null; preset?: Partial<Person> & { _title?: string; _rel?: RelKind }; after?: (p: Person, step: boolean) => void }) {
+function EditPerson({ id, preset, after }: { id: string | null; preset?: Partial<Person> & { _title?: string; _rel?: RelKind }; after?: (p: Person, v: RelVariant) => void }) {
   const p: Partial<Person> = id ? byId(id)! : Object.assign({ first: '', last: '', maiden: '', patronymic: '', gender: '', birthDate: '', birthPlace: '', deathDate: '', deathPlace: '', job: '', edu: '', bio: '', avatar: '' }, preset || {})
   const [avatar, setAvatar] = useState(p.avatar || '')
   const [gender, setGender] = useState(p.gender || '')
-  // a new parent / child: by birth or a stepfather, stepmother, stepchild
-  const [step, setStep] = useState(false)
-  const stepKind = !id && (preset?._rel === 'parent' || preset?._rel === 'child') ? preset._rel : null
+  // a new parent / child: by birth, adopted, or a stepfather, stepmother, stepchild; a new spouse: married or partners
+  const [variant, setVariant] = useState<RelVariant>('own')
+  const relKind = !id && (preset?._rel === 'parent' || preset?._rel === 'child' || preset?._rel === 'spouse') ? preset._rel : null
+  const VARIANTS: Record<string, [RelVariant, string][]> = {
+    parent: [['own', 'rel.own.parent'], ['adopt', 'rel.v.adopt'], ['step', 'rel.k.step']],
+    child: [['own', 'rel.own.child'], ['adopt', 'rel.v.adopt'], ['step', 'rel.k.stepchild']],
+    spouse: [['own', 'rel.v.married'], ['partner', 'rel.v.partner']],
+  }
   // earlier names: fields appear only when someone needs them
   const [names, setNames] = useState<FormerName[]>(() => (p.names || []).map(n => ({ ...n })))
   const setName = (i: number, k: keyof FormerName, v: string) => setNames(ns => ns.map((n, j) => j === i ? { ...n, [k]: v } : n))
@@ -188,8 +197,8 @@ function EditPerson({ id, preset, after }: { id: string | null; preset?: Partial
     const inp = form.current?.elements.namedItem('last') as HTMLInputElement | null; if (!inp || autoLast.current == null || inp.value !== autoLast.current) return
     const v = isStep ? '' : surnameFor(preset?.last || '', g as Person['gender']); inp.value = v; autoLast.current = v
   }
-  const pickGender = (g: string) => { setGender(g); putLast(g, step) }
-  const pickStep = (v: boolean) => { setStep(v); putLast(gender, v) }
+  const pickGender = (g: string) => { setGender(g); putLast(g, variant === 'step') }
+  const pickVariant = (v: RelVariant) => { setVariant(v); if (relKind !== 'spouse') putLast(gender, v === 'step') }
   const form = useRef<HTMLFormElement>(null)
   useEffect(() => {
     const f = form.current!; const offs = (['birthDate', 'deathDate'] as const).map(k => bindDateMask(f.elements.namedItem(k) as HTMLInputElement))
@@ -208,7 +217,7 @@ function EditPerson({ id, preset, after }: { id: string | null; preset?: Partial
     let target: Person
     if (id) { target = byId(id)!; Object.assign(target, data); if (!kept.length) delete target.names } else { target = addPerson(data); if (p.events) target.events = p.events }
     delete target.auto; syncLifeEvents(target); commit(); toast(t('toast.saved'))
-    if (after) after(target, step); else if (id) openPerson(target.id); else showNewPerson(target.id)
+    if (after) after(target, variant); else if (id) openPerson(target.id); else showNewPerson(target.id)
     const made = ensureFathers([target.id]); if (made.length) { commit(); toast(t('auto.father', { name: made.map(fullName).join(', ') })) }
   }
   const F = (k: keyof Person, label: string, ph?: string) => <div className="field"><label>{t(label)}</label><input name={k} type="text" defaultValue={String(p[k] || '')} placeholder={ph || ''} /></div>
@@ -223,9 +232,8 @@ function EditPerson({ id, preset, after }: { id: string | null; preset?: Partial
         <Avatar p={{ ...p, gender: gender as Person['gender'], avatar }} size={64} id="avPrev" />
         <div><div className="eyebrow" style={{ marginBottom: 6 }}>{t('p.photo')}</div><button type="button" className="btn sm" onClick={() => pickFile('image/*', data => setAvatar(data))}>{t('p.photo.change')}</button></div>
       </div>
-      {stepKind && <div className="field"><label>{t('rel.who')}</label><div className="seg">
-        <button type="button" className={!step ? 'active' : ''} onClick={() => pickStep(false)}>{t(stepKind === 'parent' ? 'rel.own.parent' : 'rel.own.child')}</button>
-        <button type="button" className={step ? 'active' : ''} onClick={() => pickStep(true)}>{t(stepKind === 'parent' ? 'rel.k.step' : 'rel.k.stepchild')}</button>
+      {relKind && <div className="field"><label>{t('rel.who')}</label><div className={'seg seg-rel n' + VARIANTS[relKind].length}>
+        {VARIANTS[relKind].map(([v, l]) => <button key={v} type="button" className={variant === v ? 'active' : ''} onClick={() => pickVariant(v)}>{t(l)}</button>)}
       </div></div>}
       <div className="row">{F('first', 'p.first')}{F('last', 'p.last')}</div>
       <div className="row">{F('patronymic', 'p.patronymic')}{F('maiden', 'p.maiden')}</div>
@@ -267,6 +275,7 @@ function EditEvent({ pid, eid }: { pid: string; eid: string | null }) {
       ne.year = date ? (+yearOf(date) || '') : ''
       ne.date = date; ne.with = d.with || undefined
       const r = ne.with ? relWith(ne.with) : undefined; if (r && date) r.from = date
+      if (r && r.partner) delete r.partner // a wedding: the partners are now married
     }
     if (!eid) p.events.push(ne as typeof p.events[number]); else { Object.assign(e, ne); if (ne.type !== 'marriage') { delete e.date; delete e.with } }
     commit(); openPerson(pid)

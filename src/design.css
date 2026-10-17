@@ -851,3 +851,25 @@ main{border-radius:var(--r-card);background:var(--mainbg);border-color:var(--edg
 .pet-kinds button svg{width:28px;height:28px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .pet-kinds button[aria-checked="true"]{border-color:var(--accent);color:var(--ink);box-shadow:0 0 0 1.5px var(--accent) inset}
 .pet-err{margin:0;color:var(--danger);font-size:13.5px}
+
+/* ---------- couples and adoption (October 2026) ----------
+   partners: a dashed line; a marriage that ended: a break in the line with «//» over it, the end year under the line;
+   an adoptive parent: a dotted line */
+.link.marriage.partner{stroke-dasharray:7 6}
+.link.marriage.ex{opacity:.6}
+.link.marriage.ex:not(.partner){stroke-dasharray:.36 .28 .36}
+.ex-mark path{fill:none;stroke-width:2;stroke-linecap:round}
+.mar-yr.ex{opacity:.75}
+.link.kin.adopt{stroke-dasharray:.5 6;stroke-linecap:round;stroke-width:2.6}
+/* the profile: the years of a former couple next to the name, the pencil that opens «Пара» */
+.chip.fam .fam-yr{margin-left:2px;font:400 11px var(--f-mono);color:var(--muted)}
+.chip.fam .fam-ed svg{fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round}
+.chip.fam .fam-ed:hover{color:var(--ink)}
+/* by birth / adopted / step: three equal buttons that may wrap onto two lines on a narrow phone */
+.seg.seg-rel{display:grid;width:100%;border-radius:12px}
+.seg.seg-rel.n2{grid-template-columns:1fr 1fr}.seg.seg-rel.n3{grid-template-columns:1fr 1fr 1fr}
+.seg.seg-rel button{border-radius:9px;padding:7px 6px;line-height:1.2;white-space:normal;text-align:center}
+.seg.seg-rel button.active{background:var(--ultra);color:var(--paper)}
+.modal.pair .panel-body{display:flex;flex-direction:column;gap:14px}
+.modal.pair .pair-who{gap:6px}.modal.pair .pair-who span{margin-left:6px}
+.modal.pair .panel-foot{display:flex;justify-content:flex-end;gap:8px}

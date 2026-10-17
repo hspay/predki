@@ -13,7 +13,7 @@ export interface Gap { id: string; a: number; b: number; kind: 'mid' | 'tail'; l
 
 const evYear = (p: Person, type: string) => { const e = (p.events || []).find(e => e.type === type && e.year); return e ? +e.year : null }
 const num = (s?: string) => +yearOf(s) || null
-const marriageRels = (id: string) => S.rels.filter(r => r.type === 'spouse' && (r.a === id || r.b === id))
+const marriageRels = (id: string) => S.rels.filter(r => r.type === 'spouse' && !r.partner && (r.a === id || r.b === id)) // partners had no wedding to ask about
 
 /** what is known about a life, as a list of years with at least one record */
 export function lifeOf(p: Person): Life {

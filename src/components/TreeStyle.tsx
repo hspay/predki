@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { S, t, commit } from '../lib/core'
+import { S, t, commit, demo } from '../lib/core'
 import { THEMES, themeName } from '../lib/treeStyle'
 
 /** Pencil in the corner of the Tree: the family's title, background and places for ancestors. */
@@ -27,8 +27,8 @@ export default function TreeStyle() {
         </div></div>
       <label className="ts-toggle"><input type="checkbox" checked={st.kin !== false} onChange={e => set({ kin: e.target.checked })} />
         <span><b>{t('ts.kin')}</b><small>{t('ts.kin.d')}</small></span></label>
-      <label className="ts-toggle"><input type="checkbox" checked={st.ghosts !== false} onChange={e => set({ ghosts: e.target.checked })} />
-        <span><b>{t('ts.ghosts')}</b><small>{t('ts.ghosts.d')}</small></span></label>
+      {!demo.on && <label className="ts-toggle"><input type="checkbox" checked={st.ghosts !== false} onChange={e => set({ ghosts: e.target.checked })} />
+        <span><b>{t('ts.ghosts')}</b><small>{t('ts.ghosts.d')}</small></span></label>}
     </div>}
   </>
 }

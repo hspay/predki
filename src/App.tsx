@@ -16,6 +16,8 @@ import MapPage from './pages/MapPage'
 import AlbumPage from './pages/AlbumPage' // «Альбом» (former «Прогресс»: pages/ProgressPage.tsx)
 import GapsPage from './pages/GapsPage'
 import SettingsPage from './pages/SettingsPage'
+import DemoPage from './components/DemoPage'
+import { openDemo, demoFromHash } from './lib/demo'
 
 export default function App() {
   useStore()
@@ -24,7 +26,11 @@ export default function App() {
   useEffect(() => { document.fonts?.ready.then(() => bump()) }, [])
   // answers from relatives («Попросить заполнить»): the number shows on «Заполнить пробелы» in the menu
   useEffect(() => { if (ui.loaded && cloud.session) refreshInbox() }, [ui.loaded, !!cloud.session])
+  // a link to the demo (…/#demo=kardashian) opens it straight away
+  useEffect(() => { if (ui.loaded) { const k = demoFromHash(); if (k && !ui.demo) openDemo(k) } }, [ui.loaded])
   if (!ui.loaded) return null
+  // «Смотреть пример древа»: the demo tree takes the whole screen, before any sign-in
+  if (ui.demo) return <><DemoPage /><Toasts /></>
   const p = ui.page
   // after the welcome landing nobody enters the tree without an account (unless they chose «without an account»)
   const signIn = !ui.onboarding && ((!cloud.session && !cloud.skipped) || cloud.recovery)

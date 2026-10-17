@@ -7,7 +7,14 @@ export const DIM={NW:152,NH:152,PG:26,GAP:56,LH:100};
 export const {NW,NH,PG,GAP,LH}=DIM;
 
 /** hOf(id) — height of a person's box (a framed portrait is taller than a card); rows take the tallest box, boxes are centred in their row. */
+// the layout is worked out again only when people or links change (a big family takes a moment), not on every redraw
+let memo={key:'',res:null};
 export function layout(hOf){
+  const key=S.people.map(p=>p.id+':'+(p.birthDate||'')+':'+(hOf?hOf(p.id):'')).join('|')+'#'+S.rels.map(r=>r.type[0]+r.a+'>'+r.b+(r.step?'s':'')).join('|');
+  if(memo.key===key&&memo.res) return memo.res;
+  const res=layoutNow(hOf); memo={key,res}; return res;
+}
+function layoutNow(hOf){
   const self=DIM;
     if(!S.people.length) return {pos:{},blocks:[],w:0,h:0};
     // people with no link to anyone stand apart: to the right of the tree, on its lowest row
@@ -29,14 +36,29 @@ export function layout(hOf){
     // the parents, so a young brother no longer pins his parents to the top row (the parents of a spouse who married in).
     const deg={}; S.rels.forEach(r=>{ const A=deg[r.a]=deg[r.a]||{k:0,s:0}, Bd=deg[r.b]=deg[r.b]||{k:0,s:0}; if(r.type==='parent') A.k++; else { A.s++; Bd.s++; } });
     const free=id=>!deg[id]||(!deg[id].k&&!deg[id].s);
-    const kidsOf=id=>S.rels.filter(r=>r.type==='parent'&&r.a===id&&r.b in gen).map(r=>r.b);
-    const push=()=>{ let ch=false; S.rels.forEach(r=>{ if(!(r.a in gen)||!(r.b in gen)) return;
+    const RL=S.rels.filter(r=>r.a in gen&&r.b in gen), KIDS={}, PARS=new Set(), SP={};
+    RL.forEach(r=>{ if(r.type==='parent'){ (KIDS[r.a]=KIDS[r.a]||[]).push(r.b); PARS.add(r.b); } else if(r.type==='spouse'){ (SP[r.a]=SP[r.a]||[]).push(r.b); (SP[r.b]=SP[r.b]||[]).push(r.a); } });
+    const kidsOf=id=>KIDS[id]||[];
+    // an in-law family: the person, their spouses, the spouses' other spouses… and nobody in that group has parents in the tree
+    const RC={}; const rootCouple=id=>{ if(id in RC) return RC[id]; const seen=new Set([id]), st=[id]; let ok=true; while(st.length&&ok){ const x=st.pop(); if(PARS.has(x)) ok=false; (SP[x]||[]).forEach(s=>{ if(!seen.has(s)){ seen.add(s); st.push(s); } }); } return RC[id]=ok; };
+    const push=()=>{ let ch=false; RL.forEach(r=>{
         if(r.type==='parent'){ if(gen[r.b]<gen[r.a]+1){ gen[r.b]=gen[r.a]+1; ch=true; } }
         else { const m=Math.max(gen[r.a],gen[r.b]); if(gen[r.a]!==m||gen[r.b]!==m){ gen[r.a]=gen[r.b]=m; ch=true; } } }); return ch; };
-    for(let it=0;it<people.length*2+4;it++){ let ch=false;
-      people.forEach(p=>{ const ks=kidsOf(p.id).filter(k=>!free(k)); if(!ks.length) return; const want=Math.min(...ks.map(k=>gen[k]))-1; if(gen[p.id]<want){ gen[p.id]=want; ch=true; } });
+    const start={...gen}, CAP=people.length*2+4;
+    // returns the people the rule kept moving when it did not settle (marriages across generations make it chase itself)
+    const settle=(useRoot,banned)=>{ const late=new Set(); for(let it=0;it<CAP;it++){ let ch=false;
+      // a couple with no parents of their own in the tree (an in-law family) stands above their deepest married child,
+      // so their other children come down to that row too instead of floating at the top of the tree
+      people.forEach(p=>{ if(banned.has(p.id)) return; const ks=kidsOf(p.id).filter(k=>!free(k)); if(!ks.length) return; const g=ks.map(k=>gen[k]); const want=(useRoot&&rootCouple(p.id)?Math.max(...g):Math.min(...g))-1; if(gen[p.id]<want){ gen[p.id]=want; ch=true; if(it>CAP-12) late.add(p.id); } });
       for(let j=0;j<people.length+2;j++){ if(!push()) break; ch=true; }
-      if(!ch) break; }
+      if(!ch) return null;
+      // no family has more generations than people: past that the rule is only chasing itself
+      if(it>8&&it%8===0){ let mx=0; for(const k in gen) if(gen[k]>mx) mx=gen[k]; if(mx>people.length+2&&it<CAP-12) it=CAP-13; } } return late; };
+    // a parent caught in such a loop (Maegor married his niece; Visenya keeps following him) stays where the links put them
+    const banned=new Set(); let left=settle(true,banned);
+    for(let k=0;left&&k<8;k++){ // first the ordinary parents in the loop, the in-law couples only when that is not enough
+      const pick=[...left].filter(id=>!rootCouple(id)); (pick.length?pick:[...left]).forEach(id=>banned.add(id)); Object.assign(gen,start); left=settle(true,banned); }
+    if(left){ Object.assign(gen,start); settle(false,new Set()); }
     const minG=Math.min(...Object.values(gen)); people.forEach(p=>gen[p.id]-=minG);
     // 2. DFS order
     const order={}; let n=0; const seen=new Set();
