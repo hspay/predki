@@ -90,11 +90,13 @@ export function mountMap(root) {
     </aside>
     <section class="mp-mapcol">
       <div class="mp-map" data-r="map">
-        <svg data-r="svg">
+        <svg data-r="wsvg" class="mp-wsvg" aria-hidden="true">
           <g data-r="world">
             <path data-r="land" stroke-width=".6" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
             <path data-r="borders" fill="none" stroke-width=".7" stroke-dasharray="3 2.5" vector-effect="non-scaling-stroke" stroke-linejoin="round"/>
           </g>
+        </svg>
+        <svg data-r="svg">
           <g data-r="routes"></g><g data-r="stations"></g><g data-r="labels"></g><g data-r="fx"></g><g data-r="deco"></g>
         </svg>
         <div class="mp-tl" data-r="tl">
@@ -274,13 +276,34 @@ export function mountMap(root) {
   }
   const sx = lo => X(lo) * MV.view.k + MV.view.tx, sy = la => Y(la) * MV.view.k + MV.view.ty
 
+  // ---------- the world under the routes ----------
+  // Land and borders are a lot of vector (the borders alone are ~160 KB of dashed lines): drawing them again on every move made
+  // dragging lag. They sit in their own layer, twice the map's size; while the map moves, the browser only shifts and scales that
+  // ready picture, and it is drawn sharp again once the map stops for a moment.
+  let crisp = null, settleT = 0
+  function placeWorld(force) {
+    const v = MV.view, w = $('wsvg'); clearTimeout(settleT)
+    const r = crisp ? v.k / crisp.k : 1, dx = crisp ? v.tx - crisp.tx * r : 0, dy = crisp ? v.ty - crisp.ty * r : 0
+    // too far from the last sharp picture (its spare edge would show) — draw it sharp right away
+    const covers = dx - r * W / 2 <= 0 && dx + 1.5 * r * W >= W && dy - r * H / 2 <= 0 && dy + 1.5 * r * H >= H
+    if (force || !crisp || r > 3 || r < 1 / 3 || !covers) {
+      crisp = { ...v }; $('world').setAttribute('transform', `translate(${v.tx + W / 2} ${v.ty + H / 2}) scale(${v.k})`)
+      w.style.transform = ''; return
+    }
+    w.style.transformOrigin = `${W / 2}px ${H / 2}px`; w.style.transform = `translate(${dx}px, ${dy}px) scale(${r})`
+    settleT = setTimeout(() => placeWorld(true), 160)
+  }
+  // moves of the mouse, the wheel and the fingers can come faster than the screen redraws: one drawing per frame
+  let pend = 0
+  const drawSoon = () => { if (!pend) pend = requestAnimationFrame(() => { pend = 0; draw() }) }
+
   // ---------- drawing ----------
   function draw() {
     if (!MV.view) return
     if (!W) { const r = map.getBoundingClientRect(); W = r.width; H = r.height }
     U = Math.max(.7, Math.min(1, W / 900))
     const { k, tx, ty } = MV.view, an = A.anim, T = an ? an.t : Infinity, C = M.colorOf
-    $('world').setAttribute('transform', `translate(${tx} ${ty}) scale(${k})`)
+    placeWorld()
     const focusP = A.preview, hiEntry = A.hi ? entryById(A.hi) : A.pin ? entryById(A.pin) : null
     const hiSeg = hiEntry?.seg || null, hiPlace = hiEntry && !hiEntry.seg ? hiEntry.place : null
     const live = M.segs.filter(s => vis(s.pid) && (!an || T >= st(s.to.y)))
@@ -447,9 +470,12 @@ export function mountMap(root) {
 
   // pan, zoom, pinch; a tap on a single person's station opens their card
   const ptrs = new Map(); let drag = null, pinch = null, moved = false, downStn = null
-  const zoomAt = (cx, cy, f) => { const v = MV.view, k = Math.min(W / 1000 * 40, Math.max(W / 1000, v.k * f)), r = k / v.k; MV.view = { k, tx: cx - (cx - v.tx) * r, ty: cy - (cy - v.ty) * r }; draw() }
+  const zoomAt = (cx, cy, f) => { const v = MV.view, k = Math.min(W / 1000 * 40, Math.max(W / 1000, v.k * f)), r = k / v.k; MV.view = { k, tx: cx - (cx - v.tx) * r, ty: cy - (cy - v.ty) * r }; drawSoon() }
   on(map, 'wheel', e => { e.preventDefault(); A.follow = false; const r = map.getBoundingClientRect(); zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * .0016)) }, { passive: false })
-  on(map, 'pointerdown', e => { if (e.target.closest('.mp-ctrls, .mp-tl')) return; ptrs.set(e.pointerId, [e.clientX, e.clientY]); map.setPointerCapture(e.pointerId); moved = false
+  on(map, 'pointerdown', e => { if (e.target.closest('.mp-ctrls, .mp-tl')) return
+    // a drag must not start a text selection: selecting the names around the map while it moves made every frame heavy
+    if (e.pointerType === 'mouse') e.preventDefault(); getSelection()?.removeAllRanges(); document.body.classList.add('no-select')
+    ptrs.set(e.pointerId, [e.clientX, e.clientY]); map.setPointerCapture(e.pointerId); moved = false
     downStn = e.target.closest('.mp-stn')
     if (ptrs.size === 1) drag = { x: e.clientX, y: e.clientY, tx: MV.view.tx, ty: MV.view.ty }
     if (ptrs.size === 2) { const [a, b] = [...ptrs.values()]; pinch = { d: Math.hypot(a[0] - b[0], a[1] - b[1]), k: MV.view.k }; drag = null } })
@@ -457,7 +483,7 @@ export function mountMap(root) {
     if (ptrs.has(e.pointerId)) ptrs.set(e.pointerId, [e.clientX, e.clientY])
     const r = map.getBoundingClientRect()
     if (pinch && ptrs.size === 2) { const [a, b] = [...ptrs.values()], d = Math.hypot(a[0] - b[0], a[1] - b[1]); zoomAt((a[0] + b[0]) / 2 - r.left, (a[1] + b[1]) / 2 - r.top, (pinch.k * d / pinch.d) / MV.view.k); moved = true; return }
-    if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) { moved = true; map.classList.add('drag') } if (moved) { A.follow = false; cancelAnimationFrame(flyRaf); MV.view = { ...MV.view, tx: drag.tx + dx, ty: drag.ty + dy }; draw(); tip.hidden = true } return }
+    if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) { moved = true; map.classList.add('drag') } if (moved) { A.follow = false; cancelAnimationFrame(flyRaf); MV.view = { ...MV.view, tx: drag.tx + dx, ty: drag.ty + dy }; drawSoon(); tip.hidden = true } return }
     const s = e.target.closest && e.target.closest('.mp-stn'); if (!s) { tip.hidden = true; return }
     const t = L(), pl = M.places.get(s.dataset.k), vs = pl.visits.filter(v => vis(v.pid)).slice().sort((a, b) => (a.ev.y ?? 9999) - (b.ev.y ?? 9999))
     tip.innerHTML = `<b>${esc(pl.name)}</b> <span class="m">${pl.c ? esc(cname(pl.c)) : ''}</span>` + vs.slice(0, 7).map(v => `<div class="r"><i style="background:${M.colorOf[v.pid]}"></i>${esc(nameOf(v.pid))} <span class="m">${t.kind[v.ev.t] || ''} ${v.ev.y ?? ''}</span></div>`).join('') + (vs.length > 7 ? `<div class="m">${t.more(vs.length - 7)}</div>` : '')
@@ -465,11 +491,11 @@ export function mountMap(root) {
   })
   const up = e => {
     if (downStn && !moved && ptrs.size === 1) { const pl = M.places.get(downStn.dataset.k), who = [...new Set(pl.visits.filter(v => vis(v.pid)).map(v => v.pid))]; if (who.length === 1) openPerson(who[0]) }
-    ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; if (!ptrs.size) { drag = null; downStn = null; map.classList.remove('drag') }
+    ptrs.delete(e.pointerId); if (ptrs.size < 2) pinch = null; if (!ptrs.size) { drag = null; downStn = null; map.classList.remove('drag'); document.body.classList.remove('no-select') }
   }
   on(map, 'pointerup', up); on(map, 'pointercancel', up); on(map, 'pointerleave', () => { tip.hidden = true })
   on($('zin'), 'click', () => zoomAt(W / 2, H / 2, 1.5)); on($('zout'), 'click', () => zoomAt(W / 2, H / 2, 1 / 1.5)); on($('zfit'), 'click', () => fit(true))
-  const ro = new ResizeObserver(() => { const r = map.getBoundingClientRect(); if (!r.width) return; if (M && M.has) tlLabels(); const first = !W; W = r.width; H = r.height; if (first && !MV.view) fit(false); else draw() })
+  const ro = new ResizeObserver(() => { const r = map.getBoundingClientRect(); if (!r.width) return; if (M && M.has) tlLabels(); const first = !W; W = r.width; H = r.height; crisp = null; if (first && !MV.view) fit(false); else draw() })
   ro.observe(map)
 
   // ---------- data changes ----------
@@ -490,6 +516,6 @@ export function mountMap(root) {
   return {
     update,
     refit(n) { if (n !== MV.refit) { MV.refit = n; fit(false) } },
-    destroy() { cancelAnimationFrame(raf); cancelAnimationFrame(flyRaf); clearTimeout(endTimer); ro.disconnect(); offs.forEach(f => f()); A.anim = null },
+    destroy() { cancelAnimationFrame(raf); cancelAnimationFrame(flyRaf); cancelAnimationFrame(pend); clearTimeout(settleT); document.body.classList.remove('no-select'); clearTimeout(endTimer); ro.disconnect(); offs.forEach(f => f()); A.anim = null },
   }
 }

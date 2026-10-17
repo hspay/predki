@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, lazy, Suspense } from 'react'
 import { ui, boot, useStore, bump, cloud } from './lib/core'
 import { refreshInbox } from './lib/invites'
 import AuthScreen from './components/AuthScreen'
@@ -12,7 +12,8 @@ import AddRelativeModal from './components/AddRelativeModal'
 import ShareSheet from './components/ShareSheet'
 import FamilyCalendar from './components/FamilyCalendar'
 import TreePage from './pages/TreePage'
-import MapPage from './pages/MapPage'
+// the Map with its world outline and borders (~230 KB) loads when it is first opened
+const MapPage = lazy(() => import('./pages/MapPage'))
 import AlbumPage from './pages/AlbumPage' // «Альбом» (former «Прогресс»: pages/ProgressPage.tsx)
 import GapsPage from './pages/GapsPage'
 import SettingsPage from './pages/SettingsPage'
@@ -27,7 +28,7 @@ export default function App() {
   // answers from relatives («Попросить заполнить»): the number shows on «Заполнить пробелы» in the menu
   useEffect(() => { if (ui.loaded && cloud.session) refreshInbox() }, [ui.loaded, !!cloud.session])
   // a link to the demo (…/#demo=kardashian) opens it straight away
-  useEffect(() => { if (ui.loaded) { const k = demoFromHash(); if (k && !ui.demo) openDemo(k) } }, [ui.loaded])
+  useEffect(() => { if (ui.loaded) { const k = demoFromHash(); if (k !== null && !ui.demo) openDemo(k || undefined) } }, [ui.loaded])
   if (!ui.loaded) return null
   // «Смотреть пример древа»: the demo tree takes the whole screen, before any sign-in
   if (ui.demo) return <><DemoPage /><Toasts /></>
@@ -45,7 +46,7 @@ export default function App() {
         <Sidebar />
         <main id="main">
           {p === 'tree' && <TreePage />}
-          {p === 'map' && <MapPage />}
+          {p === 'map' && <Suspense fallback={null}><MapPage /></Suspense>}
           {p === 'progress' && <AlbumPage />}
           {p === 'gaps' && <GapsPage />}
           {p === 'settings' && <SettingsPage />}

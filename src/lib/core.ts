@@ -9,6 +9,7 @@ import { Progress } from './progress'
 import { sb, cloud, initSession, pullTree, pushTree, signOutCloud, setSkipped } from './cloud'
 import type { FrameLook } from './frames'
 import { PRESET_SRC, presetType, typeOfPreset, pickPreset, previewPreset } from './avatars'
+import { onThumbReady, thumb } from './thumbs'
 import { mediaUrl, isCloudRef, isInline, uploadInline, isPermanent, removeRefs, clearMediaCache, onMediaReady, listOwnFiles } from './media'
 
 // ---------- types ----------
@@ -171,7 +172,7 @@ export function bump() { version++; listeners.forEach(l => l()) }
 export function useStore() { return useSyncExternalStore(subscribe, () => version) }
 
 export function commit(quiet = false) { if (demo.on) { bump(); return } assignPresets(); forgetRemovedFiles(); persist(); Progress.check(quiet); bump() }
-onMediaReady(bump)
+onMediaReady(bump); onThumbReady(bump)
 
 // ---------- photos & documents in Supabase Storage (lib/media.ts) ----------
 // Every place a file can sit in the tree: the portrait and each gallery item.
@@ -343,6 +344,8 @@ export function assignPresets() {
 export function presetOf(p: Partial<Person>) { return (p.id && byId(p.id) === p && p.preset) || previewPreset(p) }
 /** What to show in the round portrait: the family photo, else the default colour silhouette (picked by gender and age). */
 export function avatarSrc(p: Partial<Person>) { return p.avatar ? mediaUrl(p.avatar) : PRESET_SRC[presetOf(p)] }
+/** the same for small places (Tree cards, lists): a light copy of a photo instead of the full one (lib/thumbs.ts) */
+export function avatarSmall(p: Partial<Person>) { const s = avatarSrc(p); return p.avatar ? thumb(s) : s }
 export function avatarTint(p: { gender?: string }) { return p.gender === 'f' ? { background: 'rgba(255,205,225,.16)', color: '#F6D3E2' } : p.gender === 'm' ? { background: 'rgba(170,205,255,.16)', color: '#CFE0FA' } : {} }
 /** Profile completeness: 8 checks (occupation is optional, files are not counted). */
 export function fillPercent(p: Person) { const f = ['first', 'last', 'gender', 'birthDate', 'birthPlace', 'bio', 'avatar'] as const; let n = 0; f.forEach(k => { if (p[k]) n++ }); if (p.events && p.events.length) n++; return Math.round(n / 8 * 100) }

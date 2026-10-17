@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { LANG, t, byId, fullName, avatarSrc, openPerson, editPerson, editEvent, toast, type Person } from '../lib/core'
+import { LANG, t, byId, fullName, avatarSmall, openPerson, editPerson, editEvent, toast, type Person } from '../lib/core'
 import { familyGaps, life, kinFrom, GAP_MIN, question, question2, message, factLabel, witnessLabel, missing, type Gap } from '../lib/gaps'
 import { rootPerson } from '../lib/treeLayout'
 import FamilyAnswers, { FamilyLinks, AskLink, LinkIcon } from '../components/FamilyAnswers'
@@ -91,7 +91,7 @@ export default function GapsPage() {
     return `${T.last} ${factLabel(g.id, g.a)}. ${T.next} ${factLabel(g.id, g.b)}.`
   }
   const Chip = ({ p, small, onClick }: { p: Person; small?: string; onClick: () => void }) => (
-    <button type="button" className="gp-chip" onClick={onClick}><img src={avatarSrc(p)} alt="" /><span>{fullName(p)}</span>{small && <small>{small}</small>}</button>
+    <button type="button" className="gp-chip" onClick={onClick}><img src={avatarSmall(p)} alt="" /><span>{fullName(p)}</span>{small && <small>{small}</small>}</button>
   )
 
   return (
@@ -112,7 +112,7 @@ export default function GapsPage() {
               return (
                 <article className="gp-card" key={g.id + g.a}>
                   <div className="gp-hd">
-                    <button type="button" className="gp-who" onClick={() => openPerson(g.id)}><img src={avatarSrc(p)} alt="" />{fullName(p)}</button>
+                    <button type="button" className="gp-who" onClick={() => openPerson(g.id)}><img src={avatarSmall(p)} alt="" />{fullName(p)}</button>
                     <span className="gp-kin">{me && g.id === me.id ? T.you : kin ? kin.label[g.id] || '' : ''}</span>
                   </div>
                   <Mini g={g} />

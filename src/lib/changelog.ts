@@ -3,6 +3,13 @@ export interface Release { date: string; items: { ru: string; en: string }[] }
 
 export const CHANGELOG: Release[] = [
   {
+    date: '2026-10-17',
+    items: [
+      { ru: 'Добавил демо-семьи: Каллены, Кардашьяны, «Игра престолов» и Романовы', en: 'Added sample families: the Cullens, the Kardashians, Game of Thrones and the Romanovs' },
+      { ru: 'Добавил варианты для партнёров без брака, бывших, приёмных и т.д.', en: 'Added options for unmarried partners, former spouses, adoptive relatives and more' },
+    ],
+  },
+  {
     date: '2026-10-16',
     items: [
       { ru: 'Мяу! Добавили питомцев.', en: 'Meow! Pets are here.' },

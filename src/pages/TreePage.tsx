@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
-import { S, ui, t, LANG, byId, yearOf, showYear, parentsOf, childrenOf, yearsOf, avatarSrc, fullName, fillPercent, generations, openPerson, openPet, closePanel, editPerson, bump, type Person } from '../lib/core'
+import { S, ui, t, LANG, byId, yearOf, showYear, parentsOf, childrenOf, yearsOf, avatarSmall, fullName, fillPercent, generations, openPerson, openPet, closePanel, editPerson, bump, type Person } from '../lib/core'
 import { addRelative } from '../lib/relations'
 import { frameOf, frameArt } from '../lib/frames'
 import { petsOf, petSpot, petIcon, petYears, kindName, PET_R } from '../lib/pets'
@@ -39,7 +39,7 @@ function fitText(s: string, max: number, font = NM_FONT, track = 0) {
 const up = (s: string) => s.toLocaleUpperCase(LANG === 'en' ? 'en' : 'ru')
 type View = { x: number; y: number; k: number }
 // pan/zoom survive switching pages, like in the prototype
-const TV = { view: { x: 0, y: 0, k: 1 } as View, fitted: false, lastN: -1, lastSz: '', refit: -1, lastTop: -1, introAt: 0 }
+const TV = { view: { x: 0, y: 0, k: 1 } as View, fitted: false, lastN: -1, lastSz: '', refit: -1, lastTop: -1, introAt: 0, tk: 0, raf: 0, pan: null as null | { x: number; y: number } }
 // growth: who has just appeared in the tree (their branch draws, the card blooms)
 const GROW = { known: null as Set<string> | null, refit: -1, ids: new Set<string>(), until: 0, n: 0, timer: 0 as ReturnType<typeof setTimeout> | 0 }
 const GROW_MS = 4700
@@ -53,7 +53,7 @@ function Portrait({ p, yrs, kin }: { p: Person; yrs: string; kin: boolean }) {
   const h = 2 * r + 9 + rows.length * 17 + (yrs ? 15 : 0), top = kin ? 25 : 8, cy = top + (NH - 6 - top - h) / 2 + r, y = cy + r + 22
   return <>
     <circle className="av-bg" cx={NW / 2} cy={cy} r={r} />
-    <image className="av" href={avatarSrc(p)} x={NW / 2 - r} y={cy - r} width={2 * r} height={2 * r} clipPath="url(#avClip)" preserveAspectRatio="xMidYMid slice" />
+    <image className="av" href={avatarSmall(p)} x={NW / 2 - r} y={cy - r} width={2 * r} height={2 * r} clipPath="url(#avClip)" preserveAspectRatio="xMidYMid slice" />
     {rows.map((s, i) => <text key={i} className="nm" x={NW / 2} y={y + i * 17} textAnchor="middle">{fitText(up(s), NW - 18)}</text>)}
     {yrs && <text className="yr" x={NW / 2} y={y + rows.length * 17 - 1} textAnchor="middle">{yrs}</text>}
   </>
@@ -80,7 +80,7 @@ function Spark({ d, color, n, rev }: { d: string; color: string; n: number; rev?
 }
 
 export default function TreePage({ demo: dv, children }: { demo?: DemoView; children?: React.ReactNode } = {}) {
-  const svgRef = useRef<SVGSVGElement>(null), gRef = useRef<SVGGElement>(null)
+  const svgRef = useRef<SVGSVGElement>(null), gRef = useRef<SVGGElement>(null), panRef = useRef<HTMLDivElement>(null)
   const sel = ui.panel && ui.panel.mode === 'view' ? ui.panel.id : null
   const selPet = ui.panel && ui.panel.mode === 'pet' ? ui.panel.id : null
   const lay = layout(() => NH)
@@ -121,7 +121,9 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
   const growing = GROW.until > now ? GROW.ids : new Set<string>()
   useEffect(() => { if (!growing.size) return; clearTimeout(GROW.timer as ReturnType<typeof setTimeout>); GROW.timer = setTimeout(bump, GROW.until - Date.now() + 50) }, [GROW.n])
 
-  const apply = (anim?: boolean, ms = 900) => { const g = gRef.current; if (!g) return; const v = TV.view; if (anim) { g.style.transition = `transform ${ms}ms cubic-bezier(${ms > 900 ? '.5,.05,.25,1' : '.22,.61,.36,1'})`; setTimeout(() => { g.style.transition = '' }, ms + 50) } g.setAttribute('transform', `translate(${v.x},${v.y}) scale(${v.k})`); g.style.setProperty('--tk', String(v.k)) }
+  const apply = (anim?: boolean, ms = 900) => { const g = gRef.current; if (!g) return; const v = TV.view; if (anim) { g.style.transition = `transform ${ms}ms cubic-bezier(${ms > 900 ? '.5,.05,.25,1' : '.22,.61,.36,1'})`; setTimeout(() => { g.style.transition = '' }, ms + 50) } g.setAttribute('transform', `translate(${v.x},${v.y}) scale(${v.k})`); if (TV.tk !== v.k) { TV.tk = v.k; g.style.setProperty('--tk', String(v.k)) } }
+  /** wheel and pinch can fire faster than the screen redraws: one update per frame */
+  const applySoon = () => { if (!TV.raf) TV.raf = requestAnimationFrame(() => { TV.raf = 0; apply() }) }
   const fitView = (): View | null => {
     const svg = svgRef.current; if (!svg) return null; const W = svg.clientWidth || 800, H = svg.clientHeight || 600; const pad = memo ? 64 : dv ? 120 : 0
     // the demo shows the whole family at once, even when the cards get small on a phone
@@ -156,9 +158,9 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
     const cx = fits || !isFinite(nb.x0) ? (box.x0 + box.x1) / 2 : (nb.x0 + nb.x1) / 2, cy = fits || !isFinite(nb.y0) ? (box.y0 + box.y1) / 2 : (nb.y0 + nb.y1) / 2
     TV.view = { k, x: W / 2 - cx * k, y: (H - pad) / 2 - cy * k }; apply(true)
   }
-  const zoomBy = (f: number, cx?: number, cy?: number) => {
+  const zoomBy = (f: number, cx?: number, cy?: number, soon?: boolean) => {
     const svg = svgRef.current!; cx = cx == null ? svg.clientWidth / 2 : cx; cy = cy == null ? svg.clientHeight / 2 : cy
-    const v = TV.view; const k = Math.min(3, Math.max(.15, v.k * f)); const r = k / v.k; TV.view = { k, x: cx - (cx - v.x) * r, y: cy - (cy - v.y) * r }; apply()
+    const v = TV.view; const k = Math.min(3, Math.max(.15, v.k * f)); const r = k / v.k; TV.view = { k, x: cx - (cx - v.x) * r, y: cy - (cy - v.y) * r }; if (soon) applySoon(); else apply()
   }
 
   // fit on first show, when the number of people or the size changes, or when asked (sample loaded, drafts approved)
@@ -177,20 +179,25 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
   useEffect(() => {
     const svg = svgRef.current!; let drag: { x: number; y: number; vx: number; vy: number; node: Element | null } | null = null, moved = false, pinch: { d: number; k: number } | null = null
     const pts = new Map<number, { x: number; y: number }>()
-    const wheel = (e: WheelEvent) => { e.preventDefault(); const r = svg.getBoundingClientRect(); zoomBy(Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top) }
+    const wheel = (e: WheelEvent) => { e.preventDefault(); const r = svg.getBoundingClientRect(); zoomBy(Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top, true) }
+    // a drag moves the drawn tree as one ready picture (CSS transform of the whole SVG, no redrawing of the cards);
+    // the real position is written once, when the finger or the mouse is released
+    const settle = () => { const p = TV.pan; if (!p) return; TV.pan = null; TV.view = { ...TV.view, x: TV.view.x + p.x, y: TV.view.y + p.y }; if (panRef.current) panRef.current.style.transform = ''; apply() }
     const down = (e: PointerEvent) => {
+      if (e.pointerType === 'mouse') e.preventDefault() // no text selection while dragging
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); svg.setPointerCapture(e.pointerId)
       if (pts.size === 1) { drag = { x: e.clientX, y: e.clientY, vx: TV.view.x, vy: TV.view.y, node: (e.target as Element).closest('.petb, .node, .ghost') }; moved = false }
       else if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), k: TV.view.k }; drag = null }
     }
     const move = (e: PointerEvent) => {
       if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
-      if (pts.size === 2 && pinch) { const [a, b] = [...pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); const r = svg.getBoundingClientRect(); const cx = (a.x + b.x) / 2 - r.left, cy = (a.y + b.y) / 2 - r.top; const nk = Math.min(3, Math.max(.15, pinch.k * d / pinch.d)); const rr = nk / TV.view.k; TV.view = { k: nk, x: cx - (cx - TV.view.x) * rr, y: cy - (cy - TV.view.y) * rr }; apply(); moved = true; return }
-      if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) { moved = true; svg.classList.add('dragging') } TV.view = { ...TV.view, x: drag.vx + dx, y: drag.vy + dy }; apply() }
+      if (pts.size === 2 && pinch) { settle(); const [a, b] = [...pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); const r = svg.getBoundingClientRect(); const cx = (a.x + b.x) / 2 - r.left, cy = (a.y + b.y) / 2 - r.top; const nk = Math.min(3, Math.max(.15, pinch.k * d / pinch.d)); const rr = nk / TV.view.k; TV.view = { k: nk, x: cx - (cx - TV.view.x) * rr, y: cy - (cy - TV.view.y) * rr }; applySoon(); moved = true; return }
+      if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) { moved = true; svg.classList.add('dragging') }
+        if (moved) { TV.pan = { x: dx, y: dy }; if (panRef.current) panRef.current.style.transform = `translate(${dx}px, ${dy}px)` } }
     }
     const up = (e: PointerEvent) => {
       pts.delete(e.pointerId); if (pts.size < 2) pinch = null
-      if (pts.size === 0) { svg.classList.remove('dragging'); if (!moved) { const n = drag && drag.node as SVGGElement | null; if (n && n.dataset.ghost) addRelative(n.dataset.ghost, 'parent'); else if (n && n.dataset.pet) openPet(n.dataset.pet); else if (n && n.dataset.id) openPerson(n.dataset.id); else closePanel() } drag = null }
+      if (pts.size === 0) { settle(); svg.classList.remove('dragging'); if (!moved) { const n = drag && drag.node as SVGGElement | null; if (n && n.dataset.ghost) addRelative(n.dataset.ghost, 'parent'); else if (n && n.dataset.pet) openPet(n.dataset.pet); else if (n && n.dataset.id) openPerson(n.dataset.id); else closePanel() } drag = null }
     }
     const resize = () => setTimeout(fit, 50)
     svg.addEventListener('wheel', wheel, { passive: false }); svg.addEventListener('pointerdown', down); svg.addEventListener('pointermove', move); svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up); window.addEventListener('resize', resize)
@@ -289,7 +296,7 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
         <button className="btn sm add" id="btnAddPerson" onClick={() => editPerson(null)}><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg><span className="full">{t('tree.add')}</span><span className="short">{t('tree.add.short')}</span></button>
       </div>}
       <div className={'tree-wrap th-' + theme.k + (theme.light ? ' th-light' : '') + (intro ? ' intro' : '')} style={intro ? { '--end': introEnd - .5 + 's' } as React.CSSProperties : undefined}>
-        <svg id="treeSvg" ref={svgRef}>
+        <div className="tree-pan" ref={panRef}><svg id="treeSvg" ref={svgRef}>
           <defs><clipPath id="avClip" clipPathUnits="objectBoundingBox"><circle cx=".5" cy=".5" r=".5" /></clipPath>
             <filter id="frShadow" x="-20%" y="-20%" width="140%" height="145%"><feDropShadow dx="0" dy="3" stdDeviation="3" floodColor="#000" floodOpacity=".4" /></filter>
             <filter id="ndGlow" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="14" /></filter>
@@ -339,7 +346,7 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
               )
             })}
           </g>
-        </svg>
+        </svg></div>
         {!dv && kin && sel && me && sel !== me.id && byId(sel) && (() => {
           const chain = kin.chain(sel)
           return <div className="tree-kin" key={sel} aria-live="polite">

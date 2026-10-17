@@ -849,6 +849,10 @@ main{position:relative;min-width:0;overflow:hidden;border-radius:var(--r-card);b
 .mp-map *{-webkit-user-select:none;user-select:none}
 .mp-map.drag{cursor:grabbing}
 .mp-map>svg{position:absolute;inset:0;width:100%;height:100%;display:block;font-family:var(--f-body)}
+/* land and borders: their own layer with a spare half-map around it, moved as a ready picture while the map is dragged (lib/mapview.js) */
+.mp-map>svg.mp-wsvg{inset:auto;left:-50%;top:-50%;width:200%;height:200%;pointer-events:none;will-change:transform}
+/* while the map (or the Tree) is dragged nothing on the page gets selected */
+body.no-select,body.no-select *{-webkit-user-select:none!important;user-select:none!important}
 .mp-map text{pointer-events:none}
 .mp-stn{cursor:pointer}
 .mp-ctrls{position:absolute;right:12px;bottom:12px;display:flex;flex-direction:column;gap:6px;z-index:3}
@@ -1325,3 +1329,9 @@ main{position:relative;min-width:0;overflow:hidden;border-radius:var(--r-card);b
 .gs-brand:hover{color:var(--ink);text-decoration-color:var(--ink-2)}
 .gs-center .gs-brand{position:absolute;left:0;right:0;bottom:calc(24px + env(safe-area-inset-bottom,0px));font-size:13px;text-align:center}
 .gs-center{position:relative}
+/* while the Tree is dragged the whole drawing moves as one picture: the parts outside the frame are drawn too, so nothing is cut off */
+/* the layer the drag moves (TreePage) */
+.tree-pan{position:absolute;inset:0}
+.tree-pan:has(#treeSvg.dragging){will-change:transform}
+#treeSvg.dragging{overflow:visible}
+#treeSvg.dragging *{pointer-events:none}

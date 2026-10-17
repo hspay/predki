@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ui, bump, LANG, byId, avatarSrc, openPerson } from '../lib/core'
+import { ui, bump, LANG, byId, avatarSmall, openPerson } from '../lib/core'
 import { familyEvents, undatedCount, downloadIcs, type CalEvent } from '../lib/calendar'
 import { kinship } from '../lib/kinship'
 import { rootPerson } from '../lib/treeLayout'
@@ -82,7 +82,7 @@ export default function FamilyCalendar() {
   const open = (e: CalEvent) => { ui.calendar = false; openPerson(e.id) }
   const get = () => { downloadIcs(); setHelp(platform()) }
 
-  const Avatars = ({ e }: { e: CalEvent }) => <span className="cal-av">{e.ids.map(id => { const p = byId(id); return p ? <img key={id} src={avatarSrc(p)} alt="" /> : null })}</span>
+  const Avatars = ({ e }: { e: CalEvent }) => <span className="cal-av">{e.ids.map(id => { const p = byId(id); return p ? <img key={id} src={avatarSmall(p)} alt="" /> : null })}</span>
   const short = (e: CalEvent) => { if (e.kind === 'wedding') return e.title; const p = byId(e.id); return (p && p.first) || e.title }
 
   return (
