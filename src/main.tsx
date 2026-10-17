@@ -9,6 +9,7 @@ import './design.css'
 import { applyAppearance, onThemeChange, isLight } from './lib/appearance'
 import { S, ui, bump, persist } from './lib/core'
 import { THEMES } from './lib/treeStyle'
+import { initAnalytics } from './lib/analytics'
 
 applyAppearance()
 onThemeChange(() => {
@@ -24,4 +25,5 @@ onThemeChange(() => {
 
 // «Попросить заполнить»: a relative's link (?s=…) opens a light copy of the tree, without an account and without the app's own data
 const shareToken = tokenFromUrl()
+if (!shareToken) initAnalytics()
 ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode>{shareToken ? <GuestApp token={shareToken} /> : <App />}</React.StrictMode>)

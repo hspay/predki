@@ -11,6 +11,7 @@ import { frameOf, miniCard } from '../lib/frames'
 import { isLight } from '../lib/appearance'
 import { CITIES, findCity } from '../lib/world'
 import { mediaUrl } from '../lib/media'
+import { goal } from '../lib/analytics'
 import Avatar from './Avatar'
 import FrameEditor from './FrameEditor'
 import { KINDS, kindName, petIcon, petsOf, petById, petYears, savePet, removePet } from '../lib/pets'
@@ -215,7 +216,7 @@ function EditPerson({ id, preset, after }: { id: string | null; preset?: Partial
     const data = { ...d, gender, avatar, names: kept } as Partial<Person>
     if (!kept.length) delete data.names
     let target: Person
-    if (id) { target = byId(id)!; Object.assign(target, data); if (!kept.length) delete target.names } else { target = addPerson(data); if (p.events) target.events = p.events }
+    if (id) { target = byId(id)!; Object.assign(target, data); if (!kept.length) delete target.names } else { target = addPerson(data); if (p.events) target.events = p.events; goal('person_add') }
     delete target.auto; syncLifeEvents(target); commit(); toast(t('toast.saved'))
     if (after) after(target, variant); else if (id) openPerson(target.id); else showNewPerson(target.id)
     const made = ensureFathers([target.id]); if (made.length) { commit(); toast(t('auto.father', { name: made.map(fullName).join(', ') })) }

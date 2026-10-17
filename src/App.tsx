@@ -19,6 +19,9 @@ import GapsPage from './pages/GapsPage'
 import SettingsPage from './pages/SettingsPage'
 import DemoPage from './components/DemoPage'
 import { openDemo, demoFromHash } from './lib/demo'
+import { screen } from './lib/analytics'
+
+const SCREEN_TITLE: Record<string, string> = { landing: 'Лендинг', demo: 'Пример древа', 'sign-in': 'Вход', start: 'Первые шаги', tree: 'Древо', map: 'Карта', album: 'Альбом', gaps: 'Заполнить пробелы', settings: 'Настройки' }
 
 export default function App() {
   useStore()
@@ -29,6 +32,10 @@ export default function App() {
   useEffect(() => { if (ui.loaded && cloud.session) refreshInbox() }, [ui.loaded, !!cloud.session])
   // a link to the demo (…/#demo=kardashian) opens it straight away
   useEffect(() => { if (ui.loaded) { const k = demoFromHash(); if (k !== null && !ui.demo) openDemo(k || undefined) } }, [ui.loaded])
+  // statistics: each screen of the app is a page in Yandex Metrica (lib/analytics.ts)
+  const signInNow = !ui.onboarding && ((!cloud.session && !cloud.skipped) || cloud.recovery)
+  const scr = !ui.loaded ? '' : ui.demo ? 'demo/' + ui.demo.fam : ui.onboarding ? 'landing' : signInNow ? 'sign-in' : ui.firstRun && ui.page === 'tree' ? 'start' : ({ tree: 'tree', map: 'map', progress: 'album', gaps: 'gaps', settings: 'settings' } as Record<string, string>)[ui.page]
+  useEffect(() => { if (scr) screen(scr, SCREEN_TITLE[scr.split('/')[0]] + (ui.demo ? ' · ' + ui.demo.fam : '')) }, [scr])
   if (!ui.loaded) return null
   // «Смотреть пример древа»: the demo tree takes the whole screen, before any sign-in
   if (ui.demo) return <><DemoPage /><Toasts /></>

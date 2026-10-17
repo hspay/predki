@@ -3,6 +3,7 @@
 import { S, LANG, byId, fullName, type Person } from './core'
 import { rootPerson } from './treeLayout'
 import { kinship } from './kinship'
+import { goal } from './analytics'
 
 export type CalKind = 'birth' | 'memorial' | 'death' | 'wedding'
 export interface CalEvent {
@@ -101,6 +102,7 @@ export function buildIcs() {
 
 /** Save the .ics file; the phone or computer offers to add the events to its calendar. */
 export function downloadIcs() {
+  goal('calendar_export')
   const blob = new Blob([buildIcs()], { type: 'text/calendar;charset=utf-8' })
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = LANG === 'en' ? 'predki-family-calendar.ics' : 'predki-kalendar-semi.ics'
   document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000)

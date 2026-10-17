@@ -6,6 +6,7 @@ import { S, LANG, bump, byId, fullName, yearOf, uid, addPerson, syncLifeEvents, 
 import { linkPeople } from './relations'
 import { findCity } from './world'
 import { rootPerson } from './treeLayout'
+import { goal } from './analytics'
 import { familyTitle } from './treeStyle'
 import type { Gap } from './gaps'
 
@@ -63,6 +64,7 @@ export function serverError(e: { code?: string; message?: string } | null | unde
 }
 
 export async function createLink(to: string | null, gap: Gap | null) {
+  goal('ask_relatives')
   if (!cloud.session) throw new Error(LANG === 'en' ? 'Sign in to send links' : 'Чтобы отправлять ссылки, войдите в аккаунт')
   const token = newToken(), label = to && byId(to) ? fullName(byId(to)) : ''
   const { error } = await sb.from('share_links').insert({ token, label, snapshot: buildSnapshot(to, gap) })

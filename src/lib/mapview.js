@@ -5,6 +5,7 @@ import { S, LANG, fullName, openPerson } from './core'
 import { WORLD, countryAt } from './world'
 import { BORDERS } from './borders'
 import { FLAGS } from './passport'
+import { goal } from './analytics'
 
 // map colours for the dark and the light app (lines keep their hue, the light set is deeper so it reads on paper)
 const LOOK = {
@@ -434,6 +435,7 @@ export function mountMap(root) {
     clearTimeout(endTimer)
     if (!A.anim || A.anim.t >= M.TOTAL) { A.anim = { t: 0, playing: false }; shown = new Set(); A.pin = null }
     A.follow = true; followSig = ''
+    goal('map_play')
     A.anim.playing = true; last = performance.now(); cancelAnimationFrame(raf); raf = requestAnimationFrame(tick); frame()
   }
   function pause() { if (A.anim) A.anim.playing = false; cancelAnimationFrame(raf); frame() }

@@ -3,6 +3,7 @@
 // Nothing here is ever saved: core.ts skips persist / commit / cloud sync while `demo.on` is true.
 import { S, ui, bump, replaceData, finishOnboarding, closePanel, persist, demo, LANG, type Data, type Person, type Rel } from './core'
 import { PRESET_TYPES, presetType } from './avatars'
+import { goal } from './analytics'
 
 import type { DemoFamily, Two } from './demoFamilies'
 export type { DemoFamily } from './demoFamilies'
@@ -80,15 +81,17 @@ export async function openDemo(k?: string) {
   const fam = famOf(k).k
   // the tree grows from the face only the first time the page opens, not when the family is switched
   ui.demo = { fam, intro: Date.now() }
+  goal('demo_open', { family: fam })
   closePanel(); load(fam); bump()
 }
 export function switchDemo(k: string) {
   if (!ui.demo || ui.demo.fam === k) return
-  ui.demo = { fam: k, intro: 0 }; load(k); bump()
+  ui.demo = { fam: k, intro: 0 }; load(k); bump(); goal('demo_family', { family: k })
 }
 /** leave the demo: back to the landing, or (start) straight into building one's own tree */
 export function closeDemo(start = false) {
   if (!demo.on) return
+  if (start) goal('demo_build', { family: ui.demo?.fam || '' })
   if (saved) replaceData(saved); saved = null; demo.on = false
   persist() // a save asked for just before the demo opened was skipped while it was on
   ui.demo = null; ui.panel = null; ui.treeRefit++; ui.mapRefit++

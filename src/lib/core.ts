@@ -10,6 +10,7 @@ import { sb, cloud, initSession, pullTree, pushTree, signOutCloud, setSkipped } 
 import type { FrameLook } from './frames'
 import { PRESET_SRC, presetType, typeOfPreset, pickPreset, previewPreset } from './avatars'
 import { onThumbReady, thumb } from './thumbs'
+import { goal } from './analytics'
 import { mediaUrl, isCloudRef, isInline, uploadInline, isPermanent, removeRefs, clearMediaCache, onMediaReady, listOwnFiles } from './media'
 
 // ---------- types ----------
@@ -126,7 +127,7 @@ export async function signOut() {
   ui.page = 'tree'; ui.panel = null; afterLoad()
 }
 export function askToSignIn() { setSkipped(false); bump() }
-export function continueWithoutAccount() { setSkipped(true); bump() }
+export function continueWithoutAccount() { goal('no_account'); setSkipped(true); bump() }
 
 // ---------- UI state ----------
 export type Page = 'tree' | 'map' | 'progress' | 'gaps' | 'settings' // 'ai' (Архивариус) is archived: _backup/archivist-page
@@ -434,6 +435,7 @@ export function importData(d: Partial<Data>) {
 export function clearData() { S.people = []; S.rels = []; S.pets = []; S.achievements = []; S.achDates = {}; S.achSeen = []; S.achPasted = []; delete S.settings.familyName; delete S.settings.theme; delete S.settings.meId; ui.firstRun = true; commit() }
 /** First run of an empty family: you, your parents, the tree's look. */
 export function completeFirstRun(d: { theme: string; familyName: string; me: Partial<Person>; mom: { first: string; last: string }; dad: { first: string; last: string } }) {
+  goal('first_tree')
   S.settings.theme = d.theme; S.settings.familyName = d.familyName; S.settings.ghosts = true
   const me = addPerson(d.me); syncLifeEvents(me); S.settings.meId = me.id
   const mom = d.mom.first ? addPerson({ first: d.mom.first, last: d.mom.last, gender: 'f' }) : null
@@ -466,7 +468,7 @@ export async function boot() {
   sb.auth.onAuthStateChange((ev, session) => {
     const was = cloud.session?.user.id; cloud.session = session
     if (ev === 'PASSWORD_RECOVERY') cloud.recovery = true
-    if (ev === 'SIGNED_IN' && session && session.user.id !== was) { setSkipped(false); cloud.busy = true; setTimeout(() => syncFromCloud(), 0) } // never await Supabase inside this callback
+    if (ev === 'SIGNED_IN' && session && session.user.id !== was) { goal('sign_in'); setSkipped(false); cloud.busy = true; setTimeout(() => syncFromCloud(), 0) } // never await Supabase inside this callback
     if (ev === 'SIGNED_OUT') cloud.synced = false
     bump()
   })
