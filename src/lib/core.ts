@@ -6,6 +6,7 @@ import { t, setLangValue, LANG } from './i18n'
 import { findCity } from './world'
 import { sampleData } from './sample'
 import { Progress } from './progress'
+import { sync as syncChapters, gate } from './chapters'
 import { sb, cloud, initSession, pullTree, pushTree, signOutCloud, setSkipped } from './cloud'
 import type { FrameLook } from './frames'
 import { PRESET_SRC, presetType, typeOfPreset, pickPreset, previewPreset } from './avatars'
@@ -15,7 +16,7 @@ import { mediaUrl, isCloudRef, isInline, uploadInline, isPermanent, removeRefs, 
 
 // ---------- types ----------
 export type Gender = '' | 'm' | 'f'
-export type EvType = 'birth' | 'move' | 'study' | 'work' | 'marriage' | 'death' | 'other'
+export type EvType = 'birth' | 'move' | 'study' | 'work' | 'service' | 'marriage' | 'death' | 'other'
 export interface LifeEvent { id: string; type: EvType; year: number | ''; place: string; lat: number | null; lon: number | null; note: string
   /** a wedding: the full date (ДД.ММ.ГГГГ, also written into the marriage link) and the spouse */
   date?: string; with?: string }
@@ -54,6 +55,12 @@ export interface Settings {
   meId?: string; since?: string
   /** last look picked for the family passport */
   share?: { theme?: string; hero?: string; fmt?: string; uv?: boolean; fam?: string; keeper?: string }
+  /** chapters (lib/chapters.ts): how many are closed (never goes down), when each closed, stickers marked «не знаю» */
+  chapter?: number; chDates?: Record<string, string>; chSkip?: string[]
+  /** the furthest chapter already announced (its toast was shown), so the toast comes once */
+  chReady?: number
+  /** «Попросить заполнить»: links sent and answers accepted (for the «Голоса родных» chapter) */
+  asked?: number; answered?: number
 }
 /** achPasted: stickers the family has pasted into the Album (an earned achievement waits there until it is pasted) */
 /** pets (lib/pets.ts): a badge on the owner's card in the Tree; name, kind, years */
@@ -130,7 +137,7 @@ export function askToSignIn() { setSkipped(false); bump() }
 export function continueWithoutAccount() { goal('no_account'); setSkipped(true); bump() }
 
 // ---------- UI state ----------
-export type Page = 'tree' | 'map' | 'progress' | 'gaps' | 'settings' // 'ai' (Архивариус) is archived: _backup/archivist-page
+export type Page = 'tree' | 'map' | 'progress' | 'gaps' | 'keeper' | 'book' | 'settings' // 'ai' (Архивариус) is archived: _backup/archivist-page
 export type Panel =
   | { mode: 'view'; id: string }
   | { mode: 'pet'; id: string }
@@ -161,7 +168,11 @@ export const ui = {
   /** the demo tree is open (lib/demo.ts): which family, and when the page opened (0 = no growth animation) */
   demo: null as null | { fam: string; intro: number },
   /** the Album: open section and the sticker whose card is open */
-  album: { tab: 'kin', sheet: null as string | null },
+  album: { tab: '', sheet: null as string | null },
+  /** a chapter has just closed: the board shows from → to (numbers of closed chapters) */
+  levelUp: null as null | { from: number; to: number },
+  /** a closed part of the app was tapped: its lock sheet is open */
+  lock: null as null | import('./chapters').Feature,
   ai: { mode: 'text' as 'text' | 'audio' | 'photo', drafts: [] as Draft[], busy: false, transcript: '', text: '', ran: false, simulating: false },
 }
 
@@ -172,7 +183,7 @@ const subscribe = (l: () => void) => { listeners.add(l); return () => { listener
 export function bump() { version++; listeners.forEach(l => l()) }
 export function useStore() { return useSyncExternalStore(subscribe, () => version) }
 
-export function commit(quiet = false) { if (demo.on) { bump(); return } assignPresets(); forgetRemovedFiles(); persist(); Progress.check(quiet); bump() }
+export function commit(quiet = false) { if (demo.on) { bump(); return } assignPresets(); forgetRemovedFiles(); persist(); Progress.check(quiet); syncChapters(quiet); bump() }
 onMediaReady(bump); onThumbReady(bump)
 
 // ---------- photos & documents in Supabase Storage (lib/media.ts) ----------
@@ -233,7 +244,7 @@ async function cleanOrphanFiles() {
 }
 export const refresh = bump
 
-export function go(page: Page) { ui.page = page; ui.panel = null; bump() }
+export function go(page: Page) { if ((page === 'map' || page === 'book') && !demo.on && !gate(page)) return; ui.page = page; ui.panel = null; bump() }
 // Language: Russian by default for now. Only a language the person picked in the RU/EN switcher on this device counts
 // (old builds could save English automatically from the browser language, so the saved data value is ignored).
 // TODO before the App Store release: when nothing was picked, follow the device language instead of 'ru'.
@@ -252,17 +263,16 @@ export function editEvent(id: string, eventId: string | null) { ui.panel = { mod
 export function openPet(id: string) { ui.panel = { mode: 'pet', id }; bump() }
 export function editPet(id: string | null, owner: string) { ui.panel = { mode: 'petEdit', id, owner, key: ++panelKey }; bump() }
 export function closePanel() { ui.panel = null; ui.frameEdit = false; ui.relEdit = false; bump() }
-/** a person was just added: on a phone the form closes and the Tree shows the new branch growing (everything was just typed in, the card would only hide it); on a wide screen the card opens beside the Tree */
-export function showNewPerson(id: string) {
-  if (typeof matchMedia === 'function' && matchMedia('(max-width:860px)').matches) closePanel(); else openPerson(id)
-}
+/** a person was just added: the form closes and the Tree shows the new branch growing — everything was just typed in, the card would only cover it (phone and wide screen alike) */
+export function showNewPerson(_id: string) { closePanel() }
 export function openModal(m: Modal) { ui.modal = m; bump() }
 export function closeModal() { ui.modal = null; bump() }
 
 // ---------- files ----------
-export function pickFile(accept: string, cb: (data: string, name: string, mime: string) => void) {
+/** max: the longest side a picture is shrunk to; portraits 900 px, gallery photos and document scans larger so they stay readable */
+export function pickFile(accept: string, cb: (data: string, name: string, mime: string) => void, max = 900) {
   const inp = document.createElement('input'); inp.type = 'file'; inp.accept = accept
-  inp.onchange = () => { const f = inp.files && inp.files[0]; if (!f) return; if (f.type.startsWith('image/')) shrinkImage(f, 900, data => cb(data, f.name, f.type)); else { const r = new FileReader(); r.onload = () => cb(String(r.result), f.name, f.type); r.readAsDataURL(f) } }
+  inp.onchange = () => { const f = inp.files && inp.files[0]; if (!f) return; if (f.type.startsWith('image/')) shrinkImage(f, max, data => cb(data, f.name, f.type)); else { const r = new FileReader(); r.onload = () => cb(String(r.result), f.name, f.type); r.readAsDataURL(f) } }
   inp.click()
 }
 function shrinkImage(file: File, max: number, cb: (d: string) => void) {
@@ -450,7 +460,7 @@ export function completeFirstRun(d: { theme: string; familyName: string; me: Par
 function afterLoad() {
   const l = pickedLang(); S.settings.lang = l
   setLangValue(l); document.documentElement.lang = l
-  Progress.check(true)
+  Progress.check(true); syncChapters(true)
   if (assignPresets()) persist()
   if (!S.settings.since) { // first day in Predki: the earliest achievement, otherwise today
     const ds = Object.values(S.achDates || {}).map(v => new Date(v)).filter(d => !isNaN(+d)); const d = ds.length ? new Date(Math.min(...ds.map(Number))) : new Date()
@@ -463,6 +473,8 @@ function afterLoad() {
 export async function boot() {
   const saved = await loadState()
   if (saved && Array.isArray(saved.people)) S = migrateDates(Object.assign(blank(), saved))
+  // preview build: no account, no landing — straight into the first-run dialog of an empty family
+  if (import.meta.env.VITE_PREVIEW === '1') { setSkipped(true); S.settings.onboarded = true }
   setLangValue(pickedLang()); document.documentElement.lang = pickedLang()
   await initSession()
   sb.auth.onAuthStateChange((ev, session) => {

@@ -69,6 +69,7 @@ export async function createLink(to: string | null, gap: Gap | null) {
   const token = newToken(), label = to && byId(to) ? fullName(byId(to)) : ''
   const { error } = await sb.from('share_links').insert({ token, label, snapshot: buildSnapshot(to, gap) })
   if (error) throw new Error(serverError(error))
+  S.settings.asked = (S.settings.asked || 0) + 1; commit()
   refreshInbox()
   return linkUrl(token)
 }
@@ -138,7 +139,7 @@ export async function decide(s: Suggestion, idx: number | null, d: Decision) {
     if ((idx != null && i !== idx) || it.st) return
     if (d === 'ok') { it.st = apply(it, s.author) ? 'ok' : 'no'; if (it.st === 'ok' && it.t !== 'note') changed = true } else it.st = 'no'
   })
-  if (changed) commit()
+  if (changed) { S.settings.answered = (S.settings.answered || 0) + 1; commit() }
   const status = items.every(it => it.st) ? 'done' : 'new'
   s.items = items; s.status = status; bump()
   const { error } = await sb.from('suggestions').update({ items, status }).eq('id', s.id)
@@ -150,7 +151,7 @@ export function describe(it: Item): { who: string; what: string; value: string; 
   const ru = LANG !== 'en', name = (id: string) => (byId(id) ? fullName(byId(id)) : ru ? 'человек удалён' : 'removed')
   const F = { birthDate: ru ? 'Дата рождения' : 'Birth date', birthPlace: ru ? 'Место рождения' : 'Birthplace', deathDate: ru ? 'Дата ухода' : 'Date of death', deathPlace: ru ? 'Место ухода' : 'Place of death' }
   if (it.t === 'field') { const p = byId(it.id); return { who: name(it.id), what: F[it.f], value: it.v, was: p ? p[it.f] || '' : '' } }
-  if (it.t === 'event') { const K: Record<string, string> = ru ? { move: 'Жил(а)', study: 'Учёба', work: 'Работа', other: 'Событие' } : { move: 'Lived', study: 'Study', work: 'Work', other: 'Event' }; return { who: name(it.id), what: K[it.ev.type] || K.other, value: [it.ev.place, it.ev.year, it.ev.note].filter(Boolean).join(' · '), was: '' } }
+  if (it.t === 'event') { const K: Record<string, string> = ru ? { move: 'Жил(а)', study: 'Учёба', work: 'Работа', service: 'Служба', other: 'Событие' } : { move: 'Lived', study: 'Study', work: 'Work', service: 'Service', other: 'Event' }; return { who: name(it.id), what: K[it.ev.type] || K.other, value: [it.ev.place, it.ev.year, it.ev.note].filter(Boolean).join(' · '), was: '' } }
   if (it.t === 'wedding') return { who: name(it.id), what: (ru ? 'Свадьба с ' : 'Wedding with ') + (byId(it.with) ? byId(it.with)!.first : ''), value: it.v, was: '' }
   if (it.t === 'story') return { who: name(it.id), what: ru ? 'Рассказ' : 'Story', value: it.v, was: '' }
   if (it.t === 'person') {

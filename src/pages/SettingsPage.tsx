@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { getAppearance, setAppearance, type Appearance } from '../lib/appearance'
+import { getAppearance, setAppearance, resolvedTheme, type Appearance } from '../lib/appearance'
 import { S, ui, t, LANG, toast, importData, clearData, bump, cloud, signOut, askToSignIn, setLang, type Person } from '../lib/core'
 import { isCloudRef, refToInline } from '../lib/media'
 import { CHANGELOG, type Release } from '../lib/changelog'
@@ -69,8 +69,18 @@ export default function SettingsPage() {
         </div>
         <div className="bt bt-look">
           <h3 className="bt-h">{T.theme}</h3>
-          <div className="look-seg" role="group" aria-label={t('look.h')}>
-            {(['auto', 'light', 'dark'] as const).map(a => <button key={a} type="button" aria-pressed={look === a} onClick={() => { setAppearance(a); setLook(a) }}><i className={a} />{t('look.' + a)}</button>)}
+          {/* sun / moon, plus «как на устройстве» beside them: one short row instead of three wide buttons */}
+          <div className="th-row">
+            <div className="th-pill" role="group" aria-label={t('look.h')}>
+              {(['light', 'dark'] as const).map(a => <button key={a} type="button" aria-pressed={look === a} className={look === 'auto' && resolvedTheme() === a ? 'sys' : ''} title={t('look.' + a)} aria-label={t('look.' + a)} onClick={() => { setAppearance(a); setLook(a) }}>
+                {a === 'light'
+                  ? <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" /><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4" /></svg>
+                  : <svg viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z" /></svg>}
+              </button>)}
+            </div>
+            <button type="button" className={'th-auto' + (look === 'auto' ? ' on' : '')} aria-pressed={look === 'auto'} onClick={() => { const a = look === 'auto' ? resolvedTheme() : 'auto'; setAppearance(a); setLook(a) }}>
+              <i aria-hidden="true" />{t('look.auto')}
+            </button>
           </div>
           <h3 className="bt-h bt-h2">{T.lang}</h3>
           <div className="lang-seg" role="group" aria-label={T.lang}>

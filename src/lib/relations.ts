@@ -62,6 +62,9 @@ export function linkPeople(id: string, otherId: string, kind: RelKind) {
     const r = coupleRel(id, otherId)
     if (r) { r.partner = kind === 'partner' ? true : undefined; if (!r.partner) delete r.partner } // the same couple, a new status
     else addRel('spouse', id, otherId, '', false, kind === 'partner' ? { partner: true } : kind === 'ex' ? { ex: true } : undefined)
+    // a wife added to a grandfather who is the only known parent of the mother becomes the mother's mother too:
+    // a child with one known parent gets the new spouse as the second one
+    if (kind !== 'ex') { childrenOf(id).forEach(c => { if (parentsOf(c.id).length !== 1) return; const adopt = S.rels.some(r => r.type === 'parent' && r.a === id && r.b === c.id && r.adopt); addRel('parent', otherId, c.id, '', false, adopt ? { adopt: true } : undefined) }); tidySiblings() }
   } else if (kind === 'sibling') {
     const P = parentsOf(id), Q = parentsOf(otherId)
     if (P.length && !Q.length) P.forEach(x => addRel('parent', x.id, otherId))

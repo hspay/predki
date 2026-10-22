@@ -27,7 +27,7 @@ const TX = {
     playing: 'идёт история', paused: 'пауза', play: 'Показать историю семьи', watch: 'Смотреть историю', again: 'Ещё раз', pause: 'Пауза', zin: 'Приблизить', zout: 'Отдалить', zfit: 'Вся семья',
     slider: 'Год на шкале времени', more: n => `и ещё ${n}`, map: 'Карта перемещений семьи', lines: 'Линии родственников',
     lg: { line: 'путь', one: 'место одного', shared: 'общее место', star: 'рождение', wed: 'свадьба' }, moved: ['переезд', 'переезда', 'переездов'], route: 'Маршрут',
-    kind: { birth: 'рождение', move: 'переезд', study: 'учёба', work: 'работа', marriage: 'свадьба', deathF: 'ушла из жизни', deathM: 'ушёл из жизни', other: 'событие' },
+    kind: { birth: 'рождение', move: 'переезд', study: 'учёба', work: 'работа', service: 'служба', marriage: 'свадьба', deathF: 'ушла из жизни', deathM: 'ушёл из жизни', other: 'событие' },
   },
   en: {
     chron: 'Family chronicle', moves: 'Moves', all: 'Full chronicle', only: 'Only:', showAll: 'Show everyone', allLines: 'All lines',
@@ -38,7 +38,7 @@ const TX = {
     playing: 'playing', paused: 'paused', play: 'Play the family story', watch: 'Play the story', again: 'Again', pause: 'Pause', zin: 'Zoom in', zout: 'Zoom out', zfit: 'Whole family',
     slider: 'Year on the timeline', more: n => `and ${n} more`, map: 'Map of family moves', lines: 'Family lines',
     lg: { line: 'path', one: 'one person', shared: 'shared place', star: 'birth', wed: 'wedding' }, moved: ['move', 'moves'], route: 'Route',
-    kind: { birth: 'birth', move: 'move', study: 'study', work: 'work', marriage: 'wedding', deathF: 'passed away', deathM: 'passed away', other: 'event' },
+    kind: { birth: 'birth', move: 'move', study: 'study', work: 'work', service: 'service', marriage: 'wedding', deathF: 'passed away', deathM: 'passed away', other: 'event' },
   },
 }
 
@@ -82,7 +82,7 @@ export function mountMap(root) {
   root.innerHTML = `
     <aside class="mp-panel">
       <div class="mp-ph">
-        <div><div class="eyebrow" data-r="chron"></div><h3 class="mp-ttl" data-r="ttl"></h3></div>
+        <div><h3 class="mp-ttl" data-r="ttl"></h3></div>
         <div class="mp-stats" data-r="stats"></div>
         <div class="mp-ctry" data-r="ctry"></div>
         <div class="mp-fnote" data-r="fnote" hidden></div>
@@ -186,7 +186,7 @@ export function mountMap(root) {
   // ---------- static texts ----------
   function texts() {
     const t = L()
-    $('chron').textContent = t.chron; $('ttl').textContent = M.title
+    $('ttl').textContent = M.title
     $('svg').setAttribute('aria-label', t.map); lines.setAttribute('aria-label', t.lines)
     $('zin').setAttribute('aria-label', t.zin); $('zout').setAttribute('aria-label', t.zout); $('zfit').setAttribute('aria-label', t.zfit); $('zfit').title = t.zfit
     $('tlTrack').setAttribute('aria-label', t.slider); $('tl').style.display = M.has ? '' : 'none'

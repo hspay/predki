@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { gate } from '../lib/chapters'
 import { ui, bump, LANG, byId, avatarSmall, openPerson } from '../lib/core'
 import { familyEvents, undatedCount, downloadIcs, type CalEvent } from '../lib/calendar'
 import { kinship } from '../lib/kinship'
@@ -8,7 +9,7 @@ import { rootPerson } from '../lib/treeLayout'
 // and an .ics file with the same dates for the phone's calendar.
 const TX = {
   ru: {
-    h: 'Календарь семьи', close: 'Закрыть', prev: 'Предыдущий месяц', next: 'Следующий месяц', toToday: 'К сегодняшнему дню',
+    h: 'Календарь', close: 'Закрыть', prev: 'Предыдущий месяц', next: 'Следующий месяц', toToday: 'К сегодняшнему дню',
     week: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'], add: 'Добавить в календарь телефона',
     what: 'В файл попадут все даты из этого календаря ({n}). Напоминание придёт в 9:00 в сам день.',
     sub: (n: number) => `${n} ${pl(n, ['дата', 'даты', 'дат'])} в году`,
@@ -28,7 +29,7 @@ const TX = {
     again: 'Скачать ещё раз', ok: 'Понятно', lg: { birth: 'день рождения', memorial: 'со дня рождения', death: 'день памяти', wedding: 'свадьба' },
   },
   en: {
-    h: 'Family calendar', close: 'Close', prev: 'Previous month', next: 'Next month', toToday: 'Back to today',
+    h: 'Calendar', close: 'Close', prev: 'Previous month', next: 'Next month', toToday: 'Back to today',
     week: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'], add: 'Add to phone calendar',
     what: 'The file has every date from this calendar ({n}). A reminder comes at 9:00 on the day.',
     sub: (n: number) => `${n} ${n === 1 ? 'date' : 'dates'} a year`,
@@ -52,7 +53,7 @@ function pl(n: number, f: string[]) { const a = n % 10, b = n % 100; return f[(a
 type Platform = 'ios' | 'android' | 'desktop'
 const platform = (): Platform => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? 'ios' : /Android/.test(navigator.userAgent) ? 'android' : 'desktop'
 
-export function openCalendar() { ui.calendar = true; bump() }
+export function openCalendar() { if (!gate('calendar')) return; ui.calendar = true; bump() }
 /** A calendar page with two rings and a plus. */
 export const CalendarAddIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4M12 13v5M9.5 15.5h5" /></svg>
 

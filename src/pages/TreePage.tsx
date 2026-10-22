@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { S, ui, t, LANG, byId, yearOf, showYear, parentsOf, childrenOf, yearsOf, avatarSmall, fullName, fillPercent, generations, openPerson, openPet, closePanel, editPerson, bump, type Person } from '../lib/core'
 import { addRelative } from '../lib/relations'
 import { frameOf, frameArt } from '../lib/frames'
@@ -9,6 +9,8 @@ import { openCalendar } from '../components/FamilyCalendar'
 import { layout, familyColors, rootPerson, NW, NH, PG } from '../lib/treeLayout'
 import { kinship, chainName } from '../lib/kinship'
 import { Progress } from '../lib/progress'
+import { NextStop } from '../components/Chapters'
+import { nextStep } from '../lib/chapters'
 import { distances, FRIEND } from '../lib/demo'
 
 /** The demo tree («Смотреть пример древа»): no page header, no adding, labels from the demo family, growth from the face on first open */
@@ -60,13 +62,21 @@ function Portrait({ p, yrs, kin }: { p: Person; yrs: string; kin: boolean }) {
 }
 
 
-function Memo() {
+/** the memorial date can be closed with the cross: it stays hidden until the next date comes up (remembered in this browser) */
+const MEMO_KEY = 'predki:memoHide'
+const memoKey = (m: { id: string; day: number; month: string }) => `${m.id}:${m.day}.${m.month}`
+const memoHidden = (m: { id: string; day: number; month: string } | null) => { if (!m) return true; try { return localStorage.getItem(MEMO_KEY) === memoKey(m) } catch { return false } }
+function Memo({ onClose }: { onClose: () => void }) {
   const m = Progress.nearestBirthday(); if (!m) return null
+  const close = () => { try { localStorage.setItem(MEMO_KEY, memoKey(m)) } catch { /* private mode */ } onClose() }
   return (
-    <button className="tree-memo" id="treeMemo" type="button" onClick={openCalendar}>
-      <span className="d" aria-hidden="true"><span className="m">{m.month}</span><b>{m.day}</b></span>
-      <span className="tx">{m.line} <b>{m.name}</b></span>
-    </button>
+    <div className="tree-memo-w">
+      <button className="tree-memo" id="treeMemo" type="button" onClick={openCalendar}>
+        <span className="d" aria-hidden="true"><span className="m">{m.month}</span><b>{m.day}</b></span>
+        <span className="tx">{m.line} <b>{m.name}</b></span>
+      </button>
+      <button type="button" className="ns-x memo-x" onClick={close} aria-label={LANG === 'en' ? 'Hide' : 'Скрыть'}><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
+    </div>
   )
 }
 
@@ -99,7 +109,12 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
     return rows.size > 1 && list.length ? { x: minX - 28, list } : null
   })()
   const SC = scale ? 130 : 0
-  const memo = dv ? null : Progress.nearestBirthday()
+  const [, setMemoTick] = useState(0)
+  const memo0 = dv ? null : Progress.nearestBirthday()
+  const memo = memoHidden(memo0) ? null : memo0
+  // «Следующая остановка» and the memorial date share the bottom-left corner
+  const ns = !dv && S.people.length > 0 && !!nextStep()
+  const dock = (memo ? 64 : 0) + (ns ? 96 : 0) + (memo && ns ? 12 : 0)
   // «бабушка», «тёща»… under the names, relative to «you»; the chain of relatives for the selected person
   const me = st.kin === false ? null : rootPerson()
   const kin = me ? kinship(me.id) : null
@@ -125,7 +140,7 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
   /** wheel and pinch can fire faster than the screen redraws: one update per frame */
   const applySoon = () => { if (!TV.raf) TV.raf = requestAnimationFrame(() => { TV.raf = 0; apply() }) }
   const fitView = (): View | null => {
-    const svg = svgRef.current; if (!svg) return null; const W = svg.clientWidth || 800, H = svg.clientHeight || 600; const pad = memo ? 64 : dv ? 120 : 0
+    const svg = svgRef.current; if (!svg) return null; const W = svg.clientWidth || 800, H = svg.clientHeight || 600; const pad = dock ? dock : dv ? 120 : 0
     // the demo shows the whole family at once, even when the cards get small on a phone
     const lw = (lay.w || NW) + SC, lh = (lay.h || NH) + TOP; const k = Math.min(1.1, Math.max(dv ? .16 : .25, Math.min((W - (dv ? 32 : 80)) / lw, (H - 80 - pad) / lh)))
     return { k, x: (W - lw * k) / 2 + SC * k, y: (H - pad - lh * k) / 2 + TOP * k }
@@ -140,7 +155,7 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
   }
   /** a new relative: the camera moves in on them and the relatives they are linked to, so the growth is seen up close */
   const focus = (who: Set<string>) => {
-    const svg = svgRef.current; if (!svg) return; const H = svg.clientHeight || 600; const pad = memo ? 64 : 0
+    const svg = svgRef.current; if (!svg) return; const H = svg.clientHeight || 600; const pad = dock
     // the profile panel covers the right side on a wide screen: centre in what is left
     const W = (svg.clientWidth || 800) - (ui.panel && window.innerWidth > 860 ? 420 : 0)
     const near = new Set(who)
@@ -366,7 +381,7 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
           <button className="btn icon" title="−" onClick={() => zoomBy(.8)}><svg viewBox="0 0 24 24"><path d="M5 12h14" /></svg></button>
           <button className="btn icon" title="fit" onClick={() => fit()}><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" /></svg></button>
         </div>
-        {memo && <Memo />}
+        {!dv && <div className={'tree-dock' + (memo ? ' has-memo' : '')}><NextStop />{memo && <Memo onClose={() => setMemoTick(x => x + 1)} />}</div>}
         {children}
       </div>
     </section>

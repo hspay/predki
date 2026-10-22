@@ -1,5 +1,5 @@
 // @ts-nocheck — achievement logic ported from the prototype as-is
-// Progress: achievement constellation (Род · Летопись · Странствия). Data + evaluation live here, the page draws it.
+// Progress: achievement constellation (Род · Летопись · Мир). Data + evaluation live here, the page draws it.
 import { S, LANG, fullName, go, editPerson, openPerson, fillPercent, toast, t, ui, persist, bump } from './core'
 
 export const Progress=(function(){
@@ -31,7 +31,7 @@ export const Progress=(function(){
     const memo={}; const depth=id=>{ if(memo[id]!=null) return memo[id]; memo[id]=0; const ps=par(id); return memo[id]=ps.length?1+Math.max(...ps.map(p=>depth(p.id))):0; };
     const anc=(id,k)=>{ let l=[id]; for(let i=0;i<k;i++) l=[...new Set(l.flatMap(x=>par(x).map(p=>p.id)))]; return l; };
     const bio=p=>(p.bio||'').length>=100;
-    const reloc=p=>(p.events||[]).filter(e=>['move','study','work'].includes(e.type));
+    const reloc=p=>(p.events||[]).filter(e=>['move','study','work','service'].includes(e.type));
     const geo=P.flatMap(p=>(p.events||[]).filter(e=>e.lat!=null&&e.lat!==''));
     let longest=0; const legs=new Map();
     P.forEach(p=>{ const ev=(p.events||[]).filter(e=>e.lat!=null&&e.lat!=='').sort((a,b)=>(+a.year||0)-(+b.year||0));
@@ -49,11 +49,12 @@ export const Progress=(function(){
       portraits:P.filter(p=>p.avatar).length, stories:P.filter(bio).length, docs:media.filter(m=>m.type==='doc').length,
       docPeople:P.filter(p=>(p.media||[]).some(m=>m.type==='doc')).length, media:media.length+P.filter(p=>p.avatar).length,
       jobs:P.filter(p=>p.job).length, fullCard:P.some(full)?1:0, aiUsed:S.settings.aiUsed?1:0, aiAudio:S.settings.aiAudio?1:0,
-      birthPlaces:P.filter(p=>p.birthPlace).length, moveGeo:geo.some(e=>e.type==='move')?1:0, cities:new Set(geo.map(e=>e.place)).size,
+      birthPlaces:P.filter(p=>p.birthPlace).length, moveGeo:geo.some(e=>e.type==='move'||e.type==='service')?1:0, cities:new Set(geo.map(e=>e.place)).size,
       eduWork:P.filter(p=>(p.events||[]).some(e=>e.type==='study'||e.type==='work')).length, maxReloc:Math.max(0,...P.map(p=>reloc(p).length)),
       longest, pathKm:[...legs.values()].reduce((a,b)=>a+b,0), span:years.length?Math.max(...years)-Math.min(...years):0,
       rootsOk, faceGens:new Set(P.filter(p=>p.avatar).map(p=>depth(p.id))).size, bioRoute:P.some(p=>bio(p)&&reloc(p).length>=3)?1:0,
       namesake:Object.values(names).some(ys=>ys.length>1&&Math.max(...ys)-Math.min(...ys)>=40)?1:0,
+      asked:S.settings.asked||0, answered:S.settings.answered||0,
       maxAge:Math.max(0,...P.map(p=>{ const b=yr(p.birthDate), d=yr(p.deathDate); return b&&d?d-b:0; })) };
     M.faceAll=M.n>=25&&M.portraits>=M.n?25:M.n>=25?Math.min(24,Math.floor(M.portraits/M.n*25)):Math.min(M.portraits,24);
     return M;
@@ -90,6 +91,8 @@ export const Progress=(function(){
     roots:'<path d="M12 3v8M12 11c-1 4-4 5-7 6M12 11c1 4 4 5 7 6M12 11v10M9 15.5 7.5 21M15 15.5l1.5 5.5"/>',
     bio:'<path d="M3 6c2.5-1 5-1 7 .5v13c-2-1.5-4.5-1.5-7-.5z"/><path d="M10 6.5v13"/><path d="M17 16s-4-3.6-4-6.8a4 4 0 0 1 8 0c0 3.2-4 6.8-4 6.8z"/><circle cx="17" cy="9.2" r="1.3"/>',
     bulb:'<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.4 1 1.1 1 1.8V16h5v-.3c0-.7.4-1.4 1-1.8A6 6 0 0 0 12 3z"/>',
+    ask:'<path d="M4 5h16v11H9l-5 4z"/><path d="M10 9a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9v.4M12 13.6h.01"/>',
+    answer:'<path d="M20 5H4v11h11l5 4z"/><path d="M8.5 10.5l2.2 2.2 4.8-4.7"/>',
     arrow:'<path d="M5 12h14M13 6l6 6-6 6"/>', x:'<path d="M6 6l12 12M18 6 6 18"/>'
   };
 
@@ -102,7 +105,7 @@ export const Progress=(function(){
    {id:'k_parents',br:'kin',tier:1,x:430,y:560,ic:'parents',t:T('Двое родителей','Both parents'),d:T('У кого-то в древе указаны и отец, и мать.','Someone in the tree has both a father and a mother.'),m:'bothParents',goal:1,req:['k_family'],tip:T('Откройте карточку и нажмите «+ Родитель».','Open a card and tap “+ Parent”.'),cta:['go','tree',T('Открыть древо','Open the tree')]},
    {id:'k_15',br:'kin',tier:2,x:430,y:680,gl:'15',t:T('Пятнадцать','Fifteen'),d:T('15 человек в древе. Тёти, дяди и их дети быстро добавляют ширины.','15 people in the tree. Aunts, uncles and cousins widen it fast.'),m:'n',goal:15,u:U.people,req:['k_family'],tip:T('Спросите у родителей, сколько у них было братьев и сестёр.','Ask your parents how many siblings they had.'),cta:['add','',T('Добавить человека','Add person')]},
    {id:'k_gen3',br:'kin',tier:2,x:355,y:500,gl:'III',t:T('Три колена','Three generations'),d:T('Древо охватывает три поколения: вы, родители, бабушки и дедушки.','The tree spans three generations: you, your parents, your grandparents.'),m:'gens',goal:3,u:U.gen,req:['k_parents'],tip:T('Колено — поколение в родословной. Третье колено от вас — бабушки и дедушки.','Your grandparents are the third generation back.'),cta:['go','tree',T('Открыть древо','Open the tree')]},
-   {id:'k_patro',br:'kin',tier:1,x:355,y:620,gl:'-ич',t:T('Отчества','Patronymics'),d:T('Отчество указано у десяти человек. Оно называет имя отца, и Predki сам предложит его карточку.','Ten people have a patronymic. It names the father, and Predki suggests his card.'),m:'patronymics',goal:10,u:U.people,req:['k_parents'],tip:T('Впишите отчество — карточка отца появится с именем и фамилией.','Enter a patronymic and the father’s card appears with a name and surname.'),cta:['edit','patronymic',T('Вписать отчество','Add a patronymic')]},
+   {id:'k_patro',br:'kin',tier:1,x:355,y:620,gl:'-ич',t:T('Отчества','Patronymics'),d:T('Отчество указано у пяти человек. Оно называет имя отца, и Predki сам предложит его карточку.','Five people have a patronymic. It names the father, and Predki suggests his card.'),m:'patronymics',goal:5,u:U.people,req:['k_parents'],tip:T('Впишите отчество — карточка отца появится с именем и фамилией.','Enter a patronymic and the father’s card appears with a name and surname.'),cta:['edit','patronymic',T('Вписать отчество','Add a patronymic')]},
    {id:'k_cousins',br:'kin',tier:2,x:355,y:740,ic:'cousins',t:T('Двоюродные','Cousins'),d:T('В древе есть двоюродные братья или сёстры: общие бабушка и дедушка, разные родители.','The tree has cousins: shared grandparents, different parents.'),m:'cousins',goal:1,req:['k_15'],tip:T('Добавьте детей к брату или сестре одного из родителей.','Add children to a parent’s brother or sister.'),cta:['go','tree',T('Открыть древо','Open the tree')]},
    {id:'k_gp',br:'kin',tier:2,x:280,y:440,ic:'ped4',t:T('Четверо','All four'),d:T('У одного человека известны все четыре бабушки и дедушки.','One person has all four grandparents known.'),m:'gpMax',goal:4,u:U.gp,req:['k_gen3'],tip:T('Про линию матери обычно знают меньше. Начните с неё.','The mother’s line is usually less known. Start there.'),cta:['go','tree',T('Открыть древо','Open the tree')]},
    {id:'k_maiden',br:'kin',tier:2,x:280,y:560,ic:'ring',t:T('Девичьи фамилии','Maiden names'),d:T('Указана девичья фамилия у трёх женщин. По ним ищут материнские линии.','Three women have a maiden name. That is how maternal lines are traced.'),m:'maidens',goal:3,u:U.women,req:['k_gen3'],tip:T('Девичьи фамилии прабабушек теряются первыми. Спросите старших, пока есть кого.','Great-grandmothers’ maiden names are the first to be lost. Ask your elders.'),cta:['edit','maiden',T('Вписать девичью фамилию','Add a maiden name')]},
@@ -114,9 +117,11 @@ export const Progress=(function(){
 
    {id:'c_face',br:'chron',tier:1,x:600,y:525,ic:'portrait',t:T('Первое лицо','First face'),d:T('Портрет хотя бы у одного человека.','At least one person has a portrait.'),m:'portraits',goal:1,u:U.portrait,req:['root'],tip:T('Подойдёт снимок старой карточки из альбома на телефон.','A phone photo of an old album print works fine.'),cta:['edit','avatar',T('Добавить портрет','Add a portrait')]},
    {id:'c_story',br:'chron',tier:1,x:530,y:465,ic:'quill',t:T('Первая история','First story'),d:T('Биография в несколько предложений (от 100 знаков) у одного человека.','One person has a biography of a few sentences (100+ characters).'),m:'stories',goal:1,u:U.story,req:['c_face'],tip:T('Где жил, кем работал, что о нём рассказывают в семье.','Where they lived, what they did, what the family tells about them.'),cta:['edit','bio',T('Написать историю','Write a story')]},
+   {id:'v_ask',br:'chron',tier:1,x:600,y:300,ic:'ask',t:T('Первый вопрос','First question'),d:T('Отправьте родным ссылку «Попросить заполнить»: они откроют древо без регистрации и допишут, что помнят.','Send relatives an «Ask to fill» link: they open the tree without signing up and add what they remember.'),m:'asked',goal:1,tip:T('Начните с того, кто любит рассказывать. Чаще всего это бабушка или старшая тётя.','Start with whoever loves telling stories — often a grandmother or an older aunt.'),cta:['go','gaps',T('Попросить родных','Ask relatives')]},
+   {id:'v_answer',br:'chron',tier:1,x:600,y:300,ic:'answer',t:T('Первый ответ','First answer'),d:T('Родные ответили, и вы приняли их ответ в древо.','A relative answered and you accepted it into the tree.'),m:'answered',goal:1,tip:T('Если ответа долго нет, позвоните: иногда проще продиктовать, чем написать.','If no answer comes, call: sometimes it is easier to dictate than to write.'),cta:['go','gaps',T('Открыть ответы','Open answers')]},
    {id:'c_doc',br:'chron',tier:1,x:670,y:465,ic:'doc',t:T('Первый документ','First document'),d:T('Скан документа: метрика, диплом, письмо, трудовая книжка.','A scanned document: birth record, diploma, letter, employment record.'),m:'docs',goal:1,u:U.file,req:['c_face'],tip:T('Документ можно сфотографировать, скан не обязателен.','A photo of the document is enough.'),cta:['open','media',T('Загрузить документ','Upload a document')]},
    {id:'c_gallery',br:'chron',tier:2,x:460,y:405,ic:'frames',t:T('Галерея','Gallery'),d:T('Портреты у десяти человек.','Ten people have portraits.'),m:'portraits',goal:10,u:U.portrait,req:['c_story'],tip:T('Одно групповое фото можно разрезать на портреты.','One group photo can be cropped into several portraits.'),cta:['edit','avatar',T('Добавить портрет','Add a portrait')]},
-   {id:'c_jobs',br:'chron',tier:1,x:600,y:405,ic:'brief',t:T('Кем работали','Occupations'),d:T('Профессия указана у десяти человек.','Ten people have an occupation.'),m:'jobs',goal:10,u:U.people,req:['c_story'],tip:T('Профессии хорошо ищутся в трудовых книжках и некрологах.','Employment records and obituaries are good sources.'),cta:['edit','job',T('Вписать профессию','Add an occupation')]},
+   {id:'c_jobs',br:'chron',tier:1,x:600,y:405,ic:'brief',t:T('Кем работали','Occupations'),d:T('Профессия указана у пяти человек.','Five people have an occupation.'),m:'jobs',goal:5,u:U.people,req:['c_story'],tip:T('Профессии хорошо ищутся в трудовых книжках и некрологах.','Employment records and obituaries are good sources.'),cta:['edit','job',T('Вписать профессию','Add an occupation')]},
    {id:'c_ai',off:1,br:'chron',tier:1,x:740,y:405,ic:'spark',t:T('Помощь архивариуса','Archivist’s help'),d:T('Получите первый черновик от ИИ-архивариуса.','Get your first draft from the AI archivist.'),m:'aiUsed',goal:1,req:['c_doc'],tip:T('Вставьте любой текст о семье. Архивариус предложит карточки, вы их проверите.','Paste any text about the family. The archivist drafts cards for you to check.'),cta:['ai','text',T('Открыть архивариуса','Open the archivist')]},
    {id:'c_full',br:'chron',tier:2,x:530,y:345,ic:'card',t:T('Полная карточка','Complete card'),d:T('Карточка заполнена на 100%: имя, пол, дата и место рождения, профессия, история, портрет и события.','A card filled 100%: name, gender, birth date and place, occupation, story, portrait and events.'),m:'fullCard',goal:1,req:['c_jobs'],tip:T('Начните с человека, о котором знаете больше всего.','Start with the person you know most about.'),cta:['open','fullest',T('Открыть самую полную карточку','Open the fullest card')]},
    {id:'c_papers',br:'chron',tier:2,x:670,y:345,ic:'docs',t:T('Метрики','Records'),d:T('Документы есть у пяти человек.','Five people have documents.'),m:'docPeople',goal:5,u:U.people,req:['c_ai'],tip:T('Сфотографируйте свидетельства, метрики и трудовые книжки и прикрепите к карточкам.','Photograph certificates, records and work books and attach them to the cards.'),cta:['open','media',T('Добавить документ','Add a document')]},
@@ -145,7 +150,7 @@ export const Progress=(function(){
    {id:'s_name',br:'secret',tier:3,x:150,y:185,gl:'Aa',t:T('Тёзки','Namesakes'),d:T('Имя передали через поколения: два человека с одним именем, разница в рождении больше 40 лет.','A name passed down: two people with the same first name, born 40+ years apart.'),hint:T('Связано с именами.','It is about names.'),m:'namesake',goal:1,req:[],tip:T('Имена часто давали в честь дедушек и бабушек.','Children were often named after grandparents.'),cta:['go','tree',T('Перейти в древо','Go to the tree')]},
    {id:'s_long',br:'secret',tier:3,x:1050,y:185,gl:'90',t:T('Долгожитель','Long life'),d:T('В древе есть человек, проживший 90 лет и больше.','Someone in the tree lived to 90 or more.'),hint:T('Связано с датами жизни.','It is about life dates.'),m:'maxAge',goal:90,u:U.year,req:[],tip:T('Нужны обе даты: рождения и смерти.','Both dates are needed: birth and death.'),cta:['go','tree',T('Перейти в древо','Go to the tree')]}
   ];
-  const BR={kin:{ru:'Род',en:'Kin',lx:44,ly:370,a:'start'},chron:{ru:'Летопись',en:'Chronicle',lx:600,ly:142,a:'middle'},road:{ru:'Странствия',en:'Journeys',lx:1156,ly:370,a:'end'}};
+  const BR={kin:{ru:'Род',en:'Kin',lx:44,ly:370,a:'start'},chron:{ru:'Летопись',en:'Chronicle',lx:600,ly:142,a:'middle'},road:{ru:'Мир',en:'World',lx:1156,ly:370,a:'end'}};
   const R={1:19,2:22,3:25,4:31};
   const TX=x=>600+(x-600)*.8, TY=y=>620+(y-620)*1.2;
   N.forEach(n=>{ n.x=TX(n.x); n.y=TY(n.y); n.r=R[n.tier]; n.req=n.req||[]; });
@@ -186,10 +191,10 @@ export const Progress=(function(){
   const isPasted=id=>(S.achPasted||[]).includes(id);
   /** the sticker goes into the album (and counts as seen) */
   function paste(id){ if(!(S.achievements||[]).includes(id)||isPasted(id)) return; S.achPasted=[...(S.achPasted||[]),id]; S.achSeen=[...new Set([...(S.achSeen||[]),id])]; persist(); bump(); }
-  /** the Album section a sticker lives in: Род · Летопись · Странствия · Особые */
+  /** the Album section a sticker lives in: Род · Летопись · Мир · Особые */
   const secOf=n=>n.br==='root'?'kin':n.br==='link'||n.br==='secret'?'more':n.br;
   /** open the Album on this sticker's page */
-  function openSticker(id){ const n=byN(id); ui.album.tab=n?secOf(n):'kin'; ui.album.sheet=null; go('progress'); }
+  function openSticker(id){ ui.album.tab='@'+id; ui.album.sheet=null; go('progress'); }
 
   /* ---- geometry ---- */
   function hull(pts){ pts=pts.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]); const cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]); const lo=[],up=[];

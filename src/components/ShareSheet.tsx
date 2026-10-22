@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { gate } from '../lib/chapters'
 import { S, ui, bump, persist, toast, LANG } from '../lib/core'
 import { renderCard, passportData, cardLayout, SIZE, DW, DH, logoReady, stickersReady } from '../lib/passport'
 import { goal } from '../lib/analytics'
@@ -16,7 +17,7 @@ const TX = {
 }
 type St = { theme: string; hero: string; fmt: string; uv: boolean; fam: string; keeper: string }
 
-export function openShare() { ui.share = true; bump(); goal('passport') }
+export function openShare() { if (!gate('passport')) return; ui.share = true; bump(); goal('passport') }
 /** A passport booklet with a globe on the cover. */
 export const PassportIcon = () => <svg viewBox="0 0 24 24"><rect x="4.5" y="2" width="15" height="20" rx="2.2" /><circle cx="12" cy="10.2" r="4.6" /><path d="M12 5.6c-1.5 1.3-2.2 2.8-2.2 4.6s.7 3.3 2.2 4.6c1.5-1.3 2.2-2.8 2.2-4.6s-.7-3.3-2.2-4.6zM7.4 10.2h9.2M9 18.4h6" /></svg>
 export const passportLabel = () => TX[LANG === 'en' ? 'en' : 'ru'].h

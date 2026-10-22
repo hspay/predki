@@ -74,7 +74,7 @@ function useSeen<T extends Element>(threshold = .35) {
 // ---------------------------------------------------------------- split-flap board
 const ABC = { ru: 'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЭЮЯ', en: 'ABCDEFGHIJKLMNOPRSTUVWXYZ' }
 /** A row of flap cells. Each cell flips through a few random letters and lands on its own one, a little after its left neighbour. */
-function SplitFlap({ words, lang }: { words: string[]; lang: L }) {
+export function SplitFlap({ words, lang, once = false, delay = 700 }: { words: string[]; lang: L; once?: boolean; delay?: number }) {
   const ref = useRef<HTMLSpanElement>(null)
   const N = Math.max(...words.map(w => w.length))
   useEffect(() => {
@@ -98,6 +98,13 @@ function SplitFlap({ words, lang }: { words: string[]; lang: L }) {
         if (!steps) return
         seq.forEach((ch, k) => timers.push(setTimeout(() => flipTo(i, ch, D), (first ? 300 : 0) + i * 55 + k * (D + 8))))
       })
+    }
+    // once: the board stands on the first word and flips to the second one a moment later (a new chapter)
+    if (once) {
+      const up0 = words[0].toLocaleUpperCase(lang).padEnd(N, ' ')
+      cells.forEach((c, i) => { state[i] = up0[i]; show(c, up0[i]) })
+      if (words[1]) timers.push(setTimeout(() => word(words[1], false), delay))
+      return () => timers.forEach(clearTimeout)
     }
     let n = 0; word(words[0], true)
     const iv = setInterval(() => { n = (n + 1) % words.length; word(words[n], false) }, 2900)

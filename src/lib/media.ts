@@ -108,3 +108,28 @@ export async function refToInline(ref: string) {
   if (error || !data) throw error || new Error('download failed')
   return blobToData(data)
 }
+
+// ---------- opening and saving a file (the viewer in the person card) ----------
+/** The file itself: from the private bucket, decoded from an inline data: URL, or fetched (demo pictures). */
+export async function mediaBlob(ref: string): Promise<Blob> {
+  if (isCloudRef(ref)) {
+    const { data, error } = await sb.storage.from(BUCKET).download(ref.slice(PREFIX.length))
+    if (error || !data) throw error || new Error('download failed')
+    return data
+  }
+  if (isInline(ref)) return dataToBlob(ref)
+  const r = await fetch(ref); if (!r.ok) throw new Error('download failed')
+  return r.blob()
+}
+/** The name to save under, with the extension of what is really inside (photos are re-saved as JPEG). */
+export function fileName(name: string, type: string) {
+  const ext = EXT[type], base = (name || 'file').replace(/\.[A-Za-z0-9]{1,5}$/, '') || 'file'
+  return ext ? `${base}.${ext}` : name || 'file'
+}
+/** Save to the device: Downloads on a computer, the share/files sheet on a phone. */
+export async function downloadMedia(ref: string, name: string) {
+  const blob = await mediaBlob(ref), url = URL.createObjectURL(blob)
+  const a = document.createElement('a'); a.href = url; a.download = fileName(name, blob.type)
+  document.body.appendChild(a); a.click(); a.remove()
+  setTimeout(() => URL.revokeObjectURL(url), 60e3)
+}

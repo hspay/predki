@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { LANG, t, byId, fullName, avatarSmall, openPerson, editPerson, editEvent, toast, type Person } from '../lib/core'
+import { S, commit, LANG, t, byId, fullName, avatarSmall, openPerson, editPerson, editEvent, toast, type Person } from '../lib/core'
 import { familyGaps, life, kinFrom, GAP_MIN, question, question2, message, factLabel, witnessLabel, missing, type Gap } from '../lib/gaps'
 import { rootPerson } from '../lib/treeLayout'
 import FamilyAnswers, { FamilyLinks, AskLink, LinkIcon } from '../components/FamilyAnswers'
@@ -83,8 +83,10 @@ export default function GapsPage() {
     addEventListener('keydown', key); return () => removeEventListener('keydown', key)
   }, [])
 
-  const copy = async () => { if (!ask) return; try { await navigator.clipboard.writeText(ask.text); toast(T.copied) } catch { toast(T.copyFail) } }
-  const share = async () => { if (!ask) return; try { await navigator.share({ text: ask.text }) } catch { /* closed by the person */ } }
+  // copying or sending the question counts as asking relatives (the «Первый вопрос» sticker), the same as a «Попросить заполнить» link
+  const asked = () => { S.settings.asked = (S.settings.asked || 0) + 1; commit() }
+  const copy = async () => { if (!ask) return; asked(); try { await navigator.clipboard.writeText(ask.text); toast(T.copied) } catch { toast(T.copyFail) } }
+  const share = async () => { if (!ask) return; try { await navigator.share({ text: ask.text }); asked() } catch { /* closed by the person */ } }
   const ctx = (g: Gap) => {
     const p = byId(g.id)!
     if (g.kind === 'tail') { const e = (p.events || []).filter(e => e.year && +e.year <= g.a && e.place).sort((a, b) => +a.year - +b.year).pop(); return T.silence(g.a, e ? e.place : '', g.len) }

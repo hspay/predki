@@ -14,9 +14,11 @@ import { mediaUrl } from '../lib/media'
 import { goal } from '../lib/analytics'
 import Avatar from './Avatar'
 import FrameEditor from './FrameEditor'
+import MediaViewer from './MediaViewer'
 import { KINDS, kindName, petIcon, petsOf, petById, petYears, savePet, removePet } from '../lib/pets'
 
-const EV_TYPES: EvType[] = ['birth', 'move', 'study', 'work', 'marriage', 'death', 'other']
+// «Служба»: army service, one of the most common reasons to move in the USSR
+const EV_TYPES: EvType[] = ['birth', 'move', 'study', 'work', 'service', 'marriage', 'death', 'other']
 const DocIcon = () => <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5M9 13h6M9 17h6" /></svg>
 const deathLabel = (g?: string) => g === 'f' ? 'p.death.f' : g === 'm' ? 'p.death.m' : 'p.death'
 const PenIcon = () => <svg viewBox="0 0 24 24"><path d="M5 19h3.5L18 9.5a2.5 2.5 0 0 0-3.5-3.5L5 15.5z" /></svg>
@@ -80,7 +82,12 @@ function Family({ id }: { id: string }) {
   </>
 }
 
+/** a gallery file the browser can show as a picture (a document scan saved as an image counts) */
+const isPicture = (v?: string) => !!v && (/^data:image\//.test(v) || /\.(jpe?g|png|webp|gif)(\?|$)/i.test(v))
+
 function ViewPerson({ id }: { id: string }) {
+  const [view, setView] = useState<number | null>(null)
+  useEffect(() => setView(null), [id])
   const p = byId(id); if (!p) return null
   // the caption on the portrait: birth year · place · ФОТО
   const cap = [yearOf(p.birthDate), p.birthPlace, p.avatar ? t('cl.photoTag') : ''].filter(Boolean).join(' · ')
@@ -89,7 +96,8 @@ function ViewPerson({ id }: { id: string }) {
   const head = t('cl.card') + (kl ? ' · ' + kl : '')
   const setPhoto = () => pickFile('image/*', data => { p.avatar = data; commit(); toast(t('toast.photo')) })
   const removePhoto = () => { if (confirm(t('p.photo.remove.confirm'))) { p.avatar = ''; commit(); toast(t('p.photo.removed')) } }
-  const addMedia = (kind: 'photo' | 'doc') => pickFile(kind === 'photo' ? 'image/*' : 'image/*,application/pdf', (data, name) => { p.media = p.media || []; p.media.push({ id: uid(), type: kind, name, data }); commit(); toast(t('toast.photo')) })
+  const addMedia = (kind: 'photo' | 'doc') => pickFile(kind === 'photo' ? 'image/*' : 'image/*,application/pdf', (data, name) => { p.media = p.media || []; p.media.push({ id: uid(), type: kind, name, data }); commit(); toast(t('toast.photo')) }, kind === 'doc' ? 2400 : 1600)
+  const removeMedia = (mid: string) => { p.media = (p.media || []).filter(x => x.id !== mid); commit() }
   const body = (
     <div>
       <div className="profile-hero">
@@ -131,15 +139,19 @@ function ViewPerson({ id }: { id: string }) {
       </div>
       <div className="section-t"><h3>{t('p.gallery')}</h3></div>
       <div className="gallery">
-        {(p.media || []).map(m => (
-          <div key={m.id} className={'ph ' + m.type}>
-            {m.type === 'photo' ? <img src={mediaUrl(m.data)} alt="" /> : <><DocIcon /><span>{m.name}</span></>}
-            <button className="del" onClick={() => { p.media = p.media.filter(x => x.id !== m.id); commit() }}>×</button>
+        {(p.media || []).map((m, i) => {
+          const pic = m.type === 'photo' || isPicture(m.data)
+          return <div key={m.id} className={'ph ' + m.type + (pic ? ' pic' : '')} role="button" tabIndex={0} title={m.name || ''} aria-label={t('mv.open.item', { name: m.name || t(m.type === 'doc' ? 'mv.doc' : 'mv.photo') })}
+            onClick={() => setView(i)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setView(i) } }}>
+            {pic ? <img src={mediaUrl(m.data)} alt="" /> : <><DocIcon /><span>{m.name}</span></>}
+            {pic && m.type === 'doc' && <i className="ph-doc"><DocIcon /></i>}
+            <button type="button" className="del" aria-label={t('mv.delete')} onClick={e => { e.stopPropagation(); if (confirm(t('mv.delete.confirm'))) removeMedia(m.id) }}>×</button>
           </div>
-        ))}
+        })}
         <button className="add" title="photo" onClick={() => addMedia('photo')}><ImageIcon /></button>
         <button className="add" title="document" onClick={() => addMedia('doc')}><DocIcon /></button>
       </div>
+      {view !== null && (p.media || []).length > 0 && <MediaViewer items={p.media} start={view} onClose={() => setView(null)} onDelete={removeMedia} />}
       </>}
     </div>
   )
@@ -353,8 +365,8 @@ function EditPet({ id, owner }: { id: string | null; owner: string }) {
     const n = name.trim(); if (!n) { setErr(t('pet.err.name')); return }
     if (born && died && +died < +born) { setErr(t('pet.err.years')); return }
     const saved = savePet({ id: pt?.id, name: n, kind, born, died, owner }); toast(t('pet.saved'))
-    // on a phone the Tree shows the new badge right away; on a wide screen the pet's profile opens beside it
-    if (!pt && typeof matchMedia === 'function' && matchMedia('(max-width:860px)').matches) closePanel(); else openPet(saved.id)
+    // a new pet: the Tree shows the new badge right away; an edited one goes back to its profile
+    if (!pt) closePanel(); else openPet(saved.id)
   }
   const foot = <>
     <button className="btn ghost" onClick={() => pt ? openPet(pt.id) : openPerson(owner)}>{t('p.cancel')}</button>

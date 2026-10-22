@@ -4,7 +4,7 @@
 // The app has one address for every page, so each screen is sent as its own virtual page (hit), and the steps
 // that matter are goals (reachGoal). The goal names below have to exist in Metrica as «JavaScript-событие» goals.
 const ID = 113662509
-const LIVE = /(^|\.)hspay\.github\.io$/
+const LIVE = /(^|\.)(predki\.me|hspay\.github\.io)$/
 declare global { interface Window { ym?: (...a: unknown[]) => void } }
 
 const on = () => typeof location !== 'undefined' && LIVE.test(location.hostname) && !new URLSearchParams(location.search).has('s')

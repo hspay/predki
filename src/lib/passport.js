@@ -46,6 +46,30 @@ export const FLAGS = {
   MX: { v: ['#006847', '#FFFFFF', '#CE1126'] }, CU: { h: ['#002A8F', '#FFFFFF', '#002A8F', '#FFFFFF', '#002A8F'], tri: '#CF142B' }
 }
 
+// round flag icons from the specs above (also used on «Хранитель»)
+const escF = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]))
+function starPathF(cx, cy, R) { let d = ''; for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, q = i % 2 ? R * .4 : R; d += (i ? 'L' : 'M') + (cx + q * Math.cos(a)).toFixed(2) + ' ' + (cy + q * Math.sin(a)).toFixed(2) } return d + 'Z' }
+/** Round flag icon from the passport's flag specs. */
+export function flagSvg(code, title) {
+  const f = FLAGS[code]; let b = ''
+  if (!f) b = `<rect width="24" height="24" fill="#3A4152"/><text x="12" y="15" font-size="8" text-anchor="middle" fill="#EEF1F7">${code}</text>`
+  else {
+    if (f.bg) b += `<rect width="24" height="24" fill="${f.bg}"/>`
+    if (f.h) f.h.forEach((c, i, a) => { b += `<rect y="${i * 24 / a.length}" width="24" height="${24 / a.length + .3}" fill="${c}"/>` })
+    if (f.v) f.v.forEach((c, i, a) => { b += `<rect x="${i * 24 / a.length}" width="${24 / a.length + .3}" height="24" fill="${c}"/>` })
+    if (f.canton) b += `<rect width="12" height="13" fill="${f.canton}"/>`
+    if (f.tri) b += `<path d="M0 0L12 12L0 24Z" fill="${f.tri}"/>`
+    if (f.band) b += `<rect x="5" width="5" height="24" fill="${f.band}"/>`
+    if (f.crossW) b += `<rect x="8" width="8" height="24" fill="${f.crossW}"/><rect y="8" width="24" height="8" fill="${f.crossW}"/>`
+    if (f.cross) { const o = code === 'FI' || code === 'SE' ? -3 : 0; b += `<rect x="${10 + o}" width="4" height="24" fill="${f.cross}"/><rect y="10" width="24" height="4" fill="${f.cross}"/>` }
+    if (f.star) b += `<path d="${f.starAt === 'tl' ? starPathF(7.5, 8, 4.5) : starPathF(12, 12.5, 6)}" fill="${f.star}"/>`
+    if (f.sun) b += `<circle cx="12" cy="12" r="5.5" fill="${f.sun}"/><circle cx="12" cy="12" r="3" fill="none" stroke="${f.bg}" stroke-width="1"/>`
+    if (f.disc) b += `<circle cx="12" cy="12" r="4.5" fill="${f.disc}"/>`
+    if (f.crescent) b += `<circle cx="10.5" cy="12" r="5.5" fill="${f.crescent}"/><circle cx="12" cy="12" r="4.4" fill="${f.bg}"/>`
+  }
+  return `<svg viewBox="0 0 24 24" role="img" aria-label="${escF(title)}"><title>${escF(title)}</title>${b}</svg>`
+}
+
 // ---------- palettes ----------
 const PAL = {
   // night: deep ultramarine-night, paper words, sky accents, warm gold stops and stars on the map (red read as ominous on the dark card)

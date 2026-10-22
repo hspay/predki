@@ -17,11 +17,15 @@ const MapPage = lazy(() => import('./pages/MapPage'))
 import AlbumPage from './pages/AlbumPage' // «Альбом» (former «Прогресс»: pages/ProgressPage.tsx)
 import GapsPage from './pages/GapsPage'
 import SettingsPage from './pages/SettingsPage'
+import KeeperPage from './pages/KeeperPage'
+import BookPage from './pages/BookPage'
+import { ChapterUp, LockSheet } from './components/Chapters'
+import PreviewBar from './components/PreviewBar'
 import DemoPage from './components/DemoPage'
 import { openDemo, demoFromHash } from './lib/demo'
 import { screen } from './lib/analytics'
 
-const SCREEN_TITLE: Record<string, string> = { landing: 'Лендинг', demo: 'Пример древа', 'sign-in': 'Вход', start: 'Первые шаги', tree: 'Древо', map: 'Карта', album: 'Альбом', gaps: 'Заполнить пробелы', settings: 'Настройки' }
+const SCREEN_TITLE: Record<string, string> = { landing: 'Лендинг', demo: 'Пример древа', 'sign-in': 'Вход', start: 'Первые шаги', tree: 'Древо', map: 'Карта', album: 'Альбом', gaps: 'Заполнить пробелы', keeper: 'Хранитель', book: 'Книга семьи', settings: 'Настройки' }
 
 export default function App() {
   useStore()
@@ -34,7 +38,7 @@ export default function App() {
   useEffect(() => { if (ui.loaded) { const k = demoFromHash(); if (k !== null && !ui.demo) openDemo(k || undefined) } }, [ui.loaded])
   // statistics: each screen of the app is a page in Yandex Metrica (lib/analytics.ts)
   const signInNow = !ui.onboarding && ((!cloud.session && !cloud.skipped) || cloud.recovery)
-  const scr = !ui.loaded ? '' : ui.demo ? 'demo/' + ui.demo.fam : ui.onboarding ? 'landing' : signInNow ? 'sign-in' : ui.firstRun && ui.page === 'tree' ? 'start' : ({ tree: 'tree', map: 'map', progress: 'album', gaps: 'gaps', settings: 'settings' } as Record<string, string>)[ui.page]
+  const scr = !ui.loaded ? '' : ui.demo ? 'demo/' + ui.demo.fam : ui.onboarding ? 'landing' : signInNow ? 'sign-in' : ui.firstRun && ui.page === 'tree' ? 'start' : ({ tree: 'tree', map: 'map', progress: 'album', gaps: 'gaps', keeper: 'keeper', book: 'book', settings: 'settings' } as Record<string, string>)[ui.page]
   useEffect(() => { if (scr) screen(scr, SCREEN_TITLE[scr.split('/')[0]] + (ui.demo ? ' · ' + ui.demo.fam : '')) }, [scr])
   if (!ui.loaded) return null
   // «Смотреть пример древа»: the demo tree takes the whole screen, before any sign-in
@@ -56,6 +60,8 @@ export default function App() {
           {p === 'map' && <Suspense fallback={null}><MapPage /></Suspense>}
           {p === 'progress' && <AlbumPage />}
           {p === 'gaps' && <GapsPage />}
+          {p === 'keeper' && <KeeperPage />}
+          {p === 'book' && <BookPage />}
           {p === 'settings' && <SettingsPage />}
           <PersonPanel />
         </main>
@@ -63,6 +69,9 @@ export default function App() {
       <AddRelativeModal />
       {ui.share && <ShareSheet />}
       {ui.calendar && <FamilyCalendar />}
+      <LockSheet />
+      <ChapterUp />
+      {import.meta.env.VITE_PREVIEW === '1' && <PreviewBar />}
       <Toasts />
     </>
   )
