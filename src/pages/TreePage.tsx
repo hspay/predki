@@ -146,9 +146,23 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
     return { k, x: (W - lw * k) / 2 + SC * k, y: (H - pad - lh * k) / 2 + TOP * k }
   }
   const fit = (anim?: boolean) => { const v = fitView(); if (v) { TV.view = v; apply(anim) } }
-  /** demo, first open: the camera starts close on the face and pulls back to the whole family while it grows */
+  /** demo, first open: where the camera stops — the face with about a row and a half of relatives above and below it
+   *  (a big family shown whole is too small to read); null when the whole family fits at that size anyway */
+  const closeUp = (P: { x: number; y: number; h: number }): View | null => {
+    const svg = svgRef.current; if (!svg) return null; const W = svg.clientWidth || 800, H = svg.clientHeight || 600, pad = 120
+    const tops = [...new Set(Object.values(lay.pos).map((q: any) => Math.round(q.top ?? q.y)))].sort((a, b) => a - b)
+    const gaps = tops.slice(1).map((t, i) => t - tops[i]).filter(d => d > 0).sort((a, b) => a - b); if (!gaps.length) return null
+    const pitch = gaps[Math.floor(gaps.length / 2)], k = Math.min(1.1, (H - pad - 40) / (3.6 * pitch))
+    const whole = fitView(); if (!whole || k <= whole.k * 1.15) return null
+    // centred on the face, but never past the family's top or bottom edge (a face in the last row would leave half the screen empty)
+    const y0 = (H - pad) / 2 + 20 - (P.y + P.h / 2) * k, lh = lay.h || NH
+    const y = Math.min(Math.max(y0, H - pad - 20 - lh * k), TOP * k + 20)
+    return { k, x: W / 2 - (P.x + NW / 2) * k, y }
+  }
+  /** demo, first open: the camera starts close on the face and pulls back while the family grows around it */
   const startIntro = () => {
-    const svg = svgRef.current, P = dv && lay.pos[dv.face], end = fitView(); if (!svg || !P || !end) { fit(); return }
+    const svg = svgRef.current, P = dv && lay.pos[dv.face], all = fitView(); if (!svg || !P || !all) { fit(); return }
+    const end = closeUp(P) || all
     const W = svg.clientWidth || 800, H = svg.clientHeight || 600, k = Math.max(end.k, Math.min(1, W / 520))
     TV.view = { k, x: W / 2 - (P.x + NW / 2) * k, y: H / 2 - (P.y + P.h / 2) * k }; apply()
     setTimeout(() => { if (TV.introAt !== dv!.intro) return; TV.view = end; apply(true, Math.round((introEnd - .2) * 1000)) }, 500)

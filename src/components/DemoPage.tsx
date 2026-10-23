@@ -7,6 +7,7 @@ import { familyColors } from '../lib/treeLayout'
 import { themeOf } from '../lib/treeStyle'
 import { globeMark } from '../lib/globe'
 import SkyBackground from './SkyBackground'
+import { petById, petYears, kindName } from '../lib/pets'
 import '../demo.css'
 
 // «Смотреть пример древа» from the welcome landing: a famous family's tree to look at, without the menu and without editing.
@@ -17,6 +18,7 @@ const TX = {
     hint: (n: string) => `Нажмите на карточку — покажем, кто это для ${n}`,
     born: (g: string): string => (g === 'f' ? 'Родилась' : 'Родился'), died: (g: string): string => (g === 'f' ? 'Умерла' : 'Умер'),
     was: 'При рождении', years: (e: string) => `Годы — ${e}`, families: 'Семьи',
+    petYears: 'Годы', owner: (kind: string): string => (kind === 'dragon' ? 'Всадник' : 'Хозяин'),
     people: ['человек', 'человека', 'человек'], gens: ['поколение', 'поколения', 'поколений'],
     mGen: ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'],
     mNom: ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'],
@@ -26,6 +28,7 @@ const TX = {
     hint: (n: string) => `Tap a card to see who they are to ${n}`,
     born: (_g: string): string => 'Born', died: (_g: string): string => 'Died',
     was: 'Born as', years: (e: string) => `Years ${e}`, families: 'Families',
+    petYears: 'Years', owner: (kind: string): string => (kind === 'dragon' ? 'Rider' : 'Owner'),
     people: ['person', 'people', 'people'], gens: ['generation', 'generations', 'generations'],
     mGen: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
     mNom: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
@@ -46,6 +49,7 @@ export default function DemoPage() {
   const T = TX[LANG === 'en' ? 'en' : 'ru'], st = ui.demo!, fam = famOf(st.fam)
   const labels = kinOverrides(fam)
   const sel = ui.panel && ui.panel.mode === 'view' ? ui.panel.id : null
+  const selPet = ui.panel && ui.panel.mode === 'pet' ? ui.panel.id : null
   const theme = themeOf(S.settings.theme), col = familyColors(!!theme.light)
 
   // the growth runs once; after it the tree is an ordinary still tree (and switching families does not replay it)
@@ -87,8 +91,9 @@ export default function DemoPage() {
         <div className="dm-main">
           <TreePage key={st.fam} demo={{ labels, face: fam.face, intro: st.intro }}>
             {sel && byId(sel) && <DemoCard key={sel} id={sel} T={T} label={kinOf(sel, labels)} color={sel === fam.face ? '' : col.kin(sel)} face={fam.face} />}
+            {selPet && petById(selPet) && <DemoPetCard key={selPet} id={selPet} T={T} />}
             <div className="dm-cta">
-              <p className="dm-hint" aria-hidden={!!sel}>{T.hint(tr(fam.faceDat))}</p>
+              <p className="dm-hint" aria-hidden={!!(sel || selPet)}>{T.hint(tr(fam.faceDat))}</p>
               <button type="button" className="dm-btn" onClick={() => closeDemo(true)}>{T.cta}</button>
             </div>
           </TreePage>
@@ -118,6 +123,21 @@ function DemoCard({ id, T, label, color, face }: { id: string; T: typeof TX.ru; 
       {row(T.born(p.gender), p.birthDate, p.birthPlace)}
       {row(T.died(p.gender), p.deathDate, p.deathPlace)}
       {chain.length > 1 && <span className="ch">{chain.map((x, i) => <span key={x}>{i > 0 && <i aria-hidden="true">→</i>}{chainName(x)}</span>)}</span>}
+    </div>
+  )
+}
+
+/** Read-only card of a pet: its kind, name, years and whose it is (a dragon has a rider, anyone else an owner). */
+function DemoPetCard({ id, T }: { id: string; T: typeof TX.ru }) {
+  const pt = petById(id)!, owner = byId(pt.owner), yrs = petYears(pt)
+  const row = (k: string, v: string) => v ? <div className="r"><span className="l">{k}</span><span className="v">{v}</span></div> : null
+  return (
+    <div className="tree-kin dm-card" role="dialog" aria-label={pt.name}>
+      <button type="button" className="dm-card-x" onClick={closePanel} aria-label={T.closeCard}><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" /></svg></button>
+      <span className="k">{kindName(pt.kind)}</span>
+      <b className="n">{pt.name}</b>
+      {row(T.petYears, yrs)}
+      {owner && row(T.owner(pt.kind), fullName(owner))}
     </div>
   )
 }

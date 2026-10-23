@@ -45,8 +45,13 @@ export function buildFamily(f: DemoFamily): Data {
     const taken = new Set(near(x.id).map(id => byId(id).preset || '')), list = PRESET_TYPES[type], free = list.filter(v => !taken.has(v))
     const pool = free.length ? free : list; p.preset = pool[Math.floor(rnd() * pool.length)]
   })
-  if (f.frame) byId(f.face).frame = f.frame
-  return { people, rels, pets: [], achievements: [], settings: { familyName: tr(f.title), theme: f.theme, ghosts: false, lines: 'smooth', kin: true, meId: f.face } }
+  if (f.frame) (f.frameAll ? people : [byId(f.face)]).forEach(p => { p.frame = { ...f.frame! } })
+  // real photos: small files next to the site, loaded only when this family opens
+  ;(f.photos || []).forEach(id => { const p = people.find(x => x.id === id); if (p) p.avatar = `demo/${f.k}/${id}.webp` })
+  // pets: Westeros years lose their leading zeros («0298» → «298»)
+  const yr = (v?: string) => (v ? String(+v || v) : '')
+  const pets = (f.pets || []).map(([owner, name, kind, born, died], i) => ({ id: 'pet' + i, owner, name: tr(name), kind, born: yr(born), died: yr(died) }))
+  return { people, rels, pets, achievements: [], settings: { familyName: tr(f.title), theme: f.theme, ghosts: false, lines: 'smooth', kin: true, meId: f.face } }
 }
 
 /** person id → how they are related to the face, for what the rules cannot work out */

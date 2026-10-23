@@ -25,6 +25,8 @@ export interface DemoFamily {
   /** «год от Завоевания Эйегона»: Westeros years have no calendar of ours */
   era?: Two
   theme: string; frame?: { id: string; color: string }
+  /** the frame goes on everyone, not only on the face */
+  frameAll?: boolean
   /** the age portraits are picked for, for people with no death date */
   now: number
   places: Record<string, Two>
@@ -33,6 +35,10 @@ export interface DemoFamily {
   kin?: Record<string, Two>
   /** demo only, never part of the app: two families who are not related but close («друг семьи»), a dotted arc above the cards */
   friends?: [string, string][]
+  /** pets: [owner, name, kind, born, died]; Westeros years as 0298, like the people */
+  pets?: [string, Two, string, string?, string?][]
+  /** people with a real photo: public/demo/<k>/<id>.webp (192 px, public domain, sources in CREDITS.txt next to them) */
+  photos?: string[]
 }
 
 // ---------------------------------------------------------------- the Targaryens and the great houses around them: from Daenerys
@@ -55,6 +61,20 @@ const TARGARYEN: DemoFamily = {
   face: 'dany', faceDat: ['Дейенерис', 'Daenerys'], faceLabel: ['мать драконов', 'Mother of Dragons'],
   era: ['от Завоевания Эйегона', 'after Aegon’s Conquest'],
   theme: 'amber', frame: { id: 'baroque', color: 'gold' }, now: 300,
+  // dragons with their first riders, and the direwolf pups the Starks found in 298
+  pets: [
+    ['aegon1', ['Балерион', 'Balerion'], 'dragon', '', '0094'], ['aemond', ['Вхагар', 'Vhagar'], 'dragon', '', '0130'],
+    ['jaeh1', ['Вермитор', 'Vermithor'], 'dragon', '', '0130'], ['alysanne', ['Среброкрылая', 'Silverwing'], 'dragon'],
+    ['aegon2', ['Солнечный Огонь', 'Sunfyre'], 'dragon', '', '0130'], ['baela', ['Лунная Плясунья', 'Moondancer'], 'dragon', '', '0130'],
+    ['rhaenys0', ['Мераксес', 'Meraxes'], 'dragon', '', '0010'], ['rhaenyra', ['Сиракс', 'Syrax'], 'dragon', '', '0130'],
+    ['daemon', ['Караксес', 'Caraxes'], 'dragon', '', '0130'], ['helaena', ['Пламя Мечты', 'Dreamfyre'], 'dragon', '', '0130'],
+    ['laenor', ['Морской Дым', 'Seasmoke'], 'dragon', '', '0130'], ['jace', ['Вермакс', 'Vermax'], 'dragon', '', '0130'],
+    ['luke', ['Арракс', 'Arrax'], 'dragon', '', '0129'],
+    ['dany', ['Дрогон', 'Drogon'], 'dragon', '0298'], ['dany', ['Рейегаль', 'Rhaegal'], 'dragon', '0298'], ['dany', ['Визерион', 'Viserion'], 'dragon', '0298'],
+    ['robb', ['Серый Ветер', 'Grey Wind'], 'wolf', '0298', '0299'], ['jon', ['Призрак', 'Ghost'], 'wolf', '0298'],
+    ['sansa', ['Леди', 'Lady'], 'wolf', '0298', '0298'], ['arya', ['Нимерия', 'Nymeria'], 'wolf', '0298'],
+    ['bran', ['Лето', 'Summer'], 'wolf', '0298'], ['rickon', ['Лохматый Пёс', 'Shaggydog'], 'wolf', '0298'],
+  ],
   places: {
     kl: ['Королевская Гавань', 'King’s Landing'], ds: ['Драконий Камень', 'Dragonstone'], sh: ['Летний Замок', 'Summerhall'],
     se: ['Штормовой Предел', 'Storm’s End'], ss: ['Солнечное Копьё', 'Sunspear'], wf: ['Винтерфелл', 'Winterfell'],
@@ -339,7 +359,7 @@ const KARDASHIAN: DemoFamily = {
 const CULLEN: DemoFamily = {
   k: 'cullen', tab: ['Каллены', 'Cullens'], title: ['Каллены', 'The Cullens'],
   face: 'nessie', faceDat: ['Ренесми', 'Renesmee'], faceLabel: ['главная героиня', 'main character'],
-  theme: 'steel', frame: { id: 'rococo', color: 'white' }, now: 2006,
+  theme: 'steel', frame: { id: 'modern', color: 'black' }, frameAll: true, now: 2006,
   places: {
     lon: ['Лондон', 'London'], col: ['Колумбус', 'Columbus'], chi: ['Чикаго', 'Chicago'], bil: ['Билокси', 'Biloxi'], tx: ['Техас', 'Texas'],
     roc: ['Рочестер', 'Rochester'], gat: ['Гатлинбург', 'Gatlinburg'], fks: ['Форкс', 'Forks'], lp: ['Ла-Пуш', 'La Push'],
@@ -391,8 +411,10 @@ const CULLEN: DemoFamily = {
 // people born abroad keep the date of their own country.
 const ROMANOV: DemoFamily = {
   k: 'romanov', tab: ['Романовы', 'Romanovs'], title: ['Романовы', 'The Romanovs'],
-  face: 'alexeiN', faceDat: ['Алексея', 'Alexei'], faceLabel: ['цесаревич', 'tsesarevich'],
+  face: 'nick2', faceDat: ['Николая II', 'Nicholas II'], faceLabel: ['последний император', 'the last emperor'],
   theme: 'paper', frame: { id: 'empire', color: 'gold' }, now: 1918,
+  // everyone has a real portrait: photographs from the 1850s on, museum paintings and parsunas before
+  photos: ['albert', 'alex1', 'alex2', 'alex3', 'alexF1', 'alexeiM', 'alexeiN', 'alexeiP', 'alice', 'alix', 'anastasia', 'annaF', 'annaI', 'annaL', 'annaP', 'anton', 'bobrinsky', 'brasov', 'brasova', 'cath1', 'cath2', 'charlotte', 'dagmar', 'dolgorukova', 'ekatI', 'elizA', 'elizabeth', 'ella', 'filaret', 'fwk', 'fyodor3', 'georgyA', 'georgyY', 'grudz', 'ivan5', 'ivan6', 'karlF', 'karlL', 'konst', 'kseniya', 'kulikovsky', 'lopukhina', 'ludwig', 'mariaA', 'mariaF1', 'mariaN', 'mikhail', 'mikhailA', 'mikhailN', 'miloslavskaya', 'naryshkina', 'nick1', 'nick2', 'oldenburg', 'olgaA', 'olgaN', 'orlov', 'paul1', 'peter1', 'peter2', 'peter3', 'praskovya', 'sandro', 'sergei', 'sofia', 'streshneva', 'tatiana', 'victoria', 'xenia'],
   places: {
     msk: ['Москва', 'Moscow'], spb: ['Санкт-Петербург', 'Saint Petersburg'], ts: ['Царское Село', 'Tsarskoye Selo'], ph: ['Петергоф', 'Peterhof'],
     kol: ['Коломенское', 'Kolomenskoye'], kiel: ['Киль', 'Kiel'], stet: ['Штеттин', 'Stettin'], rops: ['Ропша', 'Ropsha'], ros: ['Росток', 'Rostock'],
@@ -504,5 +526,5 @@ const ROMANOV: DemoFamily = {
   ],
 }
 
-// the order of the tabs; the first one opens with the demo (the Cullens are small enough to grow smoothly on any phone)
-export const FAMILIES: DemoFamily[] = [CULLEN, KARDASHIAN, TARGARYEN, ROMANOV]
+// the order of the tabs; the first one opens with the demo: the Romanovs, with real portraits of everyone
+export const FAMILIES: DemoFamily[] = [ROMANOV, CULLEN, KARDASHIAN, TARGARYEN]

@@ -13,7 +13,9 @@ export const KINDS = [
   ['ferret','Хорёк','Ferret'],['fish','Рыбки','Fish'],['turtle','Черепаха','Turtle'],['lizard','Ящерица','Lizard'],['snake','Змея','Snake'],
   ['hedgehog','Ёж','Hedgehog'],['horse','Лошадь','Horse'],['other','Другое','Other'],
 ]
-export const kindName = k => { const r = KINDS.find(x => x[0] === k) || KINDS[KINDS.length - 1]; return LANG === 'en' ? r[2] : r[1] }
+/** kinds only the demo families use (Westeros): named and drawn, but not offered in the pet form */
+export const DEMO_KINDS = [['dragon','Дракон','Dragon'],['wolf','Лютоволк','Direwolf']]
+export const kindName = k => { const r = KINDS.find(x => x[0] === k) || DEMO_KINDS.find(x => x[0] === k) || KINDS[KINDS.length - 1]; return LANG === 'en' ? r[2] : r[1] }
 // simple line drawings until the real pet portraits are made (24×24, drawn with a stroke)
 export const ICON = {
   dog:'<path d="M8 8.5c-1.6-.4-3.4.6-3.8 3.4-.2 1.6.8 2.4 1.8 1.6M16 8.5c1.6-.4 3.4.6 3.8 3.4.2 1.6-.8 2.4-1.8 1.6"/><path d="M8 8.5c1-1.6 2.4-2.3 4-2.3s3 .7 4 2.3c.6 1 .8 2.4.8 3.9 0 3.5-2.2 5.6-4.8 5.6s-4.8-2.1-4.8-5.6c0-1.5.2-2.9.8-3.9z"/><circle cx="10" cy="11.3" r=".6"/><circle cx="14" cy="11.3" r=".6"/><path d="M11 14.2h2l-1 1z"/>',
@@ -34,6 +36,8 @@ export const ICON = {
   horse:'<path d="M14.6 4.4l1.2-1.8.8 2.2c2.2 1.4 3.4 3.8 3.4 6.8V20.5h-5.6l-.6-4.6-3.4-1.2c-1.4-.5-3.2-.2-4.2.4l-1.6-1.2c-.9-.7-1-1.8-.2-2.6l5.2-5.6c1.4-1.4 3.2-1.8 5-1.3z"/><path d="M16.6 4.8c1.6 1.8 2 4.2 1.6 6.6M15 6.2c1 1.6 1.2 3.4.8 5.2"/><circle cx="12" cy="8.6" r=".7"/><circle cx="6.6" cy="12.4" r=".5"/>',
   other:'<circle cx="7" cy="9.4" r="1.7"/><circle cx="10.4" cy="6.4" r="1.7"/><circle cx="13.6" cy="6.4" r="1.7"/><circle cx="17" cy="9.4" r="1.7"/><path d="M12 11.4c2.6 0 4.6 2.6 4.6 4.6 0 1.6-1.2 2.4-2.4 2.4-.9 0-1.4-.5-2.2-.5s-1.3.5-2.2.5c-1.2 0-2.4-.8-2.4-2.4 0-2 2-4.6 4.6-4.6z"/>',
 };
+ICON.wolf = '<path d="M5.6 3.8l3.2 4.4h6.4l3.2-4.4.9 7.4c.2 1.5-.3 2.9-1.4 4L12 20.2l-5.9-5c-1.1-1.1-1.6-2.5-1.4-4z"/><path d="M8.8 8.2l1.4 3M15.2 8.2l-1.4 3"/><circle cx="9.7" cy="12.2" r=".6"/><circle cx="14.3" cy="12.2" r=".6"/><path d="M10.9 15.6h2.2L12 16.9z"/>'
+ICON.dragon = '<path d="M6 22C5.2 18.6 5 15.8 5.6 13.4 6.1 11.4 6.9 10 8.2 9l4-1.6L19 9l2 1.4-.4 1.2-6.8 1 5.8 2-.5 1.2-5.7-.2c-1.2 2-2 4-2.2 6.4"/><path d="M8.6 8.8L3.8 3.4M10.8 7.9L8.8 3M5.7 12L3 11.4M5.3 15.4l-2.5.4M5.8 18.8l-2.4 1"/><circle cx="14.6" cy="10" r=".8"/>'
 export const petIcon = k => ICON[k] || ICON.other
 
 export const petsOf = (owner: string): Pet[] => (S.pets || []).filter(p => p.owner === owner)
