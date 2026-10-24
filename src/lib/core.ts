@@ -467,7 +467,8 @@ function afterLoad() {
     S.settings.since = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`; persist()
   }
   knownRefs = cloudRefs()
-  ui.onboarding = !S.settings.onboarded; ui.firstRun = !!S.settings.onboarded && !S.people.length
+  // a link from our e-mail (a new password, or one that no longer works) goes straight to the sign-in card, not to the landing
+  ui.onboarding = !S.settings.onboarded && !cloud.recovery && !cloud.linkError; ui.firstRun = !!S.settings.onboarded && !S.people.length
   ui.treeRefit++; ui.mapRefit++; bump()
 }
 export async function boot() {
@@ -480,6 +481,7 @@ export async function boot() {
   sb.auth.onAuthStateChange((ev, session) => {
     const was = cloud.session?.user.id; cloud.session = session
     if (ev === 'PASSWORD_RECOVERY') cloud.recovery = true
+    if (ev === 'SIGNED_IN') cloud.linkError = false
     if (ev === 'SIGNED_IN' && session && session.user.id !== was) { goal('sign_in'); setSkipped(false); cloud.busy = true; setTimeout(() => syncFromCloud(), 0) } // never await Supabase inside this callback
     if (ev === 'SIGNED_OUT') cloud.synced = false
     bump()

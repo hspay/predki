@@ -10,9 +10,10 @@ const G = <svg viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFC107" d="M4
 /** Sign in before the tree opens: Google or email + password. Also shows «loading your tree» and the new-password step after a reset link. */
 export default function AuthScreen({ loading = false }: { loading?: boolean }) {
   const logo = useMemo(() => globeTile(64), [])
-  const [mode, setMode] = useState<Mode>(cloud.recovery ? 'newpass' : 'up')
+  // a link from our e-mail that no longer works lands on «Вход» with a short explanation
+  const [mode, setMode] = useState<Mode>(cloud.recovery ? 'newpass' : cloud.linkError ? 'in' : 'up')
   const [email, setEmail] = useState(''); const [pass, setPass] = useState('')
-  const [busy, setBusy] = useState(false); const [err, setErr] = useState('')
+  const [busy, setBusy] = useState(false); const [err, setErr] = useState(() => cloud.linkError ? t('auth.link.bad') : '')
   const go = (m: Mode) => { setMode(m); setErr('') }
   const fail = (e: unknown) => setErr(authError(e as { message?: string }, LANG))
 

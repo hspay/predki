@@ -1,6 +1,6 @@
 // Predki cloud: Supabase accounts + one row per user in public.trees holding the whole family document.
 // This module knows nothing about the app state — core.ts decides what to pull and push.
-import { createClient, type Session } from '@supabase/supabase-js'
+import { createClient, type Session, type EmailOtpType } from '@supabase/supabase-js'
 
 // Both values are public by design: access to data is guarded by Row Level Security in the database.
 const SUPABASE_URL = 'https://ptdahtotkbycfbwappdn.supabase.co'
@@ -19,6 +19,8 @@ export const cloud = {
   synced: false,
   /** came back from a «reset password» email: ask for a new password */
   recovery: false,
+  /** a link from our e-mail that no longer works (used already, expired, opened by a mail scanner) */
+  linkError: false,
   offline: false,
   /** first load of the account's tree is in progress */
   busy: false,
@@ -28,10 +30,21 @@ export function setSkipped(v: boolean) { cloud.skipped = v; try { v ? localStora
 const withTimeout = <T,>(p: PromiseLike<T>, ms: number) => Promise.race([Promise.resolve(p), new Promise<never>((_, rej) => setTimeout(() => rej(new Error('timeout')), ms))])
 const here = () => location.origin + location.pathname
 
-/** Session from storage or from the ?code= the provider sent us back with. */
+/** Session from storage, from the ?code= Google sent us back with, or from a link in our e-mails.
+ *  The e-mails link to predki.me/?token_hash=…&type=… (not to Supabase's own /verify): such a link works in any browser,
+ *  not only in the one where it was asked for, and mail scanners that open links do not use it up. */
 export async function initSession() {
+  const q = new URLSearchParams(location.search), th = q.get('token_hash'), type = q.get('type') as EmailOtpType | null
+  if (th && type) {
+    try {
+      const { error } = await withTimeout(sb.auth.verifyOtp({ token_hash: th, type }), 10000)
+      if (error) throw error
+      if (type === 'recovery') cloud.recovery = true
+    } catch { cloud.linkError = true }
+  }
+  if (q.get('error') || /[#&]error=/.test(location.hash)) cloud.linkError = true
   try { const { data } = await withTimeout(sb.auth.getSession(), 8000); cloud.session = data.session } catch { cloud.session = null }
-  if (/[?&](code|error)=/.test(location.search)) history.replaceState(null, '', location.pathname + location.hash)
+  if (/[?&](code|error|token_hash)=/.test(location.search) || /[#&]error=/.test(location.hash)) history.replaceState(null, '', location.pathname + (/error=/.test(location.hash) ? '' : location.hash))
   if (cloud.session) setSkipped(false)
   return cloud.session
 }

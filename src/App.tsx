@@ -47,7 +47,7 @@ export default function App() {
   // after the welcome landing nobody enters the tree without an account (unless they chose «without an account»)
   const signIn = !ui.onboarding && ((!cloud.session && !cloud.skipped) || cloud.recovery)
   const loading = !ui.onboarding && !signIn && !!cloud.session && cloud.busy
-  if (signIn || loading) return <><SkyBackground /><AuthScreen key={cloud.recovery ? 'r' : 'a'} loading={loading} /><Toasts /></>
+  if (signIn || loading) return <><SkyBackground /><AuthScreen key={cloud.recovery ? 'r' : cloud.linkError ? 'e' : 'a'} loading={loading} /><Toasts /></>
   return (
     <>
       {ui.onboarding && <Onboarding />}
