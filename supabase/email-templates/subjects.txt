@@ -1,0 +1,3 @@
+confirm-signup: Подтвердите почту для Predki
+reset-password: Новый пароль для Predki
+change-email: Подтвердите новую почту для Predki
