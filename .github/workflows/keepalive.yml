@@ -1,0 +1,25 @@
+# Keeps the free Supabase project awake: Supabase pauses a free project after about a week without database requests.
+# Every other day this makes one tiny request: it asks the database for a «Попросить заполнить» link that does not exist.
+# Only the public key from the app is used (src/lib/cloud.ts), so no secrets are needed.
+# If the request fails (the project is paused or down), the run turns red and GitHub sends an email.
+# Note: GitHub switches scheduled runs off after 60 days without commits in the repo; it emails before that.
+name: Supabase keepalive
+on:
+  schedule:
+    - cron: '17 6 */2 * *' # 09:17 Moscow time, every other day
+  workflow_dispatch:
+permissions: {}
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: One request to the database
+        env:
+          URL: https://ptdahtotkbycfbwappdn.supabase.co
+          KEY: sb_publishable_L_uSkEpU_XP4d2cUzV6bMg_rJZNKraB
+        run: |
+          code=$(curl -s -o /tmp/out -w '%{http_code}' --max-time 30 -X POST "$URL/rest/v1/rpc/shared_tree" \
+            -H "apikey: $KEY" -H "Content-Type: application/json" -d '{"p_token":"keepalive-ping-not-a-real-link"}')
+          echo "HTTP $code: $(head -c 200 /tmp/out)"
+          test "$code" = 200
