@@ -11,6 +11,7 @@ import { applyAppearance, onThemeChange, isLight } from './lib/appearance'
 import { S, ui, bump, persist } from './lib/core'
 import { THEMES } from './lib/treeStyle'
 import { initAnalytics } from './lib/analytics'
+import { watchErrors } from './lib/problems'
 
 applyAppearance()
 onThemeChange(() => {
@@ -27,4 +28,5 @@ onThemeChange(() => {
 // «Попросить заполнить»: a relative's link (?s=…) opens a light copy of the tree, without an account and without the app's own data
 const shareToken = tokenFromUrl()
 if (!shareToken) initAnalytics()
+watchErrors() // uncaught errors are reported (live site only), on the relatives' page too
 ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode>{shareToken ? <GuestApp token={shareToken} /> : <App />}</React.StrictMode>)

@@ -4,6 +4,7 @@ import { S, ui, t, LANG, toast, importData, clearData, bump, cloud, signOut, ask
 import { isCloudRef, refToInline } from '../lib/media'
 import { CHANGELOG, type Release } from '../lib/changelog'
 import { globeMark } from '../lib/globe'
+import { DeleteAccountDialog, ReportDialog } from '../components/AccountDialogs'
 import anya from '../assets/team/anya.webp'
 import lesha from '../assets/team/lesha.webp'
 import katya from '../assets/team/katya.webp'
@@ -12,12 +13,12 @@ import katya from '../assets/team/katya.webp'
 const TX = {
   ru: {
     mission: <>Проект социолога Андрея Брызгалина. Будет круто, если сайт станет поводом поговорить с роднёй, сохранить историю семьи или обсудить миграцию, чтобы лучше понимать, кто мы и откуда. А ещё сайт появился потому, что дизайн у других сервисов — полный отстой.</>,
-    testers: 'Друзья-тестеры', names: ['Аня Журавская', 'Лёша Ремез', 'Катя Мазепо'], ideas: 'Нашли баги или есть пожелания?', write: 'Напишите мне', theme: 'Тема приложения',
+    testers: 'Друзья-тестеры', names: ['Аня Журавская', 'Лёша Ремез', 'Катя Мазепо'], ideas: 'Нашли баги или есть пожелания?', write: 'Напишите мне', report: 'Сообщить о проблеме', or: 'или', theme: 'Тема приложения',
     lang: 'Язык', home: 'Открыть начальный экран', ad: ['Место свободно', 'Здесь может быть ваша реклама'], privacy: 'Политика конфиденциальности',
   },
   en: {
     mission: <>A project by sociologist Andrey Bryzgalin. It would be great if the site became a reason to talk with your family, keep its story, or talk about migration, to better understand who we are and where we come from. And the site exists because the design of other services is total rubbish.</>,
-    testers: 'Friends who test', names: ['Anya Zhuravskaya', 'Lyosha Remez', 'Katya Mazepo'], ideas: 'Found a bug or have a wish?', write: 'Write to me', theme: 'App theme',
+    testers: 'Friends who test', names: ['Anya Zhuravskaya', 'Lyosha Remez', 'Katya Mazepo'], ideas: 'Found a bug or have a wish?', write: 'Write to me', report: 'Report a problem', or: 'or', theme: 'App theme',
     lang: 'Language', home: 'Open the welcome screen', ad: ['Spot available', 'Your ad could be here'], privacy: 'Privacy policy',
   },
 }
@@ -35,6 +36,7 @@ const backupSettings = () => { const s = S.settings; return { meId: s.meId, sinc
 
 export default function SettingsPage() {
   const [look, setLook] = useState<Appearance>(getAppearance)
+  const [dlg, setDlg] = useState<'' | 'delete' | 'report'>('')
   const exportJson = async () => {
     // files from Storage go into the backup itself, so it stays complete without the account
     const people: Person[] = JSON.parse(JSON.stringify(S.people))
@@ -93,7 +95,8 @@ export default function SettingsPage() {
             {cloud.session ? <>
               <p className="who">{t('acc.in', { email: cloud.session.user.email || '' })}</p>
               <p className={'state' + (cloud.offline ? ' off' : '')}><i />{t(cloud.offline ? 'acc.offline' : 'acc.synced')}</p>
-              <div><button className="btn" onClick={() => { if (confirm(t('acc.out.confirm'))) signOut() }}>{t('acc.out')}</button></div>
+              <div className="bt-btns"><button className="btn" onClick={() => { if (confirm(t('acc.out.confirm'))) signOut() }}>{t('acc.out')}</button>
+                <button className="btn ghost danger" onClick={() => setDlg('delete')}>{t('del.btn')}</button></div>
             </> : <>
               <p className="bt-p">{t('acc.local')}</p>
               <div><button className="btn primary" onClick={askToSignIn}>{t('acc.signin')}</button></div>
@@ -115,7 +118,7 @@ export default function SettingsPage() {
         <div className="bt bt-team">
           <h3 className="bt-h">{T.testers}</h3>
           <ul className="bt-people">{[anya, lesha, katya].map((src, i) => <li key={i}><span className="ph"><img src={src} alt="" /></span><b>{T.names[i]}</b></li>)}</ul>
-          <p className="bt-ideas">{T.ideas} <a href={TG} target="_blank" rel="noopener noreferrer">{T.write}</a></p>
+          <p className="bt-ideas">{T.ideas} <button type="button" className="bt-link" onClick={() => setDlg('report')}>{T.report}</button> {T.or} <a href={TG} target="_blank" rel="noopener noreferrer">{T.write}</a></p>
         </div>
         <div className="bt bt-log changelog"><h3>{t('set.changes')}</h3>
           <ReleaseNote r={CHANGELOG[0]} />
@@ -125,6 +128,8 @@ export default function SettingsPage() {
           </details>}
         </div>
       </div></div>
+      {dlg === 'delete' && <DeleteAccountDialog onClose={() => setDlg('')} onExport={exportJson} />}
+      {dlg === 'report' && <ReportDialog onClose={() => setDlg('')} />}
     </section>
   )
 }

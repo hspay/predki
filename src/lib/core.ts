@@ -1,18 +1,20 @@
 // Predki data layer: one mutable family document (S), saved to IndexedDB, plus the UI state.
 // Components read S directly and re-render on bump(); every data change goes through commit().
 import { useSyncExternalStore } from 'react'
-import { get as idbGet, set as idbSet, del as idbDel } from 'idb-keyval'
+import { get as idbGet, set as idbSet, del as idbDel, update as idbUpdate } from 'idb-keyval'
 import { t, setLangValue, LANG } from './i18n'
 import { findCity } from './world'
 import { sampleData } from './sample'
 import { Progress } from './progress'
 import { sync as syncChapters, gate } from './chapters'
-import { sb, cloud, initSession, pullTree, pushTree, signOutCloud, setSkipped } from './cloud'
+import { sb, cloud, initSession, pullTree, saveTree, signOutCloud, setSkipped, deleteAccountCloud, type Row } from './cloud'
+import { logProblem, setProblemContext } from './problems'
+import { merge3, same } from './merge'
 import type { FrameLook } from './frames'
 import { PRESET_SRC, presetType, typeOfPreset, pickPreset, previewPreset } from './avatars'
 import { onThumbReady, thumb } from './thumbs'
 import { goal } from './analytics'
-import { mediaUrl, isCloudRef, isInline, uploadInline, isPermanent, removeRefs, clearMediaCache, onMediaReady, listOwnFiles } from './media'
+import { mediaUrl, isMissing, isInline, uploadInline, isPermanent, clearMediaCache, onMediaReady, removeAllOwnFiles } from './media'
 
 // ---------- types ----------
 export type Gender = '' | 'm' | 'f'
@@ -74,64 +76,226 @@ function debounce<A extends unknown[]>(fn: (...a: A) => void, ms: number) { let 
 
 // ---------- state & storage ----------
 export let S: Data = { people: [], rels: [], achievements: [], settings: {} }
-/** «Смотреть пример древа» (lib/demo.ts): while a demo family is on screen nothing is saved, synced or awarded */
-export const demo = { on: false, backToEnd: false }
+/** «Смотреть пример древа» (lib/demo.ts): while a demo family is on screen S holds it, the family's own tree waits in `saved`,
+ *  and nothing is saved, synced or awarded from S */
+export const demo = { on: false, backToEnd: false, saved: null as Data | null }
 export function replaceData(d: Data) { S = d }
+/** the family's own tree, even while the demo is on screen: everything that loads, saves or syncs works on it, never on the demo */
+const own = () => demo.on && demo.saved ? demo.saved : S
+function setOwn(d: Data) { if (demo.on && demo.saved) demo.saved = d; else S = d }
+
+/** A tree kept only in this browser (no account, or before signing in). An account's tree is cached under its own key
+ *  (cacheKey), so two accounts in one browser never mix — this browser storage is shared by all tabs. */
 const KEY = 'predki:tree'
+const cacheKey = (id: string) => 'predki:acc:' + id
+/** data: the tree; base and ver: the cloud copy it grew from and its version (updated_at); dirty: has edits the cloud has not got yet.
+ *  legacyAt: a cache from before this version (one key for any account) — when it was last saved, to decide once whether it is newer */
+interface Cache { data: Data; base: Data | null; ver: string | null; dirty: boolean; legacyAt?: number }
 export async function loadState(): Promise<Data | null> {
   try { return (await idbGet<Data>(KEY)) || null } catch { try { return JSON.parse(localStorage.getItem('predki') || 'null') } catch { return null } }
 }
-const KEY_AT = 'predki:savedAt', KEY_OWNER = 'predki:owner'
-export const persist = debounce(async () => {
-  if (demo.on) return
-  try { await idbSet(KEY, S); await idbSet(KEY_AT, Date.now()) } catch { try { localStorage.setItem('predki', JSON.stringify(S)) } catch { /* storage unavailable */ } }
+/** Until now one key held the tree of whichever account signed in last; it moves under that account's own key. */
+async function moveLegacyCache() {
+  try {
+    const was = await idbGet<string>('predki:owner'); if (!was) return
+    const data = await idbGet<Data>(KEY), at = (await idbGet<number>('predki:savedAt')) || 0
+    if (data && !(await idbGet(cacheKey(was)))) await idbSet(cacheKey(was), { data, base: null, ver: null, dirty: false, legacyAt: at } as Cache)
+    await idbDel(KEY); await idbDel('predki:savedAt'); await idbDel('predki:owner')
+  } catch { /* storage unavailable */ }
+}
+
+// ---------- cloud sync ----------
+// The account's copy in the cloud is the source of truth; this browser keeps a cache for a quick start and for offline edits.
+// Every save says which cloud version it was built on (ver), and the cloud takes it only if it still holds that version.
+// If another window or device saved first, its copy is pulled in and merged with ours (lib/merge.ts) — nothing is overwritten blindly.
+const blank = (): Data => ({ people: [], rels: [], achievements: [], settings: {} })
+const clone = <T,>(x: T): T => JSON.parse(JSON.stringify(x))
+/** whose tree is in this window: an account id, or '' for a tree without an account */
+let owner = ''
+let base: Data | null = null, ver: string | null = null, dirty = false, legacyAt = 0, edits = 0
+/** the window is opening another account's tree: nothing is saved until it has */
+let switching = false
+let pushWarned = false, syncing: Promise<void> | null = null, pushing: Promise<void> | null = null, afterDemo = false
+
+async function saveLocal() {
+  const o = owner, d = own()
+  if (o && paused === o) return // the account is being deleted
+  try { if (o) await idbSet(cacheKey(o), { data: d, base, ver, dirty, legacyAt } as Cache); else await idbSet(KEY, d) }
+  catch { if (!o) try { localStorage.setItem('predki', JSON.stringify(d)) } catch { /* storage unavailable */ } }
+}
+let missedSave = false
+/** Every change is marked at once, not after the short pause before writing: a cloud copy arriving in that pause
+ *  must merge with it, not replace it. */
+export function persist() {
+  if (demo.on) { missedSave = true; return } // asked for just before the demo opened: done when it closes
+  if (switching) return
+  dirty = true; edits++
+  writeSoon()
+}
+const writeSoon = debounce(async () => {
+  if (demo.on || switching) return
+  await saveLocal()
   pushSoon()
 }, 300)
+const pushSoon = debounce(() => { pushNow() }, 1200)
+function pushNow() { if (!pushing) pushing = doPush().finally(() => { pushing = null; if (dirty && canPush()) pushSoon() }); return pushing }
+/** the account is being deleted (here or in another tab): nothing more is saved to it */
+let paused = ''
+const canPush = () => !!owner && cloud.synced && !switching && paused !== owner && cloud.session?.user.id === owner
+async function doPush() {
+  for (let tries = 0; tries < 4; tries++) {
+    if (!canPush() || !dirty) return
+    const o = owner
+    if (hasInlineFiles()) await moveFilesToCloud() // photos go to Storage first, so the tree row stays light
+    if (!canPush() || owner !== o) return
+    const e = edits, doc = clone(own())
+    try {
+      const v = await saveTree(o, doc, ver)
+      if (owner !== o) return
+      if (v) { // saved
+        ver = v; base = doc; if (edits === e) dirty = false
+        await saveLocal(); tell({ uid: o, ver: v })
+        if (cloud.offline || pushWarned) { cloud.offline = false; pushWarned = false; bump() }
+        return
+      }
+      // someone saved first: take their copy, merge ours into it and try again
+      const row = await pullTree(o); if (owner !== o) return
+      // the cloud refused our version but still holds it: saving cannot work this way — say so rather than lose edits quietly
+      if ((row ? row.ver : null) === ver) throw new Error('version check failed')
+      if (takeRemote(row) && !demo.on) refreshAfterRemote()
+    } catch (e) {
+      // a broken version check is our bug, not a lost connection: it is reported at once
+      logProblem('save', e, e instanceof Error && e.message === 'version check failed')
+      cloud.offline = true; if (!pushWarned) { pushWarned = true; toast(t('cloud.saveFail')) } bump()
+      return
+    }
+  }
+}
+/** Bring the cloud copy into this window. Nothing edited here → simply take it; edits here → merge them in.
+ *  Returns true if the tree on screen changed. */
+function takeRemote(row: Row | null): boolean {
+  const rv = row ? row.ver : null
+  if (rv && rv === ver) return false
+  if (!row) { ver = null; base = null; legacyAt = 0; if (own().people.length) dirty = true; return false } // no copy in the cloud (yet): ours goes there
+  const remote = migrateDates(Object.assign(blank(), clone(row.data)))
+  if (legacyAt) { dirty = dirty || legacyAt > (Date.parse(row.ver) || 0) + 1000; legacyAt = 0 } // first start after the update
+  const mine = own(), lang = mine.settings.lang
+  let next = remote
+  if (dirty) {
+    next = merge3(base, mine, remote)
+    if (!same(next, mine) && cloud.synced) toast(t('cloud.merged'))
+  }
+  next.settings.onboarded = true; if (lang) next.settings.lang = lang
+  base = clone(remote); ver = row.ver
+  if (same(next, mine)) return false
+  setOwn(next); return true
+}
+/** Other tabs of this browser hear about a save at once (a tab in the background also re-checks when it comes back). */
+const channel = (() => { try { return new BroadcastChannel('predki-sync') } catch { return null } })()
+type Msg = { uid?: string; ver?: string; pause?: string; resume?: string }
+function tell(m: Msg) { try { channel?.postMessage(m) } catch { /* closed */ } }
+if (channel) channel.onmessage = ev => {
+  const m = ev.data as Msg; if (!m) return
+  if (m.pause && m.pause === owner) { paused = owner; dirty = false } // the account is being deleted in another tab
+  else if (m.resume && m.resume === owner) { paused = ''; dirty = true; pushSoon() } // it was not: our edits go back to the cloud
+  else if (m.uid === owner && m.ver !== ver) syncFromCloud(true)
+}
 
-// ---------- cloud sync: the browser copy is a cache, the account copy is the source of truth ----------
-const blank = (): Data => ({ people: [], rels: [], achievements: [], settings: {} })
-let cloudAt = 0, pushWarned = false, syncing: Promise<void> | null = null
-const pushSoon = debounce(async () => {
-  if (!cloud.session || !cloud.synced) return
-  if (hasInlineFiles()) await moveFilesToCloud() // photos go to Storage first, so the tree row stays light
-  try { cloudAt = await pushTree(S); if (cloud.offline || pushWarned) { cloud.offline = false; pushWarned = false; bump() } }
-  catch { cloud.offline = true; if (!pushWarned) { pushWarned = true; toast(t('cloud.saveFail')) } bump() }
-}, 1200)
-/** Pull the account's tree and reconcile it with this browser. soft = a quiet re-check when the tab comes back. */
+/** Pull the account's tree and reconcile it with this window. soft = a quiet re-check (the tab came back, another tab saved). */
 export function syncFromCloud(soft = false) {
-  if (demo.on) return Promise.resolve()
-  if (!syncing) { if (!soft && !cloud.synced) { cloud.busy = true; bump() } syncing = doSync(soft).finally(() => { syncing = null; if (cloud.busy) { cloud.busy = false; bump() } }) }
+  if (!syncing) {
+    if (!soft && !cloud.synced) { cloud.busy = true; bump() }
+    syncing = doSync(soft).finally(() => {
+      syncing = null; if (cloud.busy) { cloud.busy = false; bump() }
+      if (cloud.session && cloud.session.user.id !== owner) syncFromCloud() // the account changed while this sync ran
+    })
+  }
   return syncing
 }
-async function doSync(soft: boolean) {
-  const uid = cloud.session?.user.id; if (!uid) return
+/** The window now shows account `id`: the previous tree stays in its own place, this account's cached tree comes up. */
+async function openAccount(id: string) {
+  const prevOwner = owner, prev = own()
+  // the previous account's tree goes back to its own place; an edit whose save had not run yet counts as not in the cloud
+  if (prevOwner && paused !== prevOwner) idbSet(cacheKey(prevOwner), { data: clone(prev), base, ver, dirty: dirty || !same(prev, base), legacyAt } as Cache).catch(() => {})
+  owner = id; switching = true; cloud.synced = false; base = null; ver = null; dirty = false; legacyAt = 0; clearMediaCache()
+  setOwn({ ...blank(), settings: { lang: prev.settings.lang, onboarded: true } })
   try {
-    const row = await pullTree()
-    if (soft && (!row || row.at <= cloudAt + 500)) return
-    const owner = await idbGet<string>(KEY_OWNER).catch(() => undefined)
-    const localAt = (await idbGet<number>(KEY_AT).catch(() => 0)) || 0
-    const cloudHas = !!row && Array.isArray(row.data?.people) && row.data.people.length > 0
-    if (owner && owner !== uid && S.people.length) { // someone else's tree left in this browser: keep a copy, never upload it
-      await idbSet(KEY + ':backup', S).catch(() => {}); S = { ...blank(), settings: { lang: S.settings.lang, onboarded: true } }
+    const c = await idbGet<Cache>(cacheKey(id)).catch(() => undefined)
+    if (owner !== id) return
+    if (c && c.data && Array.isArray(c.data.people)) { setOwn(migrateDates(Object.assign(blank(), c.data))); base = c.base; ver = c.ver; dirty = c.dirty; legacyAt = c.legacyAt || 0 }
+    // a tree made in this browser before signing in comes along, if the account has none yet (decided once the cloud answers)
+    else if (!prevOwner && prev.people.length) adopt = prev
+  } finally { if (owner === id) switching = false }
+}
+let adopt: Data | null = null
+async function doSync(soft: boolean) {
+  const id = cloud.session?.user.id; if (!id) return
+  if (owner !== id) { if (owner) toast(t('cloud.otherAccount')); await openAccount(id); soft = false }
+  let changed = false
+  try {
+    const row = await pullTree(id)
+    if (owner !== id) return
+    if (adopt) {
+      const guest = adopt; adopt = null
+      if (!row || !Array.isArray(row.data?.people) || !row.data.people.length) { setOwn(guest); dirty = true; ver = row ? row.ver : null; base = row ? clone(row.data) : null; changed = true }
+      else await idbSet(KEY + ':backup', guest).catch(() => {}) // the account already has a tree: the one made before signing in is kept aside
+      await idbDel(KEY).catch(() => {})
     }
-    const localNewer = owner === uid && localAt > (row?.at || 0)
-    if (cloudHas && !localNewer) {
-      if (S.people.length && !owner) await idbSet(KEY + ':backup', S).catch(() => {}) // a tree made before signing in
-      S = migrateDates(Object.assign(blank(), row!.data)); S.settings.onboarded = true; cloudAt = row!.at; knownRefs = cloudRefs()
-      await idbSet(KEY, S).catch(() => {}); await idbSet(KEY_AT, row!.at).catch(() => {})
-    } else if (S.people.length || cloudHas) { cloudAt = await pushTree(S) }
-    await idbSet(KEY_OWNER, uid).catch(() => {})
+    if (!(cloud.synced && (row ? row.ver : null) === ver)) changed = takeRemote(row) || changed
     cloud.synced = true; cloud.offline = false
-    knownRefs = cloudRefs(); (hasInlineFiles() ? moveFilesToCloud().then(() => persist()) : Promise.resolve()).then(() => setTimeout(cleanOrphanFiles, 5000))
-  } catch { cloud.offline = true; if (!soft) toast(t('cloud.loadFail')) }
-  if (!soft || cloud.synced) afterLoad()
+    await saveLocal()
+    if (dirty) pushNow()
+  } catch (e) { logProblem('load', e); cloud.offline = true; if (!soft) toast(t('cloud.loadFail')) }
+  if (owner !== id) return
+  if (demo.on) { afterDemo = afterDemo || changed || !soft; return } // the demo is on screen: the own tree is updated quietly, shown when it closes
+  if (!soft) afterLoad(); else if (changed) refreshAfterRemote()
+}
+/** fresh edits from another window are on screen: recount progress, keep the view where it is (no re-fit of the Tree) */
+function refreshAfterRemote() { assignPresets(); Progress.check(true); syncChapters(true); ui.firstRun = !!S.settings.onboarded && !S.people.length; bump() }
+/** lib/demo.ts: the demo closed and the own tree is back in S */
+export function demoClosed() {
+  if (afterDemo) { afterDemo = false; afterLoad() }
+  if (missedSave) { missedSave = false; persist() } else if (dirty && canPush()) pushSoon()
+}
+
+/** This window's account is gone (signed out here or in another tab): show the sign-in screen with an empty tree. */
+function closeAccount() {
+  const o = owner, keep = dirty, prev = own(), was = { base, ver, legacyAt }
+  owner = ''; cloud.synced = false; base = null; ver = null; dirty = false; legacyAt = 0; clearMediaCache()
+  setOwn({ ...blank(), settings: { lang: own().settings.lang, onboarded: true } })
+  // nothing of the account stays in this browser — unless it has edits that never reached the cloud: they wait for the next sign-in
+  // (written here and now: the usual save comes a moment after an edit, and by then the window holds no account)
+  if (o && keep) idbSet(cacheKey(o), { data: clone(prev), base: was.base, ver: was.ver, dirty: true, legacyAt: was.legacyAt } as Cache).catch(() => {})
+  // another tab of this account may have just put its unsaved edits there: the copy is cleared in one step, and only without them
+  else if (o && paused === o) idbDel(cacheKey(o)).catch(() => {}) // the account was deleted: nothing of it stays, edits included
+  else if (o) idbUpdate<Cache | undefined>(cacheKey(o), c => c && c.dirty ? c : undefined)
+    .then(() => idbGet(cacheKey(o))).then(c => { if (c === undefined) return idbDel(cacheKey(o)) }).catch(() => {})
+  idbDel(KEY).catch(() => {})
+  ui.page = 'tree'; ui.panel = null; afterLoad()
 }
 export async function signOut() {
+  if (dirty && canPush()) await Promise.race([pushNow(), new Promise(r => setTimeout(r, 5000))]) // the last edits reach the cloud first
   try { await signOutCloud() } catch { /* offline: the local session is dropped anyway */ }
-  cloud.session = null; cloud.synced = false; cloudAt = 0; clearMediaCache(); cleaned = false
-  S = { ...blank(), settings: { lang: S.settings.lang, onboarded: true } }
-  try { await idbDel(KEY); await idbDel(KEY_AT); await idbDel(KEY_OWNER) } catch { /* storage unavailable */ }
-  ui.page = 'tree'; ui.panel = null; afterLoad()
+  cloud.session = null
+  if (owner) closeAccount()
+}
+/** Delete the account for good: files in Storage, then the tree, links for relatives, their answers and the account itself.
+ *  Other tabs stop saving first, so none of them brings the tree back. Throws 'not_ready' without a connection. */
+export async function deleteAccount() {
+  const id = cloud.session?.user.id
+  if (!id || owner !== id || !cloud.synced) throw new Error('not_ready')
+  await deleteAccountCloud(false) // the database part is set up and allowed: only then is anything deleted
+  paused = id; tell({ pause: id })
+  try {
+    await removeAllOwnFiles(id)
+    await deleteAccountCloud(true)
+  } catch (e) { paused = ''; tell({ resume: id }); logProblem('delete-account', e, true); throw e }
+  goal('account_delete')
+  dirty = false
+  await Promise.all([cacheKey(id), KEY + ':backup', KEY + ':before-storage'].map(k => idbDel(k).catch(() => {})))
+  try { await sb.auth.signOut({ scope: 'local' }) } catch { /* the account is gone anyway */ }
+  cloud.session = null
+  if (owner) closeAccount()
 }
 export function askToSignIn() { setSkipped(false); bump() }
 export function continueWithoutAccount() { goal('no_account'); setSkipped(true); bump() }
@@ -183,64 +347,46 @@ const subscribe = (l: () => void) => { listeners.add(l); return () => { listener
 export function bump() { version++; listeners.forEach(l => l()) }
 export function useStore() { return useSyncExternalStore(subscribe, () => version) }
 
-export function commit(quiet = false) { if (demo.on) { bump(); return } assignPresets(); forgetRemovedFiles(); persist(); Progress.check(quiet); syncChapters(quiet); bump() }
+export function commit(quiet = false) { if (demo.on) { bump(); return } assignPresets(); persist(); Progress.check(quiet); syncChapters(quiet); bump() }
 onMediaReady(bump); onThumbReady(bump)
 
 // ---------- photos & documents in Supabase Storage (lib/media.ts) ----------
 // Every place a file can sit in the tree: the portrait and each gallery item.
+// Files are never deleted automatically: a photo that is replaced or removed simply stays in Storage. An older copy of the tree
+// (another tab, device or account) could still point to it, and a deleted file is gone for good (claude/sync-and-files-safety.md).
 interface Slot { p: Person; kind: string; get: () => string; set: (v: string) => void }
 function fileSlots(): Slot[] {
   const out: Slot[] = []
-  S.people.forEach(p => {
+  own().people.forEach(p => {
     if (p.avatar) out.push({ p, kind: 'avatar', get: () => p.avatar, set: v => { p.avatar = v } })
     ;(p.media || []).forEach(m => out.push({ p, kind: m.type, get: () => m.data, set: v => { m.data = v } }))
   })
   return out
-}
-const cloudRefs = () => new Set(fileSlots().map(x => x.get()).filter(isCloudRef))
-/** files already in Storage that the tree knows about: the ones that disappear after a user action are deleted */
-let knownRefs = new Set<string>()
-function forgetRemovedFiles() {
-  const now = cloudRefs()
-  if (cloud.session && cloud.synced) { const gone = [...knownRefs].filter(r => !now.has(r)); if (gone.length) removeRefs(gone) }
-  knownRefs = now
 }
 const refused = new Set<string>() // inline files the bucket will not take (type/size): they stay in the tree
 const hasInlineFiles = () => fileSlots().some(x => isInline(x.get()) && !refused.has(x.get()))
 let moving: Promise<void> | null = null, movedBackup = false, moveWarned = false
 /** Upload inline photos (new ones, old ones from before Storage, ones added without an account) and keep only references. */
 function moveFilesToCloud() {
-  if (!cloud.session || !cloud.synced) return Promise.resolve()
+  if (!canPush()) return Promise.resolve()
   if (!moving) moving = doMoveFiles().finally(() => { moving = null })
   return moving
 }
 async function doMoveFiles() {
-  const slots = fileSlots().filter(x => isInline(x.get()) && !refused.has(x.get())); if (!slots.length) return
-  if (!movedBackup) { movedBackup = true; await idbSet(KEY + ':before-storage', JSON.parse(JSON.stringify(S))).catch(() => {}) }
+  const o = owner, slots = fileSlots().filter(x => isInline(x.get()) && !refused.has(x.get())); if (!slots.length) return
+  if (!movedBackup) { movedBackup = true; await idbSet(KEY + ':before-storage', clone(own())).catch(() => {}) }
   let moved = 0, failed = 0
   for (const x of slots) {
+    if (owner !== o || !canPush()) return // the account changed in another tab: its folder is not this tree's place
     const data = x.get()
     try {
-      const ref = await uploadInline(data, x.p.id, x.kind)
-      if (S.people.includes(x.p) && x.get() === data) { x.set(ref); knownRefs.add(ref); moved++ } else removeRefs([ref]) // changed while uploading
-    } catch (e) { if (isPermanent(e)) refused.add(data); else failed++ }
+      const ref = await uploadInline(data, x.p.id, x.kind, o)
+      if (owner === o && own().people.includes(x.p) && x.get() === data) { x.set(ref); moved++ } // changed while uploading: the file just stays unused
+    } catch (e) { if (isPermanent(e)) refused.add(data); else { failed++; logProblem('upload', e) } }
   }
-  if (moved) { try { await idbSet(KEY, S); await idbSet(KEY_AT, Date.now()) } catch { /* storage unavailable */ } bump() }
+  if (moved && owner === o) { await saveLocal(); bump() }
   if (failed && !moveWarned) { moveWarned = true; toast(t('media.later')) }
   if (!failed) moveWarned = false
-}
-/** Once a session: delete files in the user's folder that the tree no longer points to (left over from
- *  interrupted uploads or edits on another device). Only files older than a day, so a photo another device
- *  has just uploaded but not yet saved into the tree is never touched. */
-let cleaned = false
-async function cleanOrphanFiles() {
-  if (cleaned || !cloud.session || !cloud.synced || !S.people.length || hasInlineFiles()) return
-  cleaned = true
-  try {
-    const used = cloudRefs(), dayAgo = Date.now() - 864e5
-    const orphans = (await listOwnFiles()).filter(f => !used.has(f.ref) && f.at && f.at < dayAgo).map(f => f.ref)
-    if (orphans.length && cloud.synced) await removeRefs(orphans)
-  } catch { cleaned = false }
 }
 export const refresh = bump
 
@@ -354,9 +500,10 @@ export function assignPresets() {
 /** the default portrait key of a saved person (or a stable preview for a form) */
 export function presetOf(p: Partial<Person>) { return (p.id && byId(p.id) === p && p.preset) || previewPreset(p) }
 /** What to show in the round portrait: the family photo, else the default colour silhouette (picked by gender and age). */
-export function avatarSrc(p: Partial<Person>) { return p.avatar ? mediaUrl(p.avatar) : PRESET_SRC[presetOf(p)] }
+/** the portrait: the photo, or the drawn one when there is none or its file is gone from Storage */
+export function avatarSrc(p: Partial<Person>) { return p.avatar && !isMissing(p.avatar) ? mediaUrl(p.avatar) : PRESET_SRC[presetOf(p)] }
 /** the same for small places (Tree cards, lists): a light copy of a photo instead of the full one (lib/thumbs.ts) */
-export function avatarSmall(p: Partial<Person>) { const s = avatarSrc(p); return p.avatar ? thumb(s) : s }
+export function avatarSmall(p: Partial<Person>) { const s = avatarSrc(p); return p.avatar && !isMissing(p.avatar) ? thumb(s) : s }
 export function avatarTint(p: { gender?: string }) { return p.gender === 'f' ? { background: 'rgba(255,205,225,.16)', color: '#F6D3E2' } : p.gender === 'm' ? { background: 'rgba(170,205,255,.16)', color: '#CFE0FA' } : {} }
 /** Profile completeness: 8 checks (occupation is optional, files are not counted). */
 export function fillPercent(p: Person) { const f = ['first', 'last', 'gender', 'birthDate', 'birthPlace', 'bio', 'avatar'] as const; let n = 0; f.forEach(k => { if (p[k]) n++ }); if (p.events && p.events.length) n++; return Math.round(n / 8 * 100) }
@@ -442,7 +589,12 @@ export function importData(d: Partial<Data>) {
   const made = ensureFathers(); if (made.length) setTimeout(() => toast(t('auto.father', { name: made.map(fullName).join(', ') })), 900)
   ui.treeRefit++; ui.mapRefit++; commit(true)
 }
-export function clearData() { S.people = []; S.rels = []; S.pets = []; S.achievements = []; S.achDates = {}; S.achSeen = []; S.achPasted = []; delete S.settings.familyName; delete S.settings.theme; delete S.settings.meId; ui.firstRun = true; commit() }
+export function clearData() {
+  S.people = []; S.rels = []; S.pets = []; S.achievements = []; S.achDates = {}; S.achSeen = []; S.achPasted = []; delete S.settings.familyName; delete S.settings.theme; delete S.settings.meId; ui.firstRun = true; commit()
+  // «Очистить всё» is a deliberate request: once the empty tree is in the cloud, the photos and documents go too (as the privacy policy says)
+  const o = owner
+  if (o && canPush()) pushNow().then(() => { if (owner === o && !dirty && !own().people.length) removeAllOwnFiles(o).catch(e => logProblem('clear-files', e)) })
+}
 /** First run of an empty family: you, your parents, the tree's look. */
 export function completeFirstRun(d: { theme: string; familyName: string; me: Partial<Person>; mom: { first: string; last: string }; dad: { first: string; last: string } }) {
   goal('first_tree')
@@ -466,27 +618,30 @@ function afterLoad() {
     const ds = Object.values(S.achDates || {}).map(v => new Date(v)).filter(d => !isNaN(+d)); const d = ds.length ? new Date(Math.min(...ds.map(Number))) : new Date()
     S.settings.since = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`; persist()
   }
-  knownRefs = cloudRefs()
   // a link from our e-mail (a new password, or one that no longer works) goes straight to the sign-in card, not to the landing
   ui.onboarding = !S.settings.onboarded && !cloud.recovery && !cloud.linkError; ui.firstRun = !!S.settings.onboarded && !S.people.length
   ui.treeRefit++; ui.mapRefit++; bump()
 }
+setProblemContext(() => ({ screen: demo.on ? 'demo' : ui.page, people: own().people.length, synced: cloud.synced, offline: cloud.offline, unsaved: dirty, lang: LANG }))
 export async function boot() {
+  await moveLegacyCache()
   const saved = await loadState()
   if (saved && Array.isArray(saved.people)) S = migrateDates(Object.assign(blank(), saved))
   // preview build: no account, no landing — straight into the first-run dialog of an empty family
   if (import.meta.env.VITE_PREVIEW === '1') { setSkipped(true); S.settings.onboarded = true }
   setLangValue(pickedLang()); document.documentElement.lang = pickedLang()
   await initSession()
+  // Sign-in is shared by all tabs of a browser: signing into another account (or out) in one tab changes it in the others too.
   sb.auth.onAuthStateChange((ev, session) => {
     const was = cloud.session?.user.id; cloud.session = session
     if (ev === 'PASSWORD_RECOVERY') cloud.recovery = true
     if (ev === 'SIGNED_IN') cloud.linkError = false
-    if (ev === 'SIGNED_IN' && session && session.user.id !== was) { goal('sign_in'); setSkipped(false); cloud.busy = true; setTimeout(() => syncFromCloud(), 0) } // never await Supabase inside this callback
-    if (ev === 'SIGNED_OUT') cloud.synced = false
+    if (ev === 'SIGNED_IN' && session && session.user.id !== owner) { if (session.user.id !== was) goal('sign_in'); setSkipped(false); cloud.busy = true; setTimeout(() => syncFromCloud(), 0) } // never await Supabase inside this callback
+    if (ev === 'SIGNED_OUT') setTimeout(() => { if (!cloud.session && owner) closeAccount() }, 0)
     bump()
   })
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && cloud.session) syncFromCloud(true) })
+  window.addEventListener('online', () => { if (cloud.session) syncFromCloud(true) })
   if (cloud.session) await syncFromCloud(); else afterLoad()
   ui.loaded = true; bump()
 }

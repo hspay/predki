@@ -26,7 +26,13 @@ export default function AuthScreen({ loading = false }: { loading?: boolean }) {
     setBusy(true)
     try {
       if (mode === 'in') { const { error } = await signInEmail(em, pass); if (error) throw error }
-      else if (mode === 'up') { const { data, error } = await signUpEmail(em, pass); if (error) throw error; goal('sign_up'); if (!data.session) go('sent') }
+      else if (mode === 'up') {
+        const { data, error } = await signUpEmail(em, pass); if (error) throw error
+        // Supabase answers «sent» even when the address already has an account (and sends nothing); the sign is a user
+        // with no identities. Say it plainly and switch to «Вход» with the email kept: people mix up the two tabs.
+        if (data.user && !data.session && (data.user.identities || []).length === 0) { setMode('in'); setPass(''); setErr(t('auth.exists')); setBusy(false); return }
+        goal('sign_up'); if (!data.session) go('sent')
+      }
       else if (mode === 'reset') { const { error } = await resetPassword(em); if (error) throw error; go('sent') }
       else if (mode === 'newpass') { const { error } = await setNewPassword(pass); if (error) throw error; cloud.recovery = false; bump() }
     } catch (x) {

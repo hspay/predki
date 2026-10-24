@@ -1,7 +1,7 @@
 // «Смотреть пример древа»: a read-only demo of the Tree with three famous families.
 // The demo swaps the family document (S) for a ready-made one while it is open and puts the visitor's own back when it closes.
 // Nothing here is ever saved: core.ts skips persist / commit / cloud sync while `demo.on` is true.
-import { S, ui, bump, replaceData, finishOnboarding, closePanel, persist, demo, LANG, type Data, type Person, type Rel } from './core'
+import { S, ui, bump, replaceData, finishOnboarding, closePanel, demoClosed, demo, LANG, type Data, type Person, type Rel } from './core'
 import { PRESET_TYPES, presetType } from './avatars'
 import { goal } from './analytics'
 
@@ -69,7 +69,6 @@ export function distances(faceId: string) {
 }
 
 // ---------------------------------------------------------------- open / switch / close
-let saved: Data | null = null
 const hashFor = (k: string) => '#demo=' + k
 function setHash(h: string) { try { history.replaceState(null, '', location.pathname + location.search + h) } catch { /* sandboxed */ } }
 /** the demo can be opened by a link: …/#demo or …/#demo=kardashian */
@@ -82,7 +81,7 @@ function load(k: string) {
 }
 export async function openDemo(k?: string) {
   await loadFamilies()
-  if (!demo.on) { saved = S; demo.on = true }
+  if (!demo.on) { demo.saved = S; demo.on = true }
   const fam = famOf(k).k
   // the tree grows from the face only the first time the page opens, not when the family is switched
   ui.demo = { fam, intro: Date.now() }
@@ -97,8 +96,8 @@ export function switchDemo(k: string) {
 export function closeDemo(start = false) {
   if (!demo.on) return
   if (start) goal('demo_build', { family: ui.demo?.fam || '' })
-  if (saved) replaceData(saved); saved = null; demo.on = false
-  persist() // a save asked for just before the demo opened was skipped while it was on
+  if (demo.saved) replaceData(demo.saved); demo.saved = null; demo.on = false
+  demoClosed() // the own tree is saved and, if the cloud brought news while the demo was on, refreshed
   ui.demo = null; ui.panel = null; ui.treeRefit++; ui.mapRefit++
   setHash('')
   if (start) finishOnboarding(S.people.length ? null : 'blank')

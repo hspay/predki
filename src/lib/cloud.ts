@@ -15,7 +15,7 @@ export const cloud = {
   session: null as Session | null,
   /** user chose «continue without an account»: the tree lives only in this browser */
   skipped: (() => { try { return localStorage.getItem(SKIP_KEY) === '1' } catch { return false } })(),
-  /** the cloud copy was read at least once this session: only then is pushing safe */
+  /** the cloud copy of the account on screen was read: only then is saving to the cloud safe */
   synced: false,
   /** came back from a «reset password» email: ask for a new password */
   recovery: false,
@@ -49,19 +49,34 @@ export async function initSession() {
   return cloud.session
 }
 
-export async function pullTree(): Promise<{ data: any; at: number } | null> {
-  const uid = cloud.session?.user.id; if (!uid) return null
+/** The account's tree and its version: updated_at exactly as the database gave it, used as a token, never compared as a time. */
+export type Row = { data: any; ver: string }
+export async function pullTree(uid: string): Promise<Row | null> {
   const { data, error } = await withTimeout(sb.from('trees').select('data, updated_at').eq('user_id', uid).maybeSingle(), 10000)
   if (error) throw error
-  return data ? { data: data.data, at: Date.parse(data.updated_at) || 0 } : null
+  return data ? { data: data.data, ver: String(data.updated_at) } : null
 }
-/** Save the whole document; returns the moment it was stamped with (ms). */
-export async function pushTree(doc: unknown) {
-  const uid = cloud.session?.user.id; if (!uid) return 0
-  const at = new Date()
-  const { error } = await withTimeout(sb.from('trees').upsert({ user_id: uid, data: doc, updated_at: at.toISOString() }), 20000)
+/** Save the whole document, but only over the version it was built on (ver; null = the account has no row yet).
+ *  Returns the new version, or null when another window or device saved first — then nothing is written. */
+export async function saveTree(uid: string, doc: unknown, ver: string | null): Promise<string | null> {
+  if (cloud.session?.user.id !== uid) throw new Error('another account is signed in')
+  const at = new Date().toISOString()
+  if (ver === null) {
+    const { data, error } = await withTimeout(sb.from('trees').insert({ user_id: uid, data: doc, updated_at: at }).select('updated_at').single(), 20000)
+    if (error) { if (error.code === '23505') return null; throw error } // a row appeared meanwhile
+    return String(data.updated_at)
+  }
+  const { data, error } = await withTimeout(sb.from('trees').update({ data: doc, updated_at: at }).eq('user_id', uid).eq('updated_at', ver).select('updated_at'), 20000)
   if (error) throw error
-  return +at
+  return data && data.length ? String(data[0].updated_at) : null
+}
+
+/** Deleting the account happens in the database (supabase/account-and-problems.sql): it removes the tree, the links for
+ *  relatives with their answers, problem reports and the account itself. really = false only checks that it is set up. */
+export async function deleteAccountCloud(really: boolean) {
+  const { data, error } = await withTimeout(sb.rpc('delete_my_account', { p_really: really }), 20000)
+  if (error) throw error
+  return String(data)
 }
 
 // ---------- sign in / up / out ----------
@@ -76,7 +91,7 @@ export const signOutCloud = () => sb.auth.signOut()
 export function authError(e: { message?: string; code?: string; status?: number } | null | undefined, lang: 'ru' | 'en') {
   const m = (e?.message || '').toLowerCase(); const ru = lang !== 'en'
   if (m.includes('invalid login')) return ru ? 'Неверная почта или пароль' : 'Wrong email or password'
-  if (m.includes('already registered') || e?.code === 'user_already_exists') return ru ? 'Такой аккаунт уже есть — войдите' : 'This account already exists — sign in'
+  if (m.includes('already registered') || e?.code === 'user_already_exists') return ru ? 'С этой почтой уже есть аккаунт — войдите. Не помните пароль? Нажмите «Забыли пароль?»' : 'This email already has an account — sign in. Forgot the password? Use «Forgot password?»'
   if (m.includes('not confirmed')) return ru ? 'Подтвердите почту: ссылка в письме от Predki' : 'Confirm your email first: the link is in our message'
   if (m.includes('password') && (m.includes('at least') || m.includes('weak'))) return ru ? 'Пароль слишком простой: минимум 6 символов' : 'Password is too weak: at least 6 characters'
   if (m.includes('rate limit') || e?.status === 429) return ru ? 'Слишком много попыток. Попробуйте чуть позже' : 'Too many attempts. Try again a bit later'

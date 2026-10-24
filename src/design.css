@@ -914,3 +914,22 @@ main{border-radius:var(--r-card);background:var(--mainbg);border-color:var(--edg
   .mv-f .btn.ghost[target]{display:none}
 }
 @media (prefers-reduced-motion:reduce){.mv-back,.mv-body img{animation:none}}
+
+/* Settings dialogs: delete the account, report a problem */
+.acc-dlg{max-width:480px}
+.acc-dlg .panel-body{display:flex;flex-direction:column;gap:14px}
+.acc-dlg .panel-foot{display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap}
+.dlg-p{margin:0;font-size:15px;line-height:1.5;color:var(--ink)}
+.dlg-copy{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;padding:12px 14px;border:1.5px solid var(--edge-2);border-radius:10px;background:var(--well)}
+.dlg-copy p{margin:0;font-size:13.5px;color:var(--ink-2);flex:1 1 200px}
+.dlg-note{margin:0;font-size:12.5px;line-height:1.45;color:var(--muted)}
+.dlg-err{margin:0;font-size:13.5px;line-height:1.45;color:var(--danger)}
+.dlg-err a{color:inherit;font-weight:600}
+.acc-dlg .field{display:flex;flex-direction:column;gap:6px}
+.acc-dlg .field textarea{resize:vertical;min-height:110px;font:inherit;line-height:1.45}
+.btn.kill,.acc-dlg .panel-foot .btn.kill{background:var(--wax);color:var(--paper);border-color:transparent;box-shadow:0 3px 0 var(--wax-d)}
+.btn.kill:hover,.acc-dlg .panel-foot .btn.kill:hover{background:var(--wax);filter:brightness(1.07)}
+.btn.kill:disabled,.acc-dlg .btn:disabled{opacity:.45;filter:none;cursor:not-allowed;box-shadow:none}
+.bt-ideas .bt-link{font:inherit;padding:0;border:0;background:none;cursor:pointer;color:var(--good);font-weight:600;border-bottom:1.5px solid currentColor}
+:root[data-theme="light"] .bt-ideas .bt-link{color:#1F7A50}
+.bt-account .bt-btns .danger:only-child,.bt-account .acc-part .bt-btns .danger{flex-basis:auto}

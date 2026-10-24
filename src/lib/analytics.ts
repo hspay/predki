@@ -38,7 +38,7 @@ export function screen(name: string, title: string) {
  *  no_account — «Продолжить без аккаунта»                first_tree — the first steps done (you and your parents)
  *  person_add — a person added                            map_play — the map's story played
  *  passport — the family passport opened                  ask_relatives — a «Попросить заполнить» link made
- *  calendar_export — the calendar saved to the phone */
+ *  calendar_export — the calendar saved to the phone     account_delete — the account deleted in Settings */
 export function goal(name: string, params?: Record<string, string | number>) {
   if (!started) return
   window.ym?.(ID, 'reachGoal', name, params)

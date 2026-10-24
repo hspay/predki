@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "tsx tests/merge.test.ts"
   },
   "dependencies": {
     "@fontsource/amatic-sc": "^5.3.0",

@@ -94,10 +94,11 @@ function ViewPerson({ id }: { id: string }) {
   // «КАРТОЧКА · МАМА»: how the person is related to you
   const me = S.settings.kin === false ? null : rootPerson(), kl = me && me.id !== p.id ? kinship(me.id).label[p.id] : me && me.id === p.id ? t('cl.you') : ''
   const head = t('cl.card') + (kl ? ' · ' + kl : '')
-  const setPhoto = () => pickFile('image/*', data => { p.avatar = data; commit(); toast(t('toast.photo')) })
-  const removePhoto = () => { if (confirm(t('p.photo.remove.confirm'))) { p.avatar = ''; commit(); toast(t('p.photo.removed')) } }
-  const addMedia = (kind: 'photo' | 'doc') => pickFile(kind === 'photo' ? 'image/*' : 'image/*,application/pdf', (data, name) => { p.media = p.media || []; p.media.push({ id: uid(), type: kind, name, data }); commit(); toast(t('toast.photo')) }, kind === 'doc' ? 2400 : 1600)
-  const removeMedia = (mid: string) => { p.media = (p.media || []).filter(x => x.id !== mid); commit() }
+  // the person is looked up again when the file arrives: while the picker was open the tree may have been refreshed from the cloud
+  const setPhoto = () => pickFile('image/*', data => { const q = byId(id); if (!q) return; q.avatar = data; commit(); toast(t('toast.photo')) })
+  const removePhoto = () => { if (confirm(t('p.photo.remove.confirm'))) { const q = byId(id); if (!q) return; q.avatar = ''; commit(); toast(t('p.photo.removed')) } }
+  const addMedia = (kind: 'photo' | 'doc') => pickFile(kind === 'photo' ? 'image/*' : 'image/*,application/pdf', (data, name) => { const q = byId(id); if (!q) return; q.media = q.media || []; q.media.push({ id: uid(), type: kind, name, data }); commit(); toast(t('toast.photo')) }, kind === 'doc' ? 2400 : 1600)
+  const removeMedia = (mid: string) => { const q = byId(id); if (!q) return; q.media = (q.media || []).filter(x => x.id !== mid); commit() }
   const body = (
     <div>
       <div className="profile-hero">
