@@ -3,6 +3,36 @@ export interface Release { date: string; items: { ru: string; en: string }[] }
 
 export const CHANGELOG: Release[] = [
   {
+    date: '2026-10-25',
+    items: [
+      { ru: 'Древом теперь можно поделиться по ссылке в двух форматах: родным для заполнения и в соцсети с базовой безопасной информацией', en: 'The tree can now be shared by link in two ways: with relatives so they can fill it in, and on social networks with only basic, safe details' },
+    ],
+  },
+  {
+    date: '2026-10-24',
+    items: [
+      { ru: 'Исправлена синхронизация: теперь правки в древо можно вносить одновременно с разных устройств и вкладок', en: 'Sync fixed: you can now edit the tree from several devices and tabs at once' },
+      { ru: 'Аккаунт теперь можно удалить', en: 'You can now delete your account' },
+      { ru: 'Настроены письма для входа и смены почты', en: 'New emails for signing in and changing your email' },
+    ],
+  },
+  {
+    date: '2026-10-23',
+    items: [
+      { ru: 'Обновлена демо-семья Романовых', en: 'The Romanov sample family updated' },
+      { ru: 'Изменена страница 404', en: 'New 404 page' },
+    ],
+  },
+  {
+    date: '2026-10-22',
+    items: [
+      { ru: 'Новая страница — «Хранитель»: ваша карточка, главы и собранные наклейки', en: 'New page — Keeper: your card, chapters and collected stickers' },
+      { ru: 'Новый формат — «Книга семьи»: жизнь каждого родственника рассказом', en: 'New format — Family book: the life of each relative told as a story' },
+      { ru: 'Новый формат — «Главы»: заполнение древа теперь открывает ещё больше возможностей', en: 'New format — Chapters: filling in the tree now unlocks even more' },
+      { ru: 'Фото и документы теперь можно просматривать в приложении', en: 'Photos and documents can now be viewed right in the app' },
+    ],
+  },
+  {
     date: '2026-10-17',
     items: [
       { ru: 'Добавил демо-семьи: Каллены, Кардашьяны, «Игра престолов» и Романовы', en: 'Added sample families: the Cullens, the Kardashians, Game of Thrones and the Romanovs' },

@@ -9,8 +9,11 @@ export const {NW,NH,PG,GAP,LH}=DIM;
 /** hOf(id) — height of a person's box (a framed portrait is taller than a card); rows take the tallest box, boxes are centred in their row. */
 // the layout is worked out again only when people or links change (a big family takes a moment), not on every redraw
 let memo={key:'',res:null};
+/** elder first. A tree opened by link for social networks has no birth years of the living: the snapshot then carries each
+ *  person's place in the owner's order (ord), so the guest sees the same layout without the years themselves */
+const byAge=(a,b)=>a.ord!=null&&b.ord!=null?a.ord-b.ord:(yearOf(a.birthDate)||'9999').localeCompare(yearOf(b.birthDate)||'9999');
 export function layout(hOf){
-  const key=S.people.map(p=>p.id+':'+(p.birthDate||'')+':'+(hOf?hOf(p.id):'')).join('|')+'#'+S.rels.map(r=>r.type[0]+r.a+'>'+r.b+(r.step?'s':'')).join('|');
+  const key=S.people.map(p=>p.id+':'+(p.birthDate||'')+':'+(p.ord??'')+':'+(hOf?hOf(p.id):'')).join('|')+'#'+S.rels.map(r=>r.type[0]+r.a+'>'+r.b+(r.step?'s':'')).join('|');
   if(memo.key===key&&memo.res) return memo.res;
   const res=layoutNow(hOf); memo={key,res}; return res;
 }
@@ -62,8 +65,8 @@ function layoutNow(hOf){
     const minG=Math.min(...Object.values(gen)); people.forEach(p=>gen[p.id]-=minG);
     // 2. DFS order
     const order={}; let n=0; const seen=new Set();
-    const dfs=id=>{ if(seen.has(id)) return; seen.add(id); order[id]=n++; spousesOf(id).forEach(s=>dfs(s.id)); linkedSiblingsOf(id).forEach(s=>dfs(s.id)); const kids=[...new Set([...childrenOf(id),...spousesOf(id).flatMap(s=>childrenOf(s.id))].map(k=>k.id))].map(byId).sort((a,b)=>(yearOf(a.birthDate)||'9999').localeCompare(yearOf(b.birthDate)||'9999')); kids.forEach(k=>dfs(k.id)); };
-    people.slice().sort((a,b)=>gen[a.id]-gen[b.id]||(yearOf(a.birthDate)||'9999').localeCompare(yearOf(b.birthDate)||'9999')).forEach(p=>dfs(p.id));
+    const dfs=id=>{ if(seen.has(id)) return; seen.add(id); order[id]=n++; spousesOf(id).forEach(s=>dfs(s.id)); linkedSiblingsOf(id).forEach(s=>dfs(s.id)); const kids=[...new Set([...childrenOf(id),...spousesOf(id).flatMap(s=>childrenOf(s.id))].map(k=>k.id))].map(byId).sort((a,b)=>byAge(a,b)); kids.forEach(k=>dfs(k.id)); };
+    people.slice().sort((a,b)=>gen[a.id]-gen[b.id]||byAge(a,b)).forEach(p=>dfs(p.id));
     // 3. blocks: a couple (spouses on the same level) is one unit
     const parent={}; people.forEach(p=>parent[p.id]=p.id); const find=x=>parent[x]===x?x:(parent[x]=find(parent[x]));
     S.rels.forEach(r=>{ if(r.type==='spouse'&&r.a in gen&&r.b in gen&&gen[r.a]===gen[r.b]) parent[find(r.a)]=find(r.b); });
@@ -116,7 +119,7 @@ function layoutNow(hOf){
     const top={}; let acc=0; L.forEach(g=>{ top[g]=acc; acc+=rowH[g]+self.LH; });
     const pos={}; let minX=Infinity,maxX=-Infinity; blocks.forEach(b=>b.m.forEach((id,i)=>{ const h=hgt(id); pos[id]={x:b.x+i*(NW+PG),y:top[b.g]+(rowH[b.g]-h)/2,h,g:b.g,top:top[b.g],rh:rowH[b.g]}; minX=Math.min(minX,pos[id].x); maxX=Math.max(maxX,pos[id].x+NW); }));
     // the unlinked: oldest first, after the right edge of the whole tree
-    iso.slice().sort((a,b)=>(yearOf(a.birthDate)||'9999').localeCompare(yearOf(b.birthDate)||'9999')).forEach(p=>{ const h=hgt(p.id), x=maxX+GAP; pos[p.id]={x,y:top[lastG]+(rowH[lastG]-h)/2,h,g:lastG,top:top[lastG],rh:rowH[lastG],iso:true}; maxX=x+NW; });
+    iso.slice().sort((a,b)=>byAge(a,b)).forEach(p=>{ const h=hgt(p.id), x=maxX+GAP; pos[p.id]={x,y:top[lastG]+(rowH[lastG]-h)/2,h,g:lastG,top:top[lastG],rh:rowH[lastG],iso:true}; maxX=x+NW; });
     Object.values(pos).forEach(p=>p.x-=minX);
     return {pos,blocks,w:maxX-minX,h:acc-self.LH};
   }

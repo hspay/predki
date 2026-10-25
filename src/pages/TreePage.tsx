@@ -12,6 +12,7 @@ import { Progress } from '../lib/progress'
 import { NextStop } from '../components/Chapters'
 import { nextStep } from '../lib/chapters'
 import { distances, FRIEND } from '../lib/demo'
+import ShareDialog, { ShareIcon } from '../components/ShareDialog'
 
 /** The demo tree («Смотреть пример древа»): no page header, no adding, labels from the demo family, growth from the face on first open */
 export interface DemoView { labels: Record<string, string>; face: string; intro: number }
@@ -110,6 +111,7 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
   })()
   const SC = scale ? 130 : 0
   const [, setMemoTick] = useState(0)
+  const [sharing, setSharing] = useState(false)
   const memo0 = dv ? null : Progress.nearestBirthday()
   const memo = memoHidden(memo0) ? null : memo0
   // «Следующая остановка» and the memorial date share the bottom-left corner
@@ -322,8 +324,12 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
     <section className="page active" data-page="tree">
       {!dv && <div className="topbar">
         <h2><span>{t('nav.tree')}</span><span className="sub" id="treeSub">{S.people.length ? treeSub(S.people.length, generations()) : ''}</span></h2>
-        <button className="btn sm add" id="btnAddPerson" onClick={() => editPerson(null)}><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg><span className="full">{t('tree.add')}</span><span className="short">{t('tree.add.short')}</span></button>
+        <div className="tb-acts">
+          <button className="btn rnd add" id="btnAddPerson" onClick={() => editPerson(null)} aria-label={t('tree.add')} title={t('tree.add')}><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg></button>
+          <button className="btn rnd" id="btnShare" onClick={() => setSharing(true)} aria-label={LANG === 'en' ? 'Share' : 'Поделиться'} title={LANG === 'en' ? 'Share' : 'Поделиться'}><ShareIcon /></button>
+        </div>
       </div>}
+      {sharing && <ShareDialog onClose={() => setSharing(false)} />}
       <div className={'tree-wrap th-' + theme.k + (theme.light ? ' th-light' : '') + (intro ? ' intro' : '')} style={intro ? { '--end': introEnd - .5 + 's' } as React.CSSProperties : undefined}>
         <div className="tree-pan" ref={panRef}><svg id="treeSvg" ref={svgRef}>
           <defs><clipPath id="avClip" clipPathUnits="objectBoundingBox"><circle cx=".5" cy=".5" r=".5" /></clipPath>

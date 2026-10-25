@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
-import GuestApp from './components/GuestApp'
+import { ShareGate } from './components/SharedTree'
 import { tokenFromUrl } from './lib/invites'
 import './fonts'
 import './styles.css'
@@ -29,4 +29,4 @@ onThemeChange(() => {
 const shareToken = tokenFromUrl()
 if (!shareToken) initAnalytics()
 watchErrors() // uncaught errors are reported (live site only), on the relatives' page too
-ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode>{shareToken ? <GuestApp token={shareToken} /> : <App />}</React.StrictMode>)
+ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode>{shareToken ? <ShareGate token={shareToken} /> : <App />}</React.StrictMode>)

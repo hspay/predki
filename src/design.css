@@ -933,3 +933,121 @@ main{border-radius:var(--r-card);background:var(--mainbg);border-color:var(--edg
 .bt-ideas .bt-link{font:inherit;padding:0;border:0;background:none;cursor:pointer;color:var(--good);font-weight:600;border-bottom:1.5px solid currentColor}
 :root[data-theme="light"] .bt-ideas .bt-link{color:#1F7A50}
 .bt-account .bt-btns .danger:only-child,.bt-account .acc-part .bt-btns .danger{flex-basis:auto}
+
+/* ---------- Tree header: two round buttons, add a person and share ---------- */
+.topbar .tb-acts{display:flex;align-items:center;gap:10px;margin-left:auto;flex:none}
+.btn.rnd{width:46px;height:46px;padding:0;border-radius:50%;display:grid;place-items:center;border:1.5px solid var(--edge-2);background:var(--glass-2);color:var(--ink)}
+.btn.rnd svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+.btn.rnd:hover{border-color:var(--sky);background:var(--glass-3)}
+.btn.rnd.add{height:46px;padding:0;gap:0;border:0;background:var(--good);color:#06301C;box-shadow:0 3px 0 #3E9C70}
+.btn.rnd.add:hover{background:var(--good);filter:brightness(1.06)}
+.btn.rnd.add svg{width:22px;height:22px;stroke-width:2.6}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ---------- «Поделиться»: a link to the tree or the family passport ---------- */
+.sh-dlg{max-width:520px}
+.sh-dlg .panel-body{display:flex;flex-direction:column;gap:14px}
+.sh-tabs{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;border-radius:10px;border:1.5px solid var(--edge);background:var(--well)}
+.sh-tabs button{height:38px;border-radius:7px;font-weight:600;font-size:14px;color:var(--ink-2)}
+.sh-tabs button[aria-selected="true"]{background:var(--ultra);color:var(--paper)}
+.sh-modes{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sh-mode{display:flex;flex-direction:column;align-items:flex-start;gap:5px;padding:13px 14px 12px;border-radius:12px;border:1.5px solid var(--edge);background:var(--glass);text-align:left;color:var(--ink);transition:border-color .2s,background .2s}
+.sh-mode b{display:flex;align-items:center;gap:8px;font-size:15px}
+.sh-mode svg{width:18px;height:18px;fill:none;stroke:var(--sky);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.sh-mode.ask svg{stroke:var(--good)}
+.sh-mode span{font-size:13px;color:var(--ink-2)}
+.sh-mode[aria-checked="true"]{border-color:var(--sky);background:var(--accent-soft);box-shadow:0 0 0 3px rgba(37,51,255,.25)}
+:root[data-theme="light"] .sh-mode[aria-checked="true"]{border-color:var(--ultra)}
+.sh-seen{display:flex;flex-wrap:wrap;gap:6px}
+.sh-seen span{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:999px;font-size:13px}
+.sh-seen .y{background:rgba(143,227,184,.13);color:var(--good)}
+.sh-seen .y svg{width:12px;height:12px;fill:none;stroke:currentColor;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.sh-seen .n{background:var(--glass);color:var(--muted);text-decoration:line-through;text-decoration-color:var(--faint)}
+.sh-meta{margin:-4px 0 0;font:500 12px/1.4 var(--f-mono);color:var(--muted)}
+.sh-make{height:46px;justify-content:center;font:800 20px/1 var(--f-head);letter-spacing:.04em;text-transform:uppercase}
+.sh-made{display:flex;flex-direction:column;gap:8px}
+.sh-url{display:flex;gap:8px}
+.sh-url input{flex:1;min-width:0;height:44px;padding:0 12px;border-radius:8px;border:1.5px solid var(--edge-2);background:var(--well);color:var(--ink);font:500 13.5px var(--f-mono)}
+.sh-url .btn{height:44px;white-space:nowrap}
+.btn.sh-ok{background:rgba(143,227,184,.16);color:var(--good);border-color:transparent}
+.sh-open{align-self:flex-start;font-size:13px;color:var(--sky)}
+:root[data-theme="light"] .sh-open{color:var(--ultra)}
+.sh-list{display:flex;flex-direction:column;gap:2px;padding-top:12px;border-top:1.5px solid var(--edge)}
+.sh-list h4{margin:0 0 6px;font:500 11px/1 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.sh-row{display:flex;align-items:center;gap:10px;min-height:40px}
+.sh-chip{height:24px;display:inline-flex;align-items:center;padding:0 9px;border-radius:999px;font-size:12px;font-weight:600;flex:none}
+.sh-chip.show{background:var(--accent-soft);color:var(--sky)}
+:root[data-theme="light"] .sh-chip.show{color:var(--ultra)}
+.sh-chip.ask{background:rgba(143,227,184,.14);color:var(--good)}
+.sh-when{flex:1;min-width:0;font:500 12.5px var(--f-mono);color:var(--ink-2);text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sh-when:hover{color:var(--ink)}
+.sh-x{height:32px;padding:0 10px;border-radius:7px;color:var(--danger);font-size:13px;font-weight:600}
+.sh-x:hover{background:var(--danger-soft)}
+.sh-pass{display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center;padding:6px 0 4px}
+@media (max-width:520px){.sh-modes{grid-template-columns:1fr}}
+
+/* ---------- a tree opened by link (components/SharedTree.tsx), on the demo's layout ---------- */
+#demo.shared :is(.dm-brand,.dm-btn){text-decoration:none}
+#demo.shared .sh-fam{margin:0;font:800 40px/.9 var(--f-head);letter-spacing:.02em;text-transform:uppercase;text-align:center}
+#demo.shared .dm-sub{font-size:12px}
+.sh-who{justify-self:end;position:relative}
+.sh-who-btn{height:42px;padding:0 14px 0 12px;display:inline-flex;align-items:center;gap:8px;border-radius:10px;border:1.5px solid var(--edge-2);background:var(--chrome);color:var(--ink);font-size:14px;font-weight:600}
+.sh-who-btn.on{border-color:rgba(143,227,184,.6)}
+.sh-who-btn svg{width:16px;height:16px;fill:none;stroke:var(--good);stroke-width:2;stroke-linecap:round}
+.sh-who-btn .short{display:none}
+.sh-who-menu{position:absolute;right:0;top:50px;z-index:20;width:260px;max-height:min(420px,70vh);display:flex;flex-direction:column;gap:6px;padding:8px;border-radius:12px;border:1.5px solid var(--edge-2);background:var(--surface-solid);box-shadow:var(--shadow-lg)}
+.sh-who-q{height:38px;padding:0 10px;border-radius:8px;border:1.5px solid var(--edge);background:var(--well);color:var(--ink);font-size:14px}
+.sh-who-list{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:1px}
+.sh-who-menu button{min-height:40px;padding:6px 10px;border-radius:8px;text-align:left;font-size:14px;color:var(--ink)}
+.sh-who-menu button:hover{background:var(--glass-2)}
+.sh-who-menu button[aria-selected="true"]{background:var(--accent-soft)}
+.sh-who-none{border-top:1px solid var(--edge)!important;border-radius:0 0 8px 8px!important;color:var(--ink-2)!important}
+.sh-main.ask{display:flex}
+.sh-main.ask>.page{position:relative;inset:auto;flex:1 1 auto;min-width:0;height:100%}
+.sh-side{flex:none;width:370px;box-sizing:border-box;padding:22px;border-left:1.5px solid var(--edge);background:var(--surface-solid);overflow:auto;display:flex;flex-direction:column;gap:14px}
+.sh-intro{display:flex;flex-direction:column;gap:12px}
+.sh-intro h2,.sh-form h2,.sh-sent h2{margin:0;font:800 28px/1 var(--f-head);letter-spacing:.02em;text-transform:uppercase}
+.sh-intro p,.sh-sent p{margin:0;font-size:15px;line-height:1.5;color:var(--ink-2)}
+.sh-intro-btns{display:flex;flex-direction:column;gap:8px}
+.sh-intro-btns .btn{height:42px;justify-content:center;font-weight:600}
+.sh-form{display:flex;flex-direction:column;gap:12px}
+.sh-form .field .lb{font-size:12px;font-weight:500;color:var(--ink-2)}
+.sh-form textarea{resize:vertical;font:inherit;line-height:1.45}
+.sh-two{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sh-seg{display:flex;gap:6px}
+.sh-seg button{flex:1;height:40px;border-radius:8px;border:1.5px solid var(--edge);color:var(--ink-2);font-weight:600}
+.sh-seg button[aria-pressed="true"]{border-color:var(--sky);background:var(--accent-soft);color:var(--ink)}
+.sh-foot{display:flex;gap:8px}
+.sh-foot .btn.primary{flex:1;height:46px;justify-content:center;font:800 19px/1 var(--f-head);letter-spacing:.04em;text-transform:uppercase}
+.sh-sent{display:flex;flex-direction:column;gap:14px;align-items:flex-start}
+.sh-sent .ok{width:52px;height:52px;border-radius:50%;background:rgba(143,227,184,.16);display:grid;place-items:center}
+.sh-sent .ok svg{width:24px;height:24px;fill:none;stroke:var(--good);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
+.sh-sent .btn{height:42px}
+.dm-card .sh-add{margin-top:8px;height:44px;justify-content:center;width:100%}
+.dm-card .sh-done{font-size:12.5px;color:var(--good)}
+@media (max-width:860px){
+  #demo.shared .dm-top{grid-template-areas:"brand x" "mid mid"}
+  #demo.shared .dm-brand{text-decoration:none}
+#demo.shared .sh-fam{font-size:32px}
+  #demo.shared .dm-sub{flex-direction:row;flex-wrap:wrap;justify-content:center;font-size:10.5px}
+  .sh-who{grid-area:x}
+  .sh-who-btn{height:40px;padding:0 10px;font-size:13.5px}
+  .sh-who-btn .full{display:none}.sh-who-btn .short{display:inline}
+  .sh-main.ask{display:block}
+  .sh-main.ask>.page{position:absolute;inset:0;height:auto}
+  .sh-side{position:absolute;left:0;right:0;bottom:0;width:auto;max-height:86%;z-index:4;padding:16px 16px max(16px,env(safe-area-inset-bottom,0px));border-left:0;border-top:1.5px solid var(--edge-2);border-radius:16px 16px 0 0;box-shadow:0 -20px 50px -20px rgba(0,0,14,.6)}
+  .sh-side.k-intro{gap:8px}
+  .sh-side.k-intro h2{display:none}
+  .sh-side.k-intro p{font-size:14px}
+  .sh-side.k-intro .sh-intro-btns{flex-direction:row}
+  .sh-side.k-intro .sh-intro-btns .btn{flex:1;font-size:13px;padding:0 8px}
+  #demo.shared.ask .tree-tools{bottom:150px}
+  #demo.shared.filling .dm-card{display:none} /* the form names the person itself: the card would only cover it */
+  .sh-who-menu{width:min(280px,calc(100vw - 32px))}
+}
+/* the card in the demo and in a shared tree has buttons: it must take taps (the plain kinship card lets them through) */
+.tree-kin.dm-card{pointer-events:auto}
+
+/* the memorial date: the name always on its own line, the notice only as wide as it needs (as on a phone) */
+.tree-memo .tx b{display:block}
+@media (min-width:861px){.tree-dock .tree-memo-w{width:max-content;max-width:100%}}

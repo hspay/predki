@@ -31,6 +31,8 @@ export interface Person {
   preset?: string
   /** portrait frame on the Tree; none = the usual card */
   frame?: FrameLook
+  /** a tree opened by link: the person's place in the owner's elder-first order (lib/invites.ts), for the same layout */
+  ord?: number
   /** earlier names (changed after a move, a war, a marriage…); shown under the name and found by search */
   names?: FormerName[]
 }

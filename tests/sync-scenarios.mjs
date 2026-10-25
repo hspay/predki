@@ -14,7 +14,7 @@ const USERS = { 'a@x.ru': 'uidA', 'b@x.ru': 'uidB' }
 const PNG = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==', 'base64')
 
 // ---------------------------------------------------------------- fake Supabase
-const db = new Map(), files = new Set(), log = { deletes: [], saves: [] }, gone = new Set(), problems = []
+const db = new Map(), files = new Set(), log = { deletes: [], saves: [] }, gone = new Set(), problems = [], links = new Map(), answers = []
 let rpcMissing = false
 let down = false
 const pgTime = d => new Date(d).toISOString().replace('Z', '+00:00')
@@ -85,6 +85,19 @@ async function fake(route) {
     db.delete(me); gone.add(me); for (let i = problems.length - 1; i >= 0; i--) if (problems[i].user_id === me) problems.splice(i, 1)
     return json('deleted')
   }
+  // «Ссылка на древо»: share_links with the kind of link, the guest's two functions
+  if (path === '/rest/v1/share_links') {
+    if (m === 'POST') { const b = req.postDataJSON(); if (!me) return json({ code: '42501', message: 'rls' }, 403); links.set(b.token, { ...b, user_id: me, created_at: new Date().toISOString(), expires_at: b.expires_at || new Date(Date.now() + 30 * 864e5).toISOString(), revoked: false, mode: b.mode || 'ask' }); return route.fulfill({ status: 201 }) }
+    if (m === 'GET') return json([...links.values()].filter(l => l.user_id === me).map(({ snapshot, user_id, ...l }) => l))
+    if (m === 'PATCH') { const t = (u.searchParams.get('token') || '').replace(/^eq\./, ''), l = links.get(t); if (l && l.user_id === me) Object.assign(l, req.postDataJSON()); return route.fulfill({ status: 204 }) }
+  }
+  if (path === '/rest/v1/rpc/shared_tree') { const l = links.get(req.postDataJSON().p_token); return json(l && !l.revoked ? { snapshot: l.snapshot, expires_at: l.expires_at, mode: l.mode } : null) }
+  if (path === '/rest/v1/rpc/submit_suggestion') {
+    const b = req.postDataJSON(), l = links.get(b.p_token)
+    if (!l || l.revoked || l.mode !== 'ask') return json({ code: 'P0001', message: 'link_closed' }, 400)
+    answers.push({ token: b.p_token, author: b.p_author, items: b.p_items }); return json('00000000-0000-0000-0000-000000000002')
+  }
+  if (path.startsWith('/storage/v1/object/') && m === 'GET') return route.fulfill({ status: 200, contentType: 'image/png', body: PNG })
   if (path === '/rest/v1/rpc/report_problem') { const b = req.postDataJSON(); problems.push({ user_id: me, ...b }); return json('00000000-0000-0000-0000-000000000001') }
   if (path.startsWith('/rest/v1/')) return json([]) // share links, inbox
   return json({})
@@ -115,7 +128,7 @@ const person = (uid, id) => cloudOf(uid)?.people.find(x => x.id === id)
 const toasts = p => p.evaluate(() => window.__core.ui.toasts.map(t => t.msg))
 const results = []
 async function scenario(name, fn, opt = {}) {
-  db.clear(); files.clear(); log.deletes = []; log.saves = []; down = false; gone.clear(); problems.length = 0; rpcMissing = false
+  db.clear(); files.clear(); log.deletes = []; log.saves = []; down = false; gone.clear(); problems.length = 0; rpcMissing = false; links.clear(); answers.length = 0
   seed('uidA', [P('a1', { avatar: 'sb:uidA/a1/avatar-1.png' }), P('a2', { avatar: 'sb:uidA/a2/avatar-2.png' }), P('a3')])
   seed('uidB', [P('b1', { avatar: 'sb:uidB/b1/avatar-9.png' })])
   try {
@@ -297,6 +310,86 @@ await scenario('Сообщить о проблеме: текст и тех. де
   await until(async () => (await toasts(t1)).some(m => m.includes('Спасибо')), 'thank-you toast')
   await c.close()
 })
+
+// ---------------------------------------------------------------- «Ссылка на древо»
+function seedFamily() {
+  db.set('uidA', { updated_at: pgTime(Date.now() - 864e5), data: { rels: [{ id: 'r1', type: 'spouse', a: 'a1', b: 'a2', from: '1926' }, { id: 'r2', type: 'parent', a: 'a1', b: 'a3', from: '' }, { id: 'r3', type: 'parent', a: 'a2', b: 'a3', from: '' }, { id: 'r4', type: 'spouse', a: 'a3', b: 'a4', from: '2010' }, { id: 'r5', type: 'parent', a: 'a1', b: 'a5', from: '' }, { id: 'r6', type: 'parent', a: 'a1', b: 'a6', from: '' }],
+    achievements: [], settings: { onboarded: true, familyName: 'uidA', meId: 'a3', theme: 'night' },
+    people: [P('a1', { first: 'Пётр', last: 'Ветров', patronymic: 'Ильич', birthDate: '12.03.1898', birthPlace: 'Вологда', deathDate: '02.11.1969', deathPlace: 'Ленинград', bio: 'СЕКРЕТНАЯ ИСТОРИЯ', avatar: 'sb:uidA/a1/avatar-1.png' }),
+      P('a2', { first: 'Мария', last: 'Ветрова', gender: 'f', birthDate: '30.07.1902', deathDate: '15.04.1980' }),
+      P('a3', { first: 'Дмитрий', last: 'Ветров', patronymic: 'Андреевич', birthDate: '25.02.1985', birthPlace: 'Москва', job: 'Разработчик' }),
+      P('a4', { first: 'Ольга', last: 'Ветрова', gender: 'f', birthDate: '02.11.1988', birthPlace: 'Тула' }),
+      P('a5', { first: 'Младший', last: 'Ветров', birthDate: '1990' }), P('a6', { first: 'Старшая', last: 'Ветрова', gender: 'f', birthDate: '1980' }),
+      P('a7', { first: 'Геннадий', last: 'Ветров', birthDate: '28.10.1946', deathDate: '2021' })] } })
+  files.add('uidA/a1/avatar-1.png')
+}
+async function makeLink(t, mode) {
+  await t.click('#btnShare')
+  if (mode === 'ask') await t.getByRole('radio', { name: /Для родных/ }).click()
+  await t.getByRole('button', { name: 'Создать ссылку' }).click()
+  await t.waitForSelector('#shLink', { timeout: 15000 })
+  return [...links.values()].pop()
+}
+
+await scenario('Ссылка для соцсетей: в снимке живые только по имени, без историй; гость видит древо и кнопку «Построить»', async () => {
+  seedFamily()
+  const c = await ctx(); const t = await open(c); await signIn(t, 'a@x.ru'); await ready(t, 'uidA')
+  const ownerOrder = await t.evaluate(() => [...document.querySelectorAll('#treeSvg .node')].map(n => [n.dataset.id, n.getBoundingClientRect().x, n.getBoundingClientRect().y]).sort((a, b) => a[2] - b[2] || a[1] - b[1]).map(x => x[0]).join(' '))
+  const l = await makeLink(t, 'show')
+  assert.equal(l.mode, 'show'); assert.ok(l.expires_at.startsWith('2100'), 'no end date')
+  const P_ = id => l.snapshot.people.find(p => p.id === id)
+  assert.equal(P_('a1').last, 'Ветров'); assert.equal(P_('a1').birthDate, '1898'); assert.equal(P_('a1').deathDate, '1969'); assert.equal(P_('a1').birthPlace, 'Вологда')
+  assert.ok(P_('a1').avatar.startsWith('data:image/jpeg'), 'photo inside the snapshot')
+  assert.equal(P_('a3').last, ''); assert.equal(P_('a3').birthDate, ''); assert.equal(P_('a3').birthPlace, ''); assert.equal(P_('a3').patronymic, '')
+  assert.ok(!JSON.stringify(l.snapshot).includes('СЕКРЕТНАЯ'), 'no stories'); assert.ok(!JSON.stringify(l.snapshot).includes('Разработчик'), 'no jobs')
+  assert.equal(l.snapshot.rels.find(r => r.id === 'r4').from, '', 'wedding year of the living hidden')
+  // the guest, in another browser
+  const gc = await ctx(), g = await gc.newPage(); await g.goto(APP.replace('e2e.html', 'e2e.html?s=' + l.token))
+  await g.waitForSelector('#demo.shared.show .node', { timeout: 15000 })
+  assert.equal(await g.locator('.sh-who-btn').count(), 0, 'no «Кто вы?» for social networks')
+  assert.ok(await g.getByText('Построить своё древо').isVisible())
+  await sleep(3500)
+  const guestOrder = await g.evaluate(() => [...document.querySelectorAll('#treeSvg .node')].map(n => [n.dataset.id, n.getBoundingClientRect().x, n.getBoundingClientRect().y]).sort((a, b) => a[2] - b[2] || a[1] - b[1]).map(x => x[0]).join(' '))
+  assert.equal(guestOrder, ownerOrder, 'the guest sees the same layout as the owner')
+  await g.locator('.node[data-id="a1"]').click(); await g.waitForSelector('.dm-card')
+  assert.match(await g.textContent('.dm-card'), /Пётр Ветров/)
+  assert.equal(await g.locator('.dm-card .sh-add').count(), 0, 'no «Дополнить»')
+  await g.screenshot({ path: '/home/claude/e2e/share-show.png' })
+  await c.close(); await gc.close()
+}, { custom: 1 })
+
+await scenario('Ссылка для родных: гость выбирает себя, дополняет человека, ответ уходит владельцу', async () => {
+  seedFamily()
+  const c = await ctx(); const t = await open(c); await signIn(t, 'a@x.ru'); await ready(t, 'uidA')
+  const l = await makeLink(t, 'ask')
+  assert.equal(l.mode, 'ask'); assert.equal(l.snapshot.people.find(p => p.id === 'a3').last, 'Ветров', 'relatives see full names')
+  assert.ok(!JSON.stringify(l.snapshot).includes('СЕКРЕТНАЯ'), 'no stories')
+  await t.screenshot({ path: '/home/claude/e2e/share-dialog.png' })
+  await c.close()
+  const gc = await ctx(), g = await gc.newPage(); await g.setViewportSize({ width: 1280, height: 800 }); await g.goto(APP.replace('e2e.html', 'e2e.html?s=' + l.token))
+  await g.bringToFront(); await g.waitForSelector('#demo.shared.ask .node', { timeout: 15000 }); await sleep(3500)
+  await g.click('.sh-who-btn'); await g.getByRole('option', { name: 'Ольга Ветрова' }).click()
+  await g.locator('.node[data-id="a2"]').click(); await g.waitForSelector('.dm-card .sh-add')
+  await g.screenshot({ path: '/home/claude/e2e/share-ask-card.png' })
+  await g.click('.dm-card .sh-add')
+  await g.fill('#shBd', '30071902'); await g.fill('#shSt', 'Пекла пироги с черникой')
+  assert.equal(await g.inputValue('#shName'), 'Ольга')
+  await g.screenshot({ path: '/home/claude/e2e/share-ask-form.png' })
+  await g.getByRole('button', { name: /Отправить/ }).click()
+  await until(() => answers.length === 1, 'answer saved')
+  assert.equal(answers[0].author, 'Ольга'); assert.deepEqual(answers[0].items.map(i => i.t), ['field', 'story'])
+  assert.equal(answers[0].items[0].v, '30.07.1902')
+  await g.waitForSelector('.sh-sent')
+  await gc.close()
+}, { custom: 1 })
+
+await scenario('Старая ссылка из «Пробелов» открывает прежнюю страницу; закрытая — не открывается', async () => {
+  links.set('oldtoken1234567890abcdef', { token: 'oldtoken1234567890abcdef', user_id: 'uidA', mode: 'ask', revoked: false, expires_at: new Date(Date.now() + 864e5).toISOString(),
+    snapshot: { v: 1, lang: 'ru', made: '', owner: 'Дмитрий', ownerId: 'a1', family: 'Ветровы', to: null, gap: null, people: [P('a1')], rels: [] } })
+  const gc = await ctx(), g = await gc.newPage(); await g.goto(APP.replace('e2e.html', 'e2e.html?s=oldtoken1234567890abcdef'))
+  await g.waitForSelector('.gs', { timeout: 15000 })
+  assert.equal(await g.locator('#demo.shared').count(), 0); await gc.close()
+}, { custom: 1 })
 
 await browser.close()
 console.log(`\n${results.filter(r => r[0] === '✓').length} из ${results.length} сценариев прошли`)

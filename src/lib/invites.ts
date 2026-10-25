@@ -9,10 +9,13 @@ import { rootPerson } from './treeLayout'
 import { goal } from './analytics'
 import { familyTitle } from './treeStyle'
 import type { Gap } from './gaps'
+import { mediaBlob } from './media'
 
 /** What the relative sees: names, relations, dates and places. No photos, documents, stories or notes. */
 export interface Snapshot {
-  v: 1; lang: 'ru' | 'en'; made: string
+  v: 1 | 2; lang: 'ru' | 'en'; made: string
+  /** v2, «Ссылка на древо»: who the link is for (relatives may suggest additions) and the tree's look */
+  mode?: LinkMode; style?: { theme?: string; lines?: 'smooth' | 'straight'; kin?: boolean }
   owner: string; ownerId: string | null; family: string
   /** the relative the link was made for (labels and the question are worded for them) */
   to: string | null
@@ -29,7 +32,9 @@ export type Item =
   | { t: 'note'; v: string; st?: Decision }
 export type Decision = 'ok' | 'no'
 export interface Suggestion { id: string; token: string; author: string; items: Item[]; status: 'new' | 'done'; created_at: string }
-export interface ShareLink { token: string; label: string; created_at: string; expires_at: string; revoked: boolean }
+export interface ShareLink { token: string; label: string; created_at: string; expires_at: string; revoked: boolean; mode?: LinkMode | null }
+/** «Ссылка на древо»: show — for social networks, only to look; ask — for relatives, who may suggest additions */
+export type LinkMode = 'show' | 'ask'
 
 // ---------- owner: links ----------
 const URL_KEY = 's'
@@ -57,6 +62,8 @@ export function buildSnapshot(to: string | null, gap: Gap | null): Snapshot {
 /** a server error → a sentence for the owner */
 export function serverError(e: { code?: string; message?: string } | null | undefined) {
   const ru = LANG !== 'en', m = (e?.message || '').toLowerCase()
+  if (e?.code === '42703' || e?.code === 'PGRST204' || (m.includes('mode') && (m.includes('column') || m.includes('schema cache'))))
+    return ru ? 'Ссылки на древо ещё не включены: выполните SQL из файла supabase/share-links-v2.sql в Supabase' : 'Tree links are not set up yet: run supabase/share-links-v2.sql in Supabase'
   if (e?.code === 'PGRST202' || e?.code === '42P01' || e?.code === 'PGRST205' || m.includes('does not exist') || m.includes('could not find'))
     return ru ? 'Ссылки ещё не включены на сервере: выполните SQL из файла supabase/share-links.sql в Supabase' : 'Links are not set up on the server yet: run supabase/share-links.sql in Supabase'
   if (m.includes('fetch') || m.includes('network') || m.includes('timeout')) return ru ? 'Нет связи с сервером. Проверьте интернет' : 'Cannot reach the server. Check your connection'
@@ -70,6 +77,59 @@ export async function createLink(to: string | null, gap: Gap | null) {
   const { error } = await sb.from('share_links').insert({ token, label, snapshot: buildSnapshot(to, gap) })
   if (error) throw new Error(serverError(error))
   S.settings.asked = (S.settings.asked || 0) + 1; commit()
+  refreshInbox()
+  return linkUrl(token)
+}
+// ---------- owner: «Ссылка на древо» ----------
+/** a link for social networks has no end date: it works until it is closed */
+const FOREVER = '2100-01-01T00:00:00Z'
+export const isForever = (iso: string) => +new Date(iso) >= +new Date(FOREVER) - 864e5
+const isGone = (p: Person) => !!(p.deathDate || p.deathPlace || (p.events || []).some(e => e.type === 'death'))
+/** A family photo as a small square JPEG inside the snapshot: guests have no access to the private bucket. */
+async function smallPhoto(ref: string) {
+  const bmp = await createImageBitmap(await mediaBlob(ref))
+  const s = Math.min(bmp.width, bmp.height), N = 112
+  const cv = document.createElement('canvas'); cv.width = cv.height = N
+  const x = cv.getContext('2d')!; x.imageSmoothingQuality = 'high'
+  x.drawImage(bmp, (bmp.width - s) / 2, (bmp.height - s) / 2, s, s, 0, 0, N, N)
+  bmp.close()
+  return cv.toDataURL('image/jpeg', .72)
+}
+/** What the link shows, made once now: later edits of the tree do not reach it.
+ *  ask — as «Попросить заполнить»: names, dates, places; show — the dead with names, years and places, the living by first name only.
+ *  Both carry photos, frames and the tree's look. Never: stories, notes, documents, the gallery. */
+export async function buildTreeSnapshot(mode: LinkMode): Promise<Snapshot> {
+  const snap = buildSnapshot(null, null)
+  if (mode === 'show') {
+    const gone = new Set(S.people.filter(isGone).map(p => p.id))
+    snap.people = snap.people.map(p => gone.has(p.id)
+      ? { ...p, birthDate: yearOf(p.birthDate), deathDate: yearOf(p.deathDate), events: [] }
+      : { ...p, last: '', maiden: '', patronymic: '', birthDate: '', birthPlace: '', deathDate: '', deathPlace: '', events: [] })
+    snap.rels = snap.rels.map(r => gone.has(r.a) && gone.has(r.b) ? r : { ...r, from: '' })
+  }
+  // the order the layout puts people in (elder first, by birth year): the same layout for the guest, even with the years left out
+  const age = (p: Person) => yearOf(p.birthDate) || '9999'
+  const ord = new Map(S.people.map((p, i) => [p.id, i] as const).sort((a, b) => age(S.people[a[1]]).localeCompare(age(S.people[b[1]])) || a[1] - b[1]).map(([id], k) => [id, k]))
+  snap.people.forEach(p => { p.ord = ord.get(p.id) })
+  const own = new Map(S.people.map(p => [p.id, p]))
+  snap.people.forEach(p => { const f = own.get(p.id)?.frame; if (f) p.frame = f })
+  // photos within a budget: the snapshot must stay under the database's limit (about 800 KB)
+  let budget = 560_000
+  for (const p of snap.people) {
+    const ref = own.get(p.id)?.avatar; if (!ref || budget <= 0) continue
+    try { const d = await smallPhoto(ref); if (d.length < budget) { p.avatar = d; budget -= d.length } } catch { /* this one keeps the default portrait */ }
+  }
+  snap.v = 2; snap.mode = mode
+  snap.style = { theme: S.settings.theme, lines: S.settings.lines, kin: S.settings.kin }
+  return snap
+}
+export async function createTreeLink(mode: LinkMode) {
+  goal('tree_link', { mode })
+  if (!cloud.session) throw new Error(LANG === 'en' ? 'Sign in to share links' : 'Чтобы делиться ссылкой, войдите в аккаунт')
+  const token = newToken(), snapshot = await buildTreeSnapshot(mode)
+  const { error } = await sb.from('share_links').insert({ token, label: '', snapshot, mode, ...(mode === 'show' ? { expires_at: FOREVER } : {}) })
+  if (error) throw new Error(serverError(error))
+  if (mode === 'ask') { S.settings.asked = (S.settings.asked || 0) + 1; commit() }
   refreshInbox()
   return linkUrl(token)
 }
@@ -90,9 +150,12 @@ export function refreshInbox() {
     try {
       const [a, b] = await Promise.all([
         sb.from('suggestions').select('id, token, author, items, status, created_at').order('created_at', { ascending: false }).limit(100),
-        sb.from('share_links').select('token, label, created_at, expires_at, revoked').order('created_at', { ascending: false }).limit(100),
+        sb.from('share_links').select('token, label, created_at, expires_at, revoked, mode').order('created_at', { ascending: false }).limit(100),
       ])
-      if (a.error) throw a.error; if (b.error) throw b.error
+      if (a.error) throw a.error
+      if (b.error && (b.error.code === '42703' || /mode/.test(b.error.message || ''))) // share-links-v2.sql not run yet: links without their kind
+        Object.assign(b, await sb.from('share_links').select('token, label, created_at, expires_at, revoked').order('created_at', { ascending: false }).limit(100))
+      if (b.error) throw b.error
       inbox.list = (a.data || []) as Suggestion[]; inbox.links = (b.data || []) as ShareLink[]; inbox.error = ''
     } catch (e) { inbox.error = serverError(e as { message?: string }) }
     inbox.loaded = true; loading = null; bump()
@@ -162,10 +225,11 @@ export function describe(it: Item): { who: string; what: string; value: string; 
 }
 
 // ---------- guest ----------
-export async function fetchShared(token: string): Promise<{ snapshot: Snapshot; expires_at: string } | null> {
+export interface Shared { snapshot: Snapshot; expires_at: string; mode?: LinkMode }
+export async function fetchShared(token: string): Promise<Shared | null> {
   const { data, error } = await sb.rpc('shared_tree', { p_token: token })
   if (error) throw error
-  return (data as { snapshot: Snapshot; expires_at: string } | null) || null
+  return (data as Shared | null) || null
 }
 export async function submitAnswer(token: string, author: string, items: Item[]) {
   const { error } = await sb.rpc('submit_suggestion', { p_token: token, p_author: author, p_items: items })
