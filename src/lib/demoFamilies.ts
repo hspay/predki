@@ -1,6 +1,6 @@
 // The four sample families of «Смотреть пример древа». A separate file, loaded only when the demo opens (lib/demo.ts),
 // so the app itself does not carry ~50 KB of Westeros and the Romanovs for everyone.
-import type { Gender } from './core'
+import type { EvType, Gender } from './core'
 import type { PresetType } from './avatars'
 
 export type Two = [string, string] // [ru, en]
@@ -39,7 +39,18 @@ export interface DemoFamily {
   pets?: [string, Two, string, string?, string?][]
   /** people with a real photo: public/demo/<k>/<id>.webp (192 px, public domain, sources in CREDITS.txt next to them) */
   photos?: string[]
+  /** the family has life events, so the demo also shows its Map and Family book (only the Cullens for now) */
+  views?: boolean
+  /** coordinates of the places, for the map: [lat, lon] */
+  geo?: Record<string, [number, number]>
+  /** life events: person → [type, year, place, note, wedding date, spouse] */
+  ev?: Record<string, DE[]>
+  /** births and deaths with their places become life events too (the Romanovs: no moves, but real places) */
+  lifeFromPlaces?: boolean
+  /** a short story and an occupation, for the Family book */
+  bio?: Record<string, Two>; job?: Record<string, Two>
 }
+type DE = [EvType, number, string, Two?, string?, string?]
 
 // ---------------------------------------------------------------- the Targaryens and the great houses around them: from Daenerys
 // «Песнь льда и пламени», «Пламя и кровь», «Повести о Дунке и Эгге» and both series. A marriage told in at least one of them counts.
@@ -361,8 +372,48 @@ const CULLEN: DemoFamily = {
   face: 'nessie', faceDat: ['Ренесми', 'Renesmee'], faceLabel: ['главная героиня', 'main character'],
   theme: 'steel', frame: { id: 'modern', color: 'black' }, frameAll: true, now: 2006,
   places: {
-    lon: ['Лондон', 'London'], col: ['Колумбус', 'Columbus'], chi: ['Чикаго', 'Chicago'], bil: ['Билокси', 'Biloxi'], tx: ['Техас', 'Texas'],
+    lon: ['Лондон', 'London'], col: ['Колумбус', 'Columbus'], chi: ['Чикаго', 'Chicago'], bil: ['Билокси', 'Biloxi'], hou: ['Хьюстон', 'Houston'],
     roc: ['Рочестер', 'Rochester'], gat: ['Гатлинбург', 'Gatlinburg'], fks: ['Форкс', 'Forks'], lp: ['Ла-Пуш', 'La Push'],
+    vol: ['Вольтерра', 'Volterra'], ash: ['Эшленд', 'Ashland'], phl: ['Филадельфия', 'Philadelphia'], phx: ['Финикс', 'Phoenix'], jax: ['Джэксонвилл', 'Jacksonville'],
+  },
+  views: true,
+  geo: {
+    lon: [51.51, -0.13], col: [39.96, -83.0], chi: [41.88, -87.63], bil: [30.4, -88.89], hou: [29.76, -95.37], roc: [43.16, -77.61], gat: [35.71, -83.51],
+    fks: [47.95, -124.39], lp: [47.91, -124.64], vol: [43.4, 10.86], ash: [46.59, -90.88], phl: [39.95, -75.17], phx: [33.45, -112.07], jax: [30.33, -81.66],
+  },
+  // only what the books tell: Carlisle in Volterra, the 1918 epidemic in Chicago, Esme found in Ashland in 1921,
+  // Rosalie in Rochester in 1933, Alice and Jasper meeting in Philadelphia in 1948, the move to Forks two years before Bella came
+  ev: {
+    carlisle: [['birth', 1640, 'lon'], ['other', 1700, 'vol', ['Несколько десятилетий жил у Вольтури, год примерный', 'Spent several decades with the Volturi, approximate year']],
+      ['work', 1918, 'chi', ['Врач в больнице во время эпидемии испанки', 'A hospital doctor during the Spanish flu']], ['work', 1921, 'ash', ['Врач', 'Doctor']],
+      ['move', 1933, 'roc'], ['work', 2003, 'fks', ['Хирург в больнице Форкса', 'A surgeon at Forks hospital']]],
+    esme: [['birth', 1895, 'col'], ['move', 1921, 'ash', ['Здесь Карлайл нашёл её во второй раз', 'Where Carlisle found her for the second time']], ['move', 1933, 'roc'], ['move', 2003, 'fks']],
+    masen: [['death', 1918, 'chi', ['Испанка', 'Spanish flu']]], elizabeth: [['death', 1918, 'chi', ['Испанка', 'Spanish flu']]],
+    edward: [['birth', 1901, 'chi'], ['move', 1921, 'ash', ['Вместе с Карлайлом', 'With Carlisle']], ['move', 1933, 'roc'], ['move', 2003, 'fks'],
+      ['marriage', 2006, 'fks', undefined, '13.08.2006', 'bella']],
+    rosalie: [['birth', 1915, 'roc'], ['move', 2003, 'fks']],
+    emmett: [['birth', 1915, 'gat'], ['move', 2003, 'fks']],
+    alice: [['birth', 1901, 'bil'], ['move', 1948, 'phl', ['Встретила Джаспера', 'Met Jasper']], ['move', 2003, 'fks']],
+    jasper: [['birth', 1843, 'hou'], ['move', 1948, 'phl', ['Встретил Элис', 'Met Alice']], ['move', 2003, 'fks']],
+    bella: [['birth', 1987, 'fks'], ['move', 1987, 'phx', ['С мамой', 'With her mother']], ['move', 2005, 'fks', ['Переехала к папе', 'Moved in with her father']],
+      ['marriage', 2006, 'fks', undefined, '13.08.2006', 'edward']],
+    renee: [['move', 1987, 'phx'], ['move', 2005, 'jax', ['Вместе с Филом', 'With Phil']]],
+    phil: [['move', 2005, 'jax']],
+    nessie: [['birth', 2006, 'fks']],
+    jacob: [['birth', 1990, 'lp']],
+  },
+  job: { carlisle: ['Врач', 'Doctor'], charlie: ['Шеф полиции Форкса', 'Chief of police in Forks'] },
+  bio: {
+    carlisle: ['Сын англиканского пастора из Лондона. Много лет учился в Европе и несколько десятилетий провёл в Вольтерре. Везде, где жила семья, работал врачом.',
+      'The son of an Anglican pastor from London. He studied across Europe for years and spent several decades in Volterra. Wherever the family lived, he worked as a doctor.'],
+    edward: ['Родился в Чикаго. В 1918 году родители умерли от испанки, и Карлайл взял его в семью. Играет на рояле и сочиняет музыку.',
+      'Born in Chicago. In 1918 his parents died of the Spanish flu, and Carlisle took him into the family. He plays the piano and writes music.'],
+    esme: ['Выросла в Колумбусе. Любит восстанавливать старые дома: каждый дом семьи она обставляет сама.',
+      'Grew up in Columbus. She loves restoring old houses and furnishes every one of the family’s homes herself.'],
+    bella: ['Выросла с мамой в Финиксе. В 17 лет переехала к папе в Форкс и там познакомилась с Эдвардом.',
+      'Grew up with her mother in Phoenix. At 17 she moved in with her father in Forks and met Edward there.'],
+    alice: ['В 1948 году встретила Джаспера в кафе в Филадельфии. Через два года они вместе нашли Калленов.',
+      'In 1948 she met Jasper in a diner in Philadelphia. Two years later they found the Cullens together.'],
   },
   people: [
     { id: 'geoffrey', g: 'm', n: ['Джеффри', 'Свон', 'Geoffrey', 'Swan'], look: 'oldm' },
@@ -383,7 +434,7 @@ const CULLEN: DemoFamily = {
     { id: 'edward', g: 'm', n: ['Эдвард', 'Каллен', 'Edward', 'Cullen'], was: ['Мейсен', 'Masen'], b: '20.06.1901', bp: 'chi', look: 'man' },
     { id: 'bella', g: 'f', n: ['Белла', 'Свон', 'Bella', 'Swan'], b: '13.09.1987', bp: 'fks', look: 'woman' },
     { id: 'alice', g: 'f', n: ['Элис', 'Каллен', 'Alice', 'Cullen'], was: ['Брэндон', 'Brandon'], b: '1901', bp: 'bil', look: 'woman' },
-    { id: 'jasper', g: 'm', n: ['Джаспер', 'Хейл', 'Jasper', 'Hale'], was: ['Уитлок', 'Whitlock'], b: '1843', bp: 'tx', look: 'man' },
+    { id: 'jasper', g: 'm', n: ['Джаспер', 'Хейл', 'Jasper', 'Hale'], was: ['Уитлок', 'Whitlock'], b: '1843', bp: 'hou', look: 'man' },
     { id: 'rosalie', g: 'f', n: ['Розали', 'Хейл', 'Rosalie', 'Hale'], b: '1915', bp: 'roc', look: 'woman' },
     { id: 'emmett', g: 'm', n: ['Эмметт', 'Каллен', 'Emmett', 'Cullen'], was: ['Маккарти', 'McCarty'], b: '1915', bp: 'gat', look: 'man' },
     { id: 'nessie', g: 'f', n: ['Ренесми', 'Каллен', 'Renesmee', 'Cullen'], b: '09.2006', bp: 'fks', look: 'girl' },
@@ -423,6 +474,26 @@ const ROMANOV: DemoFamily = {
     can: ['Канны', 'Cannes'], liv: ['Ливадия', 'Livadia'], cph: ['Копенгаген', 'Copenhagen'], hvi: ['Видёре', 'Hvidøre'], lon: ['Лондон', 'London'],
     osb: ['Осборн', 'Osborne'], win: ['Виндзор', 'Windsor'], alap: ['Алапаевск', 'Alapayevsk'], ekb: ['Екатеринбург', 'Yekaterinburg'], abas: ['Абастумани', 'Abastumani'],
     tif: ['Тифлис', 'Tiflis'], perm: ['Пермь', 'Perm'], tor: ['Торонто', 'Toronto'],
+  },
+  views: true, lifeFromPlaces: true,
+  bio: {
+    nick2: ['Последний российский император. Правил с 1894 года, в 1917‑м отрёкся от престола. В 1918 году вместе с семьёй расстрелян в Екатеринбурге.',
+      'The last Russian emperor. He reigned from 1894 and abdicated in 1917. In 1918 he was shot together with his family in Yekaterinburg.'],
+    alix: ['Родилась в Дармштадте, внучка британской королевы Виктории. Последняя российская императрица.',
+      'Born in Darmstadt, a granddaughter of Queen Victoria. The last Russian empress.'],
+    alexeiN: ['Единственный сын Николая II и наследник престола. С детства болел гемофилией.',
+      'The only son of Nicholas II and heir to the throne. He had haemophilia from early childhood.'],
+    peter1: ['Первый российский император. Основал Санкт-Петербург и перенёс туда столицу из Москвы.',
+      'The first Russian emperor. He founded Saint Petersburg and moved the capital there from Moscow.'],
+    cath2: ['Родилась в Штеттине немецкой принцессой. Стала императрицей в 1762 году и правила Россией 34 года.',
+      'Born a German princess in Stettin. She became empress in 1762 and ruled Russia for 34 years.'],
+  },
+  geo: {
+    msk: [55.76, 37.62], spb: [59.94, 30.31], ts: [59.72, 30.4], ph: [59.88, 29.91], kol: [55.67, 37.67], kiel: [54.32, 10.13], stet: [53.43, 14.55],
+    rops: [59.73, 29.86], ros: [54.09, 12.1], kh: [64.22, 41.65], shl: [59.94, 31.03], pav: [59.69, 30.43], karl: [49.01, 8.4], bel: [53.81, 36.13],
+    tag: [47.21, 38.94], vit: [55.19, 30.2], ber: [52.52, 13.4], darm: [49.87, 8.65], nice: [43.7, 7.27], can: [43.55, 7.02], liv: [44.47, 34.14],
+    cph: [55.68, 12.57], hvi: [55.75, 12.59], lon: [51.51, -0.13], osb: [50.75, -1.27], win: [51.48, -0.61], alap: [57.85, 61.69], ekb: [56.84, 60.61],
+    abas: [41.75, 42.83], tif: [41.69, 44.8], perm: [58.01, 56.23], tor: [43.65, -79.38],
   },
   people: [
     W('filaret', 'm', 'Фёдор (Филарет)|Романов', 'Feodor (Filaret)|Romanov', undefined, undefined, '01.10.1633', 'msk', { look: 'oldm' }),

@@ -46,6 +46,26 @@ export function buildFamily(f: DemoFamily): Data {
     const pool = free.length ? free : list; p.preset = pool[Math.floor(rnd() * pool.length)]
   })
   if (f.frame) (f.frameAll ? people : [byId(f.face)]).forEach(p => { p.frame = { ...f.frame! } })
+  // life events, stories and occupations, for the Map and the Family book
+  Object.entries(f.ev || {}).forEach(([id, list]) => {
+    const p = people.find(x => x.id === id); if (!p) return
+    p.events = list.map(([type, year, pk, note, date, w], i) => {
+      const g = f.geo?.[pk]
+      return { id: `${id}e${i}`, type, year, place: place(pk), lat: g ? g[0] : null, lon: g ? g[1] : null, note: tr(note), ...(date ? { date } : {}), ...(w ? { with: w } : {}) }
+    })
+  })
+  if (f.lifeFromPlaces) {
+    const geoOf = (name: string) => { const k = Object.keys(f.places).find(k => place(k) === name); return k ? f.geo?.[k] : undefined }
+    people.forEach(p => {
+      ;([['birth', p.birthDate, p.birthPlace], ['death', p.deathDate, p.deathPlace]] as const).forEach(([type, date, pl], i) => {
+        const y = +(String(date).match(/\d{3,4}/)?.[0] || 0); if (!y) return
+        const g = pl ? geoOf(pl) : undefined
+        p.events.push({ id: `${p.id}l${i}`, type, year: y, place: pl, lat: g ? g[0] : null, lon: g ? g[1] : null, note: '' })
+      })
+    })
+  }
+  Object.entries(f.bio || {}).forEach(([id, v]) => { const p = people.find(x => x.id === id); if (p) p.bio = tr(v) })
+  Object.entries(f.job || {}).forEach(([id, v]) => { const p = people.find(x => x.id === id); if (p) p.job = tr(v) })
   // real photos: small files next to the site, loaded only when this family opens
   ;(f.photos || []).forEach(id => { const p = people.find(x => x.id === id); if (p) p.avatar = `demo/${f.k}/${id}.webp` })
   // pets: Westeros years lose their leading zeros («0298» → «298»)

@@ -19,6 +19,17 @@
 .dm-x:hover{border-color:var(--sky);background:var(--glass-2)}
 .dm-x svg,.dm-card-x svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
 .dm-main{position:relative;flex:1;min-height:0;border-radius:14px;overflow:hidden;border:1.5px solid var(--edge)}
+/* Tree · Map · Family book, for a family with life events: quieter than the family tabs above it */
+.dm-views{display:flex;gap:2px;padding:3px;border-radius:10px;border:1.5px solid var(--edge);background:var(--chrome)}
+.dm-views button{padding:7px 14px 6px;border-radius:7px;font:500 11.5px/1 var(--f-mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);white-space:nowrap;transition:background .25s,color .25s}
+.dm-views button:hover{color:var(--ink);background:var(--glass-2)}
+.dm-views button[aria-selected="true"]{color:var(--ink);background:var(--glass-3);box-shadow:inset 0 0 0 1.5px var(--sky)}
+.dm-view{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--mainbg,var(--bg))}
+.dm-view>.page{position:relative;inset:auto;flex:1;min-height:0;animation:none}
+.dm-view .topbar{display:none}
+/* on the Map and in the Book the CTA has its own strip below, so it never covers names or text */
+.dm-view .dm-cta{position:static;transform:none;width:auto;max-width:none;flex:none;align-self:center;padding:12px 0 14px;border-top:1.5px solid var(--edge)}
+.dm-view .dm-cta{align-self:stretch;align-items:center}
 .dm-main .tree-wrap{flex:1}
 
 /* the card of the selected person: the usual chain-of-relatives card, with birth, death and places */
@@ -64,6 +75,9 @@
   .dm-mid{grid-area:mid;align-items:stretch}
   .dm-fams{display:grid;grid-template-columns:1fr 1fr}
   .dm-fams button{padding:8px 6px 7px;font-size:17px}
+  .dm-views{display:grid;grid-template-columns:repeat(3,1fr)}
+  .dm-views button{padding:8px 4px 7px;text-align:center}
+  .dm-view .dm-cta{padding:8px 12px 10px}
   .dm-sub{font-size:10.5px;gap:2px 10px;flex-direction:column;align-items:center}
   .dm-sub .tag{display:none}
   .dm-sub>span+span::before{display:none}

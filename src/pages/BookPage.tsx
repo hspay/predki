@@ -84,10 +84,11 @@ function near(p: Person, y: number) {
 /** who has a life worth a chapter: events, a story, a birth year */
 const richness = (p: Person) => (p.events || []).length + ((p.bio || '').trim() ? 3 : 0) + (life(p.id).by ? 1 : 0)
 
-export default function BookPage() {
+/** demo: the sample families' book, read-only — no way back to «Хранитель», witnesses are not links */
+export default function BookPage({ demo = false, start }: { demo?: boolean; start?: string }) {
   const people = useMemo(() => S.people.filter(p => richness(p) >= 2).sort((a, b) => richness(b) - richness(a)), [S.people.length, S.people])
   const me = rootPerson()
-  const [cur, setCur] = useState<string>(() => (people.find(p => p.id !== me?.id && (p.bio || '').length > 80) || people[0] || me)?.id || '')
+  const [cur, setCur] = useState<string>(() => (start && byId(start) ? byId(start) : people.find(p => p.id !== me?.id && (p.bio || '').length > 80) || people[0] || me)?.id || '')
   const p = byId(cur) || people[0]
   const box = useRef<HTMLDivElement>(null)
   useEffect(() => { box.current?.closest('.scroll')?.scrollTo({ top: 0, behavior: 'smooth' }) }, [cur])
@@ -107,7 +108,7 @@ export default function BookPage() {
     <section className="page active" data-page="book" id="bookPage">
       <div className="topbar">
         <h2><span>{L('Книга семьи', 'Family book')}</span><span className="sub">{people.length} {plural(people.length, ['глава', 'главы', 'глав'], ['chapter', 'chapters'])} · {L('жизнь каждого по годам', 'each life year by year')}</span></h2>
-        <button type="button" className="btn sm ghost bk-back" onClick={() => go('keeper')}><svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6" /></svg>{L('Хранитель', 'Keeper')}</button>
+        {!demo && <button type="button" className="btn sm ghost bk-back" onClick={() => go('keeper')}><svg viewBox="0 0 24 24"><path d="m15 6-6 6 6 6" /></svg>{L('Хранитель', 'Keeper')}</button>}
       </div>
       <div className="scroll bk-scroll"><div className="bk-in" ref={box}>
         <div className="bk-picker" role="tablist" aria-label={L('Чья глава', 'Whose chapter')}>
@@ -144,7 +145,8 @@ export default function BookPage() {
               {gaps.map((g, i) => <div className="bk-gap" key={i}>
                 <p>{g.a}–{g.kind === 'tail' ? L('сегодня', 'today') : g.b}: {question(g, null)}</p>
                 {g.w.length > 0 && <div className="bk-witn"><span className="lbl">{L('Кто может рассказать:', 'Who may remember:')}</span>
-                  {g.w.map(w => { const q = byId(w)!; return <button key={w} type="button" className="bk-chip sm" onClick={() => go('gaps')}><Avatar p={q} size={22} /><span>{fullName(q)}</span><small>{witnessLabel(g.id, w)}</small></button> })}</div>}
+                  {g.w.map(w => { const q = byId(w)!, inner = <><Avatar p={q} size={22} /><span>{fullName(q)}</span><small>{witnessLabel(g.id, w)}</small></>
+                    return demo ? <span key={w} className="bk-chip sm">{inner}</span> : <button key={w} type="button" className="bk-chip sm" onClick={() => go('gaps')}>{inner}</button> })}</div>}
               </div>)}
             </>}
           </div>

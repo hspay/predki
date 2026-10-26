@@ -1,6 +1,8 @@
-import { useEffect } from 'react'
+import { useEffect, useState, lazy, Suspense } from 'react'
 import { S, ui, LANG, byId, fullName, showYear, closePanel, generations, bump } from '../lib/core'
 import TreePage, { introStep, INTRO_START } from '../pages/TreePage'
+import BookPage from '../pages/BookPage'
+const MapPage = lazy(() => import('../pages/MapPage'))
 import { FAMILIES, famOf, tr, kinOverrides, switchDemo, closeDemo, distances } from '../lib/demo'
 import { kinship, chainName } from '../lib/kinship'
 import { familyColors } from '../lib/treeLayout'
@@ -14,7 +16,7 @@ import '../demo.css'
 // Families switch at the top, the tree style can be changed with the pencil, the CTA at the bottom starts the usual onboarding.
 const TX = {
   ru: {
-    label: 'Пример древа', cta: 'Построить своё древо', close: 'Закрыть пример', closeCard: 'Закрыть карточку',
+    label: 'Пример древа', cta: 'Построить своё древо', views: 'Разделы', view: { tree: 'Древо', map: 'Карта', book: 'Книга семьи' }, close: 'Закрыть пример', closeCard: 'Закрыть карточку',
     hint: (n: string) => `Нажмите на карточку — покажем, кто это для ${n}`,
     born: (g: string): string => (g === 'f' ? 'Родилась' : 'Родился'), died: (g: string): string => (g === 'f' ? 'Умерла' : 'Умер'),
     was: 'При рождении', years: (e: string) => `Годы — ${e}`, families: 'Семьи',
@@ -24,7 +26,7 @@ const TX = {
     mNom: ['январь', 'февраль', 'март', 'апрель', 'май', 'июнь', 'июль', 'август', 'сентябрь', 'октябрь', 'ноябрь', 'декабрь'],
   },
   en: {
-    label: 'Sample tree', cta: 'Build your own tree', close: 'Close the sample', closeCard: 'Close the card',
+    label: 'Sample tree', cta: 'Build your own tree', views: 'Sections', view: { tree: 'Tree', map: 'Map', book: 'Family book' }, close: 'Close the sample', closeCard: 'Close the card',
     hint: (n: string) => `Tap a card to see who they are to ${n}`,
     born: (_g: string): string => 'Born', died: (_g: string): string => 'Died',
     was: 'Born as', years: (e: string) => `Years ${e}`, families: 'Families',
@@ -51,6 +53,11 @@ export default function DemoPage() {
   const sel = ui.panel && ui.panel.mode === 'view' ? ui.panel.id : null
   const selPet = ui.panel && ui.panel.mode === 'pet' ? ui.panel.id : null
   const theme = themeOf(S.settings.theme), col = familyColors(!!theme.light)
+  // a family with life events also shows its Map and Family book; another family opens on its Tree
+  const [view, setView] = useState<View>('tree')
+  useEffect(() => { setView('tree') }, [st.fam])
+  // a person picked on the map or in the book is shown on the tree, with their card
+  useEffect(() => { if (view !== 'tree' && (sel || selPet)) setView('tree') }, [sel, selPet])
 
   // the growth runs once; after it the tree is an ordinary still tree (and switching families does not replay it)
   useEffect(() => {
@@ -78,6 +85,9 @@ export default function DemoPage() {
             <nav className="dm-fams" role="tablist" aria-label={T.families}>
               {FAMILIES.map(f => <button key={f.k} type="button" role="tab" aria-selected={f.k === st.fam} onClick={() => switchDemo(f.k)}>{tr(f.tab)}</button>)}
             </nav>
+            {fam.views && <nav className="dm-views" role="tablist" aria-label={T.views}>
+              {VIEWS.map(v => <button key={v} type="button" role="tab" aria-selected={v === view} onClick={() => { setView(v); if (ui.panel) closePanel() }}>{T.view[v]}</button>)}
+            </nav>}
             <p className="dm-sub">
               <span className="tag">{T.label}</span>
               <span>{n} {pl(n, T.people)} · {g} {pl(g, T.gens)}</span>
@@ -89,19 +99,25 @@ export default function DemoPage() {
           </button>
         </header>
         <div className="dm-main">
-          <TreePage key={st.fam} demo={{ labels, face: fam.face, intro: st.intro }}>
+          {view !== 'tree' ? <div className={'dm-view dm-' + view}>
+            {view === 'map' ? <Suspense fallback={null}><MapPage /></Suspense> : <BookPage demo start={fam.bio?.[fam.face] ? fam.face : undefined} />}
+            <div className="dm-cta"><button type="button" className="dm-btn" onClick={() => closeDemo(true)}>{T.cta}</button></div>
+          </div> : <TreePage key={st.fam} demo={{ labels, face: fam.face, intro: st.intro }}>
             {sel && byId(sel) && <DemoCard key={sel} id={sel} T={T} label={kinOf(sel, labels)} color={sel === fam.face ? '' : col.kin(sel)} face={fam.face} />}
             {selPet && petById(selPet) && <DemoPetCard key={selPet} id={selPet} T={T} />}
             <div className="dm-cta">
               <p className="dm-hint" aria-hidden={!!(sel || selPet)}>{T.hint(tr(fam.faceDat))}</p>
               <button type="button" className="dm-btn" onClick={() => closeDemo(true)}>{T.cta}</button>
             </div>
-          </TreePage>
+          </TreePage>}
         </div>
       </div>
     </>
   )
 }
+
+type View = 'tree' | 'map' | 'book'
+const VIEWS: View[] = ['tree', 'map', 'book']
 
 /** the kinship label for one person: the demo's own words where it has them, else the usual rules */
 function kinOf(id: string, labels: Record<string, string>) {

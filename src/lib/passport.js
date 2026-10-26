@@ -31,16 +31,18 @@ const tx = () => TX[LANG === 'en' ? 'en' : 'ru']
 const plural = (n, f) => { if (LANG === 'en') return n === 1 ? f[0] : f[1]; const a = n % 10, b = n % 100; return f[(a === 1 && b !== 11) ? 0 : (a >= 2 && a <= 4 && (b < 12 || b > 14)) ? 1 : 2] }
 
 // ---------- flags (simplified, drawn inside a circle) ----------
+/** Canada's maple leaf in the 24×24 flag box */
+export const LEAF = 'M12 6L13 8.3L14.6 7.6L14.1 10.6L16.2 9.2L16.7 10.4L18.4 10L17.6 12.2L18.6 12.8L15.6 15.2L16 16.4L12.5 16L12.5 18.5L11.5 18.5L11.5 16L8 16.4L8.4 15.2L5.4 12.8L6.4 12.2L5.6 10L7.3 10.4L7.8 9.2L9.9 10.6L9.4 7.6L11 8.3Z'
 export const FLAGS = {
   RU: { h: ['#FFFFFF', '#1C57A5', '#D52B1E'] }, UA: { h: ['#0057B7', '#FFD700'] }, BY: { h: ['#C8313E', '#C8313E', '#4AA657'] }, LV: { h: ['#9E3039', '#9E3039', '#FFFFFF', '#9E3039', '#9E3039'] },
-  LT: { h: ['#FDB913', '#006A44', '#C1272D'] }, EE: { h: ['#0072CE', '#111111', '#FFFFFF'] }, MD: { v: ['#0046AE', '#FFD200', '#CC092F'] }, GE: { bg: '#FFFFFF', cross: '#E8112D' },
+  LT: { h: ['#FDB913', '#006A44', '#C1272D'] }, EE: { h: ['#0072CE', '#111111', '#FFFFFF'] }, MD: { v: ['#0046AE', '#FFD200', '#CC092F'] }, GE: { bg: '#FFFFFF', cross: '#E8112D', crosslets: true },
   AM: { h: ['#D90012', '#0033A0', '#F2A800'] }, AZ: { h: ['#00B5E2', '#EF3340', '#509E2F'] }, UZ: { h: ['#1EB5E5', '#FFFFFF', '#2FB04A'] }, KZ: { bg: '#00AFCA', disc: '#FEC50C' },
   KG: { bg: '#E8112D', sun: '#FFEF00' }, TM: { bg: '#00843D', band: '#D22630' }, TJ: { h: ['#CC0000', '#FFFFFF', '#006600'] }, DE: { h: ['#111111', '#DD0000', '#FFCE00'] }, FR: { v: ['#0055A4', '#FFFFFF', '#EF4135'] },
-  GB: { bg: '#012169', cross: '#C8102E', crossW: '#FFFFFF' }, PL: { h: ['#FFFFFF', '#DC143C'] }, CZ: { h: ['#FFFFFF', '#D7141A'], tri: '#11457E' }, AT: { h: ['#ED2939', '#FFFFFF', '#ED2939'] },
+  GB: { bg: '#012169', saltire: ['#FFFFFF', '#C8102E'], cross: '#C8102E', crossW: '#FFFFFF' }, PL: { h: ['#FFFFFF', '#DC143C'] }, CZ: { h: ['#FFFFFF', '#D7141A'], tri: '#11457E' }, AT: { h: ['#ED2939', '#FFFFFF', '#ED2939'] },
   IT: { v: ['#009246', '#FFFFFF', '#CE2B37'] }, ES: { h: ['#AA151B', '#F1BF00', '#F1BF00', '#AA151B'] }, PT: { v: ['#006600', '#FF0000', '#FF0000'] }, NL: { h: ['#AE1C28', '#FFFFFF', '#21468B'] },
   FI: { bg: '#FFFFFF', cross: '#002F6C' }, SE: { bg: '#006AA7', cross: '#FECC00' }, TR: { bg: '#E30A17', crescent: '#FFFFFF' }, IL: { h: ['#FFFFFF', '#0038B8', '#FFFFFF', '#FFFFFF', '#0038B8', '#FFFFFF'] },
   AE: { h: ['#00732F', '#FFFFFF', '#111111'], tri: '#FF0000' }, RS: { h: ['#C6363C', '#0C4076', '#FFFFFF'] }, CY: { bg: '#FFFFFF', disc: '#D57800' }, US: { h: ['#B22234', '#FFFFFF', '#B22234', '#FFFFFF', '#B22234', '#FFFFFF', '#B22234'], canton: '#3C3B6E' },
-  CA: { v: ['#FF0000', '#FFFFFF', '#FFFFFF', '#FF0000'], disc: '#FF0000' }, AR: { h: ['#74ACDF', '#FFFFFF', '#74ACDF'] }, BR: { bg: '#009C3B', disc: '#FFDF00' }, AU: { bg: '#012169', disc: '#FFFFFF' },
+  CA: { v: ['#FF0000', '#FFFFFF', '#FFFFFF', '#FF0000'], leaf: '#FF0000' }, AR: { h: ['#74ACDF', '#FFFFFF', '#74ACDF'] }, BR: { bg: '#009C3B', disc: '#FFDF00' }, AU: { bg: '#012169', disc: '#FFFFFF' },
   JP: { bg: '#FFFFFF', disc: '#BC002D' }, CN: { bg: '#EE1C25', star: '#FFDE00', starAt: 'tl' }, KR: { bg: '#FFFFFF', disc: '#CD2E3A' }, TH: { h: ['#A51931', '#F4F5F8', '#2D2A4A', '#2D2A4A', '#F4F5F8', '#A51931'] },
   VN: { bg: '#DA251D', star: '#FFFF00' }, ID: { h: ['#CE1126', '#FFFFFF'] }, EG: { h: ['#CE1126', '#FFFFFF', '#111111'] }, ZA: { h: ['#E03C31', '#FFFFFF', '#007749', '#FFFFFF', '#001489'] },
   MX: { v: ['#006847', '#FFFFFF', '#CE1126'] }, CU: { h: ['#002A8F', '#FFFFFF', '#002A8F', '#FFFFFF', '#002A8F'], tri: '#CF142B' }
@@ -60,11 +62,15 @@ export function flagSvg(code, title) {
     if (f.canton) b += `<rect width="12" height="13" fill="${f.canton}"/>`
     if (f.tri) b += `<path d="M0 0L12 12L0 24Z" fill="${f.tri}"/>`
     if (f.band) b += `<rect x="5" width="5" height="24" fill="${f.band}"/>`
+    // the Union Jack: white and red diagonals under the cross, otherwise it reads as a Nordic flag
+    if (f.saltire) b += `<path d="M0 0L24 24M24 0L0 24" stroke="${f.saltire[0]}" stroke-width="5"/><path d="M0 0L24 24M24 0L0 24" stroke="${f.saltire[1]}" stroke-width="1.8"/>`
     if (f.crossW) b += `<rect x="8" width="8" height="24" fill="${f.crossW}"/><rect y="8" width="24" height="8" fill="${f.crossW}"/>`
     if (f.cross) { const o = code === 'FI' || code === 'SE' ? -3 : 0; b += `<rect x="${10 + o}" width="4" height="24" fill="${f.cross}"/><rect y="10" width="24" height="4" fill="${f.cross}"/>` }
     if (f.star) b += `<path d="${f.starAt === 'tl' ? starPathF(7.5, 8, 4.5) : starPathF(12, 12.5, 6)}" fill="${f.star}"/>`
     if (f.sun) b += `<circle cx="12" cy="12" r="5.5" fill="${f.sun}"/><circle cx="12" cy="12" r="3" fill="none" stroke="${f.bg}" stroke-width="1"/>`
     if (f.disc) b += `<circle cx="12" cy="12" r="4.5" fill="${f.disc}"/>`
+    if (f.leaf) b += `<path d="${LEAF}" fill="${f.leaf}"/>`
+    if (f.crosslets) [[5.5, 5.5], [18.5, 5.5], [5.5, 18.5], [18.5, 18.5]].forEach(([x, y]) => { b += `<rect x="${x - .8}" y="${y - 2}" width="1.6" height="4" fill="${f.cross}"/><rect x="${x - 2}" y="${y - .8}" width="4" height="1.6" fill="${f.cross}"/>` })
     if (f.crescent) b += `<circle cx="10.5" cy="12" r="5.5" fill="${f.crescent}"/><circle cx="12" cy="12" r="4.4" fill="${f.bg}"/>`
   }
   return `<svg viewBox="0 0 24 24" role="img" aria-label="${escF(title)}"><title>${escF(title)}</title>${b}</svg>`
@@ -300,6 +306,7 @@ function flags({ c, P, D }) {
       if (f.v) { const n = f.v.length; f.v.forEach((col, i) => { c.fillStyle = col; c.fillRect(x - r + i * 2 * r / n, y - r, 2 * r / n + .5, 2 * r) }) }
       if (f.canton) { c.fillStyle = f.canton; c.fillRect(x - r, y - r, r, r * 1.08) }
       if (f.tri) { c.fillStyle = f.tri; c.beginPath(); c.moveTo(x - r, y - r); c.lineTo(x, y); c.lineTo(x - r, y + r); c.fill() }
+      if (f.saltire) [[9, f.saltire[0]], [3.3, f.saltire[1]]].forEach(([w, col]) => { c.strokeStyle = col; c.lineWidth = w; c.beginPath(); c.moveTo(x - r, y - r); c.lineTo(x + r, y + r); c.moveTo(x + r, y - r); c.lineTo(x - r, y + r); c.stroke() })
       if (f.crossW) { c.fillStyle = f.crossW; c.fillRect(x - 7, y - r, 14, 2 * r); c.fillRect(x - r, y - 7, 2 * r, 14) }
       if (f.cross) { const off = code === 'FI' || code === 'SE' ? -6 : 0; c.fillStyle = f.cross; c.fillRect(x - 4 + off, y - r, 8, 2 * r); c.fillRect(x - r, y - 4, 2 * r, 8) }
       if (f.star) { const big = f.starAt !== 'tl', sx = big ? x : x - 8, sy = big ? y : y - 7, R = big ? 10 : 7; c.fillStyle = f.star; c.beginPath()
@@ -308,6 +315,10 @@ function flags({ c, P, D }) {
         c.fillStyle = f.sun; c.beginPath(); c.arc(x, y, 6, 0, 7); c.fill(); c.strokeStyle = f.bg; c.lineWidth = 1; c.beginPath(); c.arc(x, y, 3.6, 0, 7); c.stroke() }
       if (f.band) { c.fillStyle = f.band; c.fillRect(x - r + 7, y - r, 9, 2 * r) }
       if (f.disc) { c.fillStyle = f.disc; c.beginPath(); c.arc(x, y, 8, 0, 7); c.fill() }
+      if (f.leaf || f.crosslets) { c.save(); c.translate(x - r, y - r); c.scale(r / 12, r / 12); c.fillStyle = f.leaf || f.cross
+        if (f.leaf) c.fill(new Path2D(LEAF))
+        if (f.crosslets) [[5.5, 5.5], [18.5, 5.5], [5.5, 18.5], [18.5, 18.5]].forEach(([a, b]) => { c.fillRect(a - .8, b - 2, 1.6, 4); c.fillRect(a - 2, b - .8, 4, 1.6) })
+        c.restore() }
       if (f.crescent) { c.fillStyle = f.crescent; c.beginPath(); c.arc(x - 3, y, 10, 0, 7); c.fill(); c.fillStyle = f.bg; c.beginPath(); c.arc(x, y, 8, 0, 7); c.fill() }
     }
     c.restore(); c.strokeStyle = P.ring; c.lineWidth = 3.5; c.beginPath(); c.arc(x, y, r, 0, 7); c.stroke(); x += step })

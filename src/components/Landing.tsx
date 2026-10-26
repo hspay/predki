@@ -28,8 +28,8 @@ import { demo } from '../lib/core'
 type L = 'ru' | 'en'
 const TX = {
   ru: {
-    l1: 'Мои предки', from: 'из', cities: ['Ташкента', 'Москвы', 'Токио', 'Читы', 'Берлина', 'Пензы', 'Риги', 'Казани', 'Одессы', 'Тбилиси'],
-    sub: 'Конструктор семейного древа и карта миграции', start: 'Построить древо', demo: 'Смотреть пример древа', back: 'Вернуться к древу', scroll: 'Листайте',
+    l1: 'Ваши предки', from: 'из', cities: ['Ташкента', 'Москвы', 'Токио', 'Читы', 'Берлина', 'Пензы', 'Риги', 'Казани', 'Одессы', 'Тбилиси'],
+    sub: 'Исследуйте историю семьи и постройте древо вместе с родными', start: 'Построить древо', demo: 'Смотреть пример древа', back: 'Вернуться к древу', scroll: 'Листайте',
     grow: 'Построй древо семьи за пару минут',
     tree: [['Ренесми', 'Каллен', '2006'], ['Эдвард', 'Каллен', '1901'], ['Белла', 'Свон', '1987'], ['Карлайл', 'Каллен', '1640'], ['Эсми', 'Каллен', '1895'], ['Чарли', 'Свон', '1964'], ['Рене', 'Дуайер', '1966']],
     moreH: 'А ещё',
@@ -43,8 +43,8 @@ const TX = {
     places: { lon: 'Лондон', vol: 'Вольтерра', chi: 'Чикаго', for: 'Форкс', phx: 'Финикс', col: 'Колумбус', jax: 'Джэксонвилл' },
   },
   en: {
-    l1: 'My ancestors', from: 'are from', cities: ['Tashkent', 'Moscow', 'Tokyo', 'Chita', 'Berlin', 'Penza', 'Riga', 'Kazan', 'Odesa', 'Tbilisi'],
-    sub: 'A family tree builder and a migration map', start: 'Build the tree', demo: 'See a sample tree', back: 'Back to the tree', scroll: 'Scroll',
+    l1: 'Your ancestors', from: 'are from', cities: ['Tashkent', 'Moscow', 'Tokyo', 'Chita', 'Berlin', 'Penza', 'Riga', 'Kazan', 'Odesa', 'Tbilisi'],
+    sub: 'Explore your family history and build the tree together with your relatives', start: 'Build the tree', demo: 'See a sample tree', back: 'Back to the tree', scroll: 'Scroll',
     grow: 'Build your family tree in a couple of minutes',
     tree: [['Renesmee', 'Cullen', '2006'], ['Edward', 'Cullen', '1901'], ['Bella', 'Swan', '1987'], ['Carlisle', 'Cullen', '1640'], ['Esme', 'Cullen', '1895'], ['Charlie', 'Swan', '1964'], ['Renée', 'Dwyer', '1966']],
     moreH: 'And also',
@@ -74,7 +74,8 @@ function useSeen<T extends Element>(threshold = .35) {
 // ---------------------------------------------------------------- split-flap board
 const ABC = { ru: 'АБВГДЕЖЗИКЛМНОПРСТУФХЦЧШЭЮЯ', en: 'ABCDEFGHIJKLMNOPRSTUVWXYZ' }
 /** A row of flap cells. Each cell flips through a few random letters and lands on its own one, a little after its left neighbour. */
-export function SplitFlap({ words, lang, once = false, delay = 700 }: { words: string[]; lang: L; once?: boolean; delay?: number }) {
+/** speed: 1 is the usual pace; the welcome hero runs 1.2 times faster (flips, the wave across the cells and the pause between cities) */
+export function SplitFlap({ words, lang, once = false, delay = 700, speed = 1 }: { words: string[]; lang: L; once?: boolean; delay?: number; speed?: number }) {
   const ref = useRef<HTMLSpanElement>(null)
   const N = Math.max(...words.map(w => w.length))
   useEffect(() => {
@@ -93,10 +94,10 @@ export function SplitFlap({ words, lang, once = false, delay = 700 }: { words: s
       const up = w.toLocaleUpperCase(lang).padEnd(N, ' ')
       cells.forEach((c, i) => {
         if (reduced()) { state[i] = up[i]; show(c, up[i]); return }
-        const steps = up[i] === ' ' && state[i] === ' ' ? 0 : 2 + ((i * 7 + w.length) % 4), D = 70
+        const steps = up[i] === ' ' && state[i] === ' ' ? 0 : 2 + ((i * 7 + w.length) % 4), D = Math.round(70 / speed)
         const seq = [...Array(steps).keys()].map(() => ABC[lang][Math.floor(Math.random() * ABC[lang].length)]).concat(up[i])
         if (!steps) return
-        seq.forEach((ch, k) => timers.push(setTimeout(() => flipTo(i, ch, D), (first ? 300 : 0) + i * 55 + k * (D + 8))))
+        seq.forEach((ch, k) => timers.push(setTimeout(() => flipTo(i, ch, D), (first ? 300 : 0) + i * Math.round(55 / speed) + k * (D + 8))))
       })
     }
     // once: the board stands on the first word and flips to the second one a moment later (a new chapter)
@@ -107,9 +108,9 @@ export function SplitFlap({ words, lang, once = false, delay = 700 }: { words: s
       return () => timers.forEach(clearTimeout)
     }
     let n = 0; word(words[0], true)
-    const iv = setInterval(() => { n = (n + 1) % words.length; word(words[n], false) }, 2900)
+    const iv = setInterval(() => { n = (n + 1) % words.length; word(words[n], false) }, Math.round(2900 / speed))
     return () => { clearInterval(iv); timers.forEach(clearTimeout) }
-  }, [words.join('|'), lang])
+  }, [words.join('|'), lang, speed])
   return <span className="sf" ref={ref} aria-label={words[0]} role="img">
     {[...Array(N).keys()].map(i => <span className="sf-c" key={i} aria-hidden="true">
       <span className="sf-h sf-top"><b /></span><span className="sf-h sf-bot"><b /></span><span className="sf-h sf-ft"><b /></span><span className="sf-h sf-fb"><b /></span>
@@ -271,7 +272,7 @@ export default function Landing({ lang, hasData, onStart, onLang, onDemo }: { la
         <div className="lp-lang" role="group" aria-label="Language">{(['ru', 'en'] as const).map(l => <button key={l} type="button" aria-pressed={lang === l} onClick={() => lang !== l && onLang(l)}>{l.toUpperCase()}</button>)}</div>
       </header>
       <section className="lp-hero blue">
-        <h1><span className="l1">{T.l1}</span><span className="l2"><span className="from">{T.from}</span><SplitFlap words={T.cities} lang={lang} /></span></h1>
+        <h1><span className="l1">{T.l1}</span><span className="l2"><span className="from">{T.from}</span><SplitFlap words={T.cities} lang={lang} speed={1.2} /></span></h1>
         <p className="lp-sub">{T.sub}</p>
         <Start />
         <span className="lp-scroll" aria-hidden="true">{T.scroll}<i /></span>

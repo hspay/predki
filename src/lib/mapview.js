@@ -4,7 +4,7 @@
 import { S, LANG, fullName, openPerson } from './core'
 import { WORLD, countryAt } from './world'
 import { BORDERS } from './borders'
-import { FLAGS } from './passport'
+import { FLAGS, LEAF } from './passport'
 import { goal } from './analytics'
 
 // map colours for the dark and the light app (lines keep their hue, the light set is deeper so it reads on paper)
@@ -63,11 +63,15 @@ function flagSvg(code, title) {
     if (f.canton) b += `<rect width="12" height="13" fill="${f.canton}"/>`
     if (f.tri) b += `<path d="M0 0L12 12L0 24Z" fill="${f.tri}"/>`
     if (f.band) b += `<rect x="5" width="5" height="24" fill="${f.band}"/>`
+    // the Union Jack: white and red diagonals under the cross, otherwise it reads as a Nordic flag
+    if (f.saltire) b += `<path d="M0 0L24 24M24 0L0 24" stroke="${f.saltire[0]}" stroke-width="5"/><path d="M0 0L24 24M24 0L0 24" stroke="${f.saltire[1]}" stroke-width="1.8"/>`
     if (f.crossW) b += `<rect x="8" width="8" height="24" fill="${f.crossW}"/><rect y="8" width="24" height="8" fill="${f.crossW}"/>`
     if (f.cross) { const o = code === 'FI' || code === 'SE' ? -3 : 0; b += `<rect x="${10 + o}" width="4" height="24" fill="${f.cross}"/><rect y="10" width="24" height="4" fill="${f.cross}"/>` }
     if (f.star) b += `<path d="${f.starAt === 'tl' ? starPath(7.5, 8, 4.5) : starPath(12, 12.5, 6)}" fill="${f.star}"/>`
     if (f.sun) b += `<circle cx="12" cy="12" r="5.5" fill="${f.sun}"/><circle cx="12" cy="12" r="3" fill="none" stroke="${f.bg}" stroke-width="1"/>`
     if (f.disc) b += `<circle cx="12" cy="12" r="4.5" fill="${f.disc}"/>`
+    if (f.leaf) b += `<path d="${LEAF}" fill="${f.leaf}"/>`
+    if (f.crosslets) [[5.5, 5.5], [18.5, 5.5], [5.5, 18.5], [18.5, 18.5]].forEach(([x, y]) => { b += `<rect x="${x - .8}" y="${y - 2}" width="1.6" height="4" fill="${f.cross}"/><rect x="${x - 2}" y="${y - .8}" width="4" height="1.6" fill="${f.cross}"/>` })
     if (f.crescent) b += `<circle cx="10.5" cy="12" r="5.5" fill="${f.crescent}"/><circle cx="12" cy="12" r="4.4" fill="${f.bg}"/>`
   }
   return `<svg viewBox="0 0 24 24" role="img" aria-label="${esc(title)}"><title>${esc(title)}</title>${b}</svg>`
