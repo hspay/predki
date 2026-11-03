@@ -43,7 +43,8 @@ export interface DemoFamily {
   views?: boolean
   /** coordinates of the places, for the map: [lat, lon] */
   geo?: Record<string, [number, number]>
-  /** life events: person → [type, year, place, note, wedding date, spouse] */
+  /** life events: person → [type, year, place, note, wedding date, spouse]; «~msk» names the place but keeps it off the map
+   *  (a coronation or a wedding is not a move: it must not start a new chapter of the life) */
   ev?: Record<string, DE[]>
   /** births and deaths with their places become life events too (the Romanovs: no moves, but real places) */
   lifeFromPlaces?: boolean
@@ -473,12 +474,22 @@ const ROMANOV: DemoFamily = {
     tag: ['Таганрог', 'Taganrog'], vit: ['Витебск', 'Vitebsk'], ber: ['Берлин', 'Berlin'], darm: ['Дармштадт', 'Darmstadt'], nice: ['Ницца', 'Nice'],
     can: ['Канны', 'Cannes'], liv: ['Ливадия', 'Livadia'], cph: ['Копенгаген', 'Copenhagen'], hvi: ['Видёре', 'Hvidøre'], lon: ['Лондон', 'London'],
     osb: ['Осборн', 'Osborne'], win: ['Виндзор', 'Windsor'], alap: ['Алапаевск', 'Alapayevsk'], ekb: ['Екатеринбург', 'Yekaterinburg'], abas: ['Абастумани', 'Abastumani'],
-    tif: ['Тифлис', 'Tiflis'], perm: ['Пермь', 'Perm'], tor: ['Торонто', 'Toronto'],
+    tif: ['Тифлис', 'Tiflis'], perm: ['Пермь', 'Perm'], tor: ['Торонто', 'Toronto'], tob: ['Тобольск', 'Tobolsk'],
   },
   views: true, lifeFromPlaces: true,
+  // the last emperor's family: the wedding, the coronation, the exile to Tobolsk and Yekaterinburg (births and deaths come from the places above)
+  ev: {
+    nick2: [['marriage', 1894, '~spb', undefined, '14.11.1894', 'alix'], ['other', 1896, '~msk', ['Коронация в Успенском соборе Кремля', 'Crowned in the Dormition Cathedral of the Kremlin']], ['move', 1917, 'tob', ['Ссылка вместе с семьёй', 'Exile with the family']], ['move', 1918, 'ekb', ['Перевезли в Ипатьевский дом', 'Taken to the Ipatiev House']]],
+    alix: [['marriage', 1894, '~spb', undefined, '14.11.1894', 'nick2'], ['move', 1917, 'tob', ['Ссылка вместе с семьёй', 'Exile with the family']], ['move', 1918, 'ekb', ['Перевезли в Ипатьевский дом', 'Taken to the Ipatiev House']]],
+    olgaN: [['move', 1917, 'tob', ['Ссылка вместе с семьёй', 'Exile with the family']], ['move', 1918, 'ekb', ['Перевезли в Ипатьевский дом', 'Taken to the Ipatiev House']]],
+    tatiana: [['move', 1917, 'tob', ['Ссылка вместе с семьёй', 'Exile with the family']], ['move', 1918, 'ekb', ['Перевезли в Ипатьевский дом', 'Taken to the Ipatiev House']]],
+    mariaN: [['move', 1917, 'tob', ['Ссылка вместе с семьёй', 'Exile with the family']], ['move', 1918, 'ekb', ['Перевезли в Ипатьевский дом', 'Taken to the Ipatiev House']]],
+    anastasia: [['move', 1917, 'tob', ['Ссылка вместе с семьёй', 'Exile with the family']], ['move', 1918, 'ekb', ['Перевезли в Ипатьевский дом', 'Taken to the Ipatiev House']]],
+    alexeiN: [['move', 1917, 'tob', ['Ссылка вместе с семьёй', 'Exile with the family']], ['move', 1918, 'ekb', ['Перевезли в Ипатьевский дом', 'Taken to the Ipatiev House']]],
+  },
   bio: {
-    nick2: ['Последний российский император. Правил с 1894 года, в 1917‑м отрёкся от престола. В 1918 году вместе с семьёй расстрелян в Екатеринбурге.',
-      'The last Russian emperor. He reigned from 1894 and abdicated in 1917. In 1918 he was shot together with his family in Yekaterinburg.'],
+    nick2: ['В семье его звали Ники. Он рос в Гатчине и Царском Селе, любил долгие прогулки, греблю и колку дров, всю жизнь фотографировал и почти каждый день вёл дневник. Отец, Александр III, умер внезапно в 1894 году, и в 26 лет Николаю пришлось стать императором раньше, чем он сам того ждал. Через неделю после похорон он обвенчался с Аликс Гессенской, с которой был помолвлен весной того же года.\nДома, в Александровском дворце, у них родились четыре дочери — Ольга, Татьяна, Мария и Анастасия, а в 1904 году долгожданный сын Алексей. Вскоре выяснилось, что у наследника гемофилия, и болезнь сына стала главной тревогой семьи: её скрывали даже от двора.\nЦарствование вышло тяжёлым: давка на Ходынском поле в дни коронации, война с Японией, Кровавое воскресенье и революция 1905 года, потом Первая мировая. В 1915 году Николай сам принял командование армией и уехал в Ставку, а в марте 1917 года отрёкся от престола за себя и за сына. Семью сослали в Тобольск, весной 1918‑го перевезли в Екатеринбург, и в ночь на 17 июля всех расстреляли в подвале Ипатьевского дома. В 1998 году останки императора, императрицы и трёх их дочерей похоронили в Петропавловском соборе Петербурга.',
+      'The family called him Nicky. He grew up in Gatchina and Tsarskoye Selo, loved long walks, rowing and chopping wood, took photographs all his life and kept a diary almost every day. His father, Alexander III, died suddenly in 1894, and at 26 Nicholas became emperor sooner than he had expected. A week after the funeral he married Alix of Hesse, to whom he had been engaged that spring.\nAt home, in the Alexander Palace, they had four daughters, Olga, Tatiana, Maria and Anastasia, and in 1904 the long-awaited son, Alexei. The heir soon turned out to have haemophilia, and his illness became the family’s greatest worry: it was kept secret even from the court.\nHis reign was a hard one: the crush on Khodynka Field during the coronation, the war with Japan, Bloody Sunday and the 1905 revolution, then the First World War. In 1915 Nicholas took command of the army himself and left for headquarters, and in March 1917 he abdicated for himself and his son. The family was exiled to Tobolsk, moved to Yekaterinburg in the spring of 1918, and on the night of 17 July they were all shot in the cellar of the Ipatiev House. In 1998 the remains of the emperor, the empress and three of their daughters were buried in the Peter and Paul Cathedral in Saint Petersburg.'],
     alix: ['Родилась в Дармштадте, внучка британской королевы Виктории. Последняя российская императрица.',
       'Born in Darmstadt, a granddaughter of Queen Victoria. The last Russian empress.'],
     alexeiN: ['Единственный сын Николая II и наследник престола. С детства болел гемофилией.',
@@ -493,7 +504,7 @@ const ROMANOV: DemoFamily = {
     rops: [59.73, 29.86], ros: [54.09, 12.1], kh: [64.22, 41.65], shl: [59.94, 31.03], pav: [59.69, 30.43], karl: [49.01, 8.4], bel: [53.81, 36.13],
     tag: [47.21, 38.94], vit: [55.19, 30.2], ber: [52.52, 13.4], darm: [49.87, 8.65], nice: [43.7, 7.27], can: [43.55, 7.02], liv: [44.47, 34.14],
     cph: [55.68, 12.57], hvi: [55.75, 12.59], lon: [51.51, -0.13], osb: [50.75, -1.27], win: [51.48, -0.61], alap: [57.85, 61.69], ekb: [56.84, 60.61],
-    abas: [41.75, 42.83], tif: [41.69, 44.8], perm: [58.01, 56.23], tor: [43.65, -79.38],
+    abas: [41.75, 42.83], tif: [41.69, 44.8], perm: [58.01, 56.23], tor: [43.65, -79.38], tob: [58.2, 68.25],
   },
   people: [
     W('filaret', 'm', 'Фёдор (Филарет)|Романов', 'Feodor (Filaret)|Romanov', undefined, undefined, '01.10.1633', 'msk', { look: 'oldm' }),

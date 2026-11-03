@@ -145,7 +145,7 @@ export function LockSheet() {
         <span>{i > cur ? L(`Сейчас вы в главе ${cur + 1}. Наклейки этой главы можно собирать уже сейчас.`, `You are on chapter ${cur + 1}. You can collect this chapter’s stickers already.`)
           : L(`Нужно ${c.need} ${plural(c.need, ['наклейка', 'наклейки', 'наклеек'], ['sticker', 'stickers'])} из ${c.st.length}, собрано ${k}.`, `${c.need} of ${c.st.length} stickers needed, ${k} collected.`)}</span>
       </div>
-      <ul className="lk-list">
+      <ul className="lk-sticks">
         {c.st.map(id => { const n: any = Progress.byN(id), d = Progress.ST[id] === 'done', sk = isSkipped(id), r = Progress.ratio(n)
           return <li key={id} className={d ? 'd' : sk ? 's' : ''}>
             <img src={stickerSrc(id)} alt="" />

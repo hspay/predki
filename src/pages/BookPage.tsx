@@ -50,7 +50,7 @@ function lifeItems(p: Person): Item[] {
     else if (e.type === 'study') it.push({ y, ap: approx(e), pl: e.place, geo, txt: `${L('Учёба', 'Study')}${at}.${n}` })
     else if (e.type === 'service') it.push({ y, ap: approx(e), pl: e.place, geo, txt: `${L('Служба', 'Military service')}${at}.${n}` })
     else if (e.type === 'marriage') { const sp = (e.with && byId(e.with)) || spousesOf(p.id)[0]; it.push({ y, txt: `${L('Свадьба', 'Wedding')}${sp ? ` — ${L(fv(p, 'жена', 'муж'), fv(p, 'wife', 'husband'))} ${fullName(sp)}` : ''}.${n}` }) }
-    else if (e.type === 'death') it.push({ y, txt: `${L(`Ушл${fv(p, 'ёл', 'а')} из жизни`, 'Passed away')}${at}.` })
+    else if (e.type === 'death') it.push({ y, txt: `${L(`${fv(p, 'Ушёл', 'Ушла')} из жизни`, 'Passed away')}${at}.` })
     else it.push({ y, ap: approx(e), pl: e.place, geo, txt: `${note || e.place}.` })
   })
   const by = life(p.id).by
@@ -60,7 +60,9 @@ function lifeItems(p: Person): Item[] {
     childrenOf(c.id).forEach(g => { const z = life(g.id).by; if (z) it.push({ y: z, fam: true, txt: L(`Родил${fv(g, 'ся', 'ась')} ${fv(g, 'внук', 'внучка')} ${first(g)}.`, `${fv(g, 'Grandson', 'Granddaughter')} ${first(g)} is born.`) }) })
   })
   parentsOf(p.id).forEach(q => { const dy = life(q.id).dy; if (dy) it.push({ y: dy, fam: true, txt: L(`Не стало ${fv(q, 'отца', 'мамы')} — ${first(q)}.`, `${fv(q, 'Father', 'Mother')} ${first(q)} dies.`) }) })
-  return it.sort((a, b) => a.y - b.y)
+  // the family after this life ends (a parent who outlived them) is not part of it
+  const dy = life(p.id).dy
+  return it.filter(x => !(x.fam && dy && x.y > dy)).sort((a, b) => a.y - b.y)
 }
 /** the life split by places: a new chapter begins with each new city */
 function chaptersOf(p: Person) {

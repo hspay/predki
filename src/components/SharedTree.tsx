@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { S, ui, LANG, byId, fullName, showYear, closePanel, generations, demo, useStore, bindDateMask, normDate, dateValid, type Person } from '../lib/core'
+import { S, ui, LANG, byId, fullName, showYear, closePanel, generations, demo, useStore, bindDateMask, normDate, dateValid, pickFile, avatarSrc, type Person } from '../lib/core'
 import { setLangValue } from '../lib/i18n'
 import TreePage, { introStep, INTRO_START } from '../pages/TreePage'
 import { distances } from '../lib/demo'
@@ -7,9 +7,10 @@ import { kinship, chainName } from '../lib/kinship'
 import { familyColors } from '../lib/treeLayout'
 import { themeOf } from '../lib/treeStyle'
 import { globeMark } from '../lib/globe'
-import { fetchShared, submitAnswer, type Shared, type Item } from '../lib/invites'
+import { fetchShared, submitAnswer, submitPhoto, type Shared, type Item } from '../lib/invites'
 import SkyBackground from './SkyBackground'
 import GuestApp from './GuestApp'
+import { SplitFlap } from './Landing'
 import '../demo.css'
 
 // «Ссылка на древо»: what a guest opens by a link (?s=…). The owner's tree as a snapshot made when the link was created,
@@ -44,6 +45,10 @@ const TX = {
     empty: 'Заполните хотя бы одно поле', badDate: 'Дата: ДД.ММ.ГГГГ или только год', needName: 'Напишите, как вас зовут',
     failed: 'Не получилось отправить. Проверьте интернет', tooMany: 'Слишком много ответов за час. Попробуйте позже', closedLink: 'Ссылку закрыли',
     mGen: ['января', 'февраля', 'марта', 'апреля', 'мая', 'июня', 'июля', 'августа', 'сентября', 'октября', 'ноября', 'декабря'],
+    photoBtn: 'Предложить фото', photoH: 'Фото для\u00A0портрета', photoPick: 'Выбрать фото', photoOther: 'Другое фото', photoDrop: 'Убрать',
+    photoP: (n: string) => `Если у\u00A0вас есть фото этого человека, пришлите его. ${n} посмотрит и\u00A0поставит на\u00A0портрет.`,
+    photoReady: (n: string) => `Отправится вместе с\u00A0ответом. ${n} решит, ставить ли его на\u00A0портрет.`,
+    badPhoto: 'Это фото не\u00A0получилось отправить. Попробуйте другое',
   },
   en: {
     people: ['person', 'people', 'people'], gens: ['generation', 'generations', 'generations'],
@@ -63,6 +68,10 @@ const TX = {
     empty: 'Fill in at least one field', badDate: 'Date: DD.MM.YYYY or just the year', needName: 'Please write your name',
     failed: 'Could not send. Check your connection', tooMany: 'Too many answers this hour. Try again later', closedLink: 'The link was closed',
     mGen: ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'],
+    photoBtn: 'Suggest a photo', photoH: 'Photo for the portrait', photoPick: 'Choose a photo', photoOther: 'Another photo', photoDrop: 'Remove',
+    photoP: (n: string) => `If you have a photo of this person, send it. ${n} will look at it and may set it as the portrait.`,
+    photoReady: (n: string) => `It goes with your answer. ${n} decides whether to set it as the portrait.`,
+    badPhoto: 'This photo could not be sent. Try another one',
   },
 }
 type T_ = typeof TX.ru
@@ -99,6 +108,9 @@ function SharedTree({ token, data }: { token: string; data: Shared }) {
   const [sheet, setSheet] = useState<Sheet>({ k: 'intro' })
   const [done, setDone] = useState<Set<string>>(new Set())
   const [whoOpen, setWhoOpen] = useState(false)
+  /** a photo picked for someone's portrait, waiting in their form */
+  const [pic, setPic] = useState<{ id: string; data: string } | null>(null)
+  const suggestPhoto = (id: string) => pickFile('image/*', (data, _n, mime) => { if (!mime.startsWith('image/')) return; setPic({ id, data }); setSheet({ k: 'person', id }) }, 900)
 
   // the snapshot becomes the tree on screen; nothing is ever saved from it (the same switch the demo uses)
   useMemo(() => {
@@ -114,6 +126,9 @@ function SharedTree({ token, data }: { token: string; data: Shared }) {
   const labels: Record<string, string> = !viewer && ownerId ? { [ownerId]: T.leader } : {}
   const face = viewer || ownerId || (snap.people[0] && snap.people[0].id) || ''
 
+  // the family's board in the header: blank while the tree grows, then the letters run to the name; a tap runs them again
+  const flapAt = useMemo(() => { if (!face) return 0; const d = distances(face), mx = Math.max(0, ...Object.values(d)); return Math.round((INTRO_START + mx * introStep(mx) + .9) * 1000) }, [])
+  const [flap, setFlap] = useState(0)
   // the growth runs once, from the owner
   useEffect(() => {
     if (!intro || !face) return
@@ -139,7 +154,7 @@ function SharedTree({ token, data }: { token: string; data: Shared }) {
         <header className="dm-top">
           <a className="dm-brand" href={HOME}><span className="mk" dangerouslySetInnerHTML={{ __html: globeMark('currentColor', 20) }} />PREDKI</a>
           <div className="dm-mid">
-            <h1 className="sh-fam">{snap.family || owner}</h1>
+            <FamBoard name={snap.family || owner} lang={snap.lang === 'en' ? 'en' : 'ru'} at={flapAt} n={flap} onTap={() => setFlap(x => x + 1)} />
             <p className="dm-sub">{ask ? <span>{T.asks(owner, until)}</span> : <><span>{n} {pl(n, T.people)} · {g} {pl(g, T.gens)}</span><span>{T.leads(owner)}</span></>}</p>
           </div>
           {ask ? <div className="sh-who">
@@ -154,7 +169,7 @@ function SharedTree({ token, data }: { token: string; data: Shared }) {
         <div className={'dm-main sh-main' + (ask ? ' ask' : '')}>
           <TreePage demo={{ labels, face, intro }}>
             {sel && byId(sel) && <Card key={sel} id={sel} T={T} label={labelOf(sel)} color={sel === face ? '' : col.kin(sel)} chainFrom={S.settings.meId || ''}
-              ask={ask} done={done.has(sel)} onAdd={() => setSheet({ k: 'person', id: sel })} />}
+              ask={ask} done={done.has(sel)} onAdd={() => setSheet({ k: 'person', id: sel })} onPhoto={() => suggestPhoto(sel)} />}
             {!ask && <div className="dm-cta">
               <p className="dm-hint" aria-hidden={!!sel}>{T.hint}</p>
               <a className="dm-btn" href={HOME}>{T.cta}</a>
@@ -169,7 +184,9 @@ function SharedTree({ token, data }: { token: string; data: Shared }) {
                 <button type="button" className="btn" onClick={() => setSheet({ k: 'note' })}>{T.write(ownerD)}</button>
               </div>
             </div>}
-            {sheet.k === 'person' && byId(sheet.id) && <PersonForm key={sheet.id} p={byId(sheet.id)!} T={T} token={token} who={viewer} ownerD={ownerD} onCancel={() => setSheet({ k: 'intro' })} onSent={() => sent([sheet.id])} />}
+            {sheet.k === 'person' && byId(sheet.id) && <PersonForm key={sheet.id} p={byId(sheet.id)!} T={T} token={token} who={viewer} owner={owner} ownerD={ownerD}
+              pic={pic && pic.id === sheet.id ? pic.data : ''} onPic={d => setPic(d ? { id: sheet.id, data: d } : null)}
+              onCancel={() => { setPic(null); setSheet({ k: 'intro' }) }} onSent={() => { setPic(null); sent([sheet.id]) }} />}
             {sheet.k === 'add' && <NewPersonForm T={T} token={token} who={viewer} ownerD={ownerD} onCancel={() => setSheet({ k: 'intro' })} onSent={() => sent([])} />}
             {sheet.k === 'note' && <NoteForm T={T} token={token} who={viewer} owner={ownerG} ownerD={ownerD} onCancel={() => setSheet({ k: 'intro' })} onSent={() => sent([])} />}
             {sheet.k === 'sent' && <div className="sh-sent">
@@ -201,7 +218,7 @@ function WhoMenu({ T, current, onPick }: { T: T_; current: string; onPick: (id: 
 }
 
 /** the card of the selected person: who they are, born and died with places, the chain of relatives; for relatives — «Дополнить» */
-function Card({ id, T, label, color, chainFrom, ask, done, onAdd }: { id: string; T: T_; label: string; color: string; chainFrom: string; ask: boolean; done: boolean; onAdd: () => void }) {
+function Card({ id, T, label, color, chainFrom, ask, done, onAdd, onPhoto }: { id: string; T: T_; label: string; color: string; chainFrom: string; ask: boolean; done: boolean; onAdd: () => void; onPhoto: () => void }) {
   const p = byId(id)!
   const chain = chainFrom && id !== chainFrom ? kinship(chainFrom).chain(id) : []
   const row = (k: string, date: string, place: string) => (date || place) ? <div className="r"><span className="l">{k}</span><span className="v">{[date && fmtDate(date, T), place].filter(Boolean).join(' · ')}</span></div> : null
@@ -214,7 +231,10 @@ function Card({ id, T, label, color, chainFrom, ask, done, onAdd }: { id: string
       {row(T.born(p.gender), p.birthDate, p.birthPlace)}
       {row(T.died(p.gender), p.deathDate, p.deathPlace)}
       {chain.length > 1 && <span className="ch">{chain.map((x, i) => <span key={x}>{i > 0 && <i aria-hidden="true">→</i>}{chainName(x)}</span>)}</span>}
-      {ask && <>{done && <span className="sh-done">{T.doneHere}</span>}<button type="button" className="btn add sh-add" onClick={onAdd}>{T.add}</button></>}
+      {ask && <>{done && <span className="sh-done">{T.doneHere}</span>}<div className="sh-card-btns">
+        <button type="button" className="btn add sh-add" onClick={onAdd}>{T.add}</button>
+        <button type="button" className="btn sh-pic-b" onClick={onPhoto}><CamIcon />{T.photoBtn}</button>
+      </div></>}
     </div>
   )
 }
@@ -228,13 +248,22 @@ function DateInput({ id, onChange, placeholder }: { id: string; onChange: (v: st
 /** sending: the guest's name (kept on this device for next time), the server's refusals in plain words */
 function useSend(T: T_, token: string, who: string) {
   const [name, setName] = useState(() => (who && byId(who)?.first) || store.get(NAME_KEY))
-  const [busy, setBusy] = useState(false), [err, setErr] = useState('')
-  const send = async (items: Item[], onSent: () => void) => {
-    if (!items.length) { setErr(T.empty); return }
+  const [busy, setBusy] = useState(false), [err, setErr] = useState(''), photoSent = useRef('')
+  /** photo — a portrait suggestion for one person, sent first (it is the heavier part) */
+  const send = async (items: Item[], onSent: () => void, photo?: { id: string; data: string } | null) => {
+    if (!items.length && !photo) { setErr(T.empty); return }
     if (!name.trim()) { setErr(T.needName); return }
     setBusy(true); setErr('')
-    try { await submitAnswer(token, name.trim(), items); store.set(NAME_KEY, name.trim()); onSent() }
-    catch (e) { const m = (e as { message?: string }).message || ''; setErr(m.includes('too_many') ? T.tooMany : m.includes('link_closed') ? T.closedLink : T.failed) }
+    let atPhoto = false
+    try {
+      // a photo that already went is not sent twice when only the text failed and is sent again
+      if (photo && photoSent.current !== photo.data) { atPhoto = true; await submitPhoto(token, name.trim(), photo.id, photo.data); photoSent.current = photo.data; atPhoto = false }
+      if (items.length) await submitAnswer(token, name.trim(), items)
+      store.set(NAME_KEY, name.trim()); onSent()
+    } catch (e) {
+      const m = (e as { message?: string }).message || ''
+      setErr(m.includes('too_many') ? T.tooMany : m.includes('link_closed') ? T.closedLink : atPhoto && !/fetch|network/i.test(m) ? T.badPhoto : T.failed)
+    }
     setBusy(false)
   }
   return { name, setName, busy, err, setErr, send }
@@ -249,7 +278,7 @@ function Foot({ T, busy, err, label, onCancel }: { T: T_; busy: boolean; err: st
   </>
 }
 
-function PersonForm({ p, T, token, who, ownerD, onCancel, onSent }: { p: Person; T: T_; token: string; who: string; ownerD: string; onCancel: () => void; onSent: () => void }) {
+function PersonForm({ p, T, token, who, owner, ownerD, pic, onPic, onCancel, onSent }: { p: Person; T: T_; token: string; who: string; owner: string; ownerD: string; pic: string; onPic: (d: string) => void; onCancel: () => void; onSent: () => void }) {
   const gone = !!(p.deathDate || p.deathPlace)
   const v = useRef({ bd: '', bp: '', dd: '', dp: '', st: '' })
   const s = useSend(T, token, who)
@@ -264,11 +293,23 @@ function PersonForm({ p, T, token, who, ownerD, onCancel, onSent }: { p: Person;
     if (bp.trim()) items.push({ t: 'field', id: p.id, f: 'birthPlace', v: bp.trim() })
     if (dp.trim()) items.push({ t: 'field', id: p.id, f: 'deathPlace', v: dp.trim() })
     if (st.trim()) items.push({ t: 'story', id: p.id, v: st.trim() })
-    s.send(items, onSent)
+    s.send(items, onSent, pic ? { id: p.id, data: pic } : null)
   }
+  const choose = () => pickFile('image/*', (data, _n, mime) => { if (mime.startsWith('image/')) { onPic(data); s.setErr('') } }, 900)
   return (
     <form className="sh-form" onSubmit={submit}>
       <h2>{fullName(p)}</h2>
+      <div className={'sh-pic' + (pic ? ' on' : '')}>
+        <img src={pic || avatarSrc(p)} alt="" />
+        <div>
+          <b>{T.photoH}</b>
+          <small>{pic ? T.photoReady(owner) : T.photoP(owner)}</small>
+          <span className="sh-pic-acts">
+            <button type="button" className="btn sm" onClick={choose}><CamIcon />{pic ? T.photoOther : T.photoPick}</button>
+            {pic && <button type="button" className="btn sm ghost" onClick={() => onPic('')}>{T.photoDrop}</button>}
+          </span>
+        </div>
+      </div>
       <div className="field"><label htmlFor="shBd">{T.bDate}</label><DateInput id="shBd" placeholder={T.datePh} onChange={x => { v.current.bd = x }} /></div>
       <div className="field"><label htmlFor="shBp">{T.bPlace}</label><input id="shBp" placeholder={T.placePh} onChange={e => { v.current.bp = e.target.value }} /></div>
       {gone && <>
@@ -329,3 +370,18 @@ function NoteForm({ T, token, who, owner, ownerD, onCancel, onSent }: { T: T_; t
   )
 }
 
+
+const CamIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8.5A1.5 1.5 0 0 1 5.5 7h2l1.5-2h6l1.5 2h2A1.5 1.5 0 0 1 20 8.5v9a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 4 17.5z" /><circle cx="12" cy="13" r="3.5" /></svg>
+
+/** the family's name as a split-flap board, like on the welcome screen: first it flips from blank tiles to the name
+ *  (after the tree has grown), then every tap runs the letters and lands on the name again */
+function FamBoard({ name, lang, at, n, onTap }: { name: string; lang: 'ru' | 'en'; at: number; n: number; onTap: () => void }) {
+  const len = Math.max(1, [...name].length)
+  return (
+    <h1 className="sh-fam sh-board" aria-label={name} style={{ '--n': len } as React.CSSProperties}>
+      <button type="button" onClick={onTap} aria-label={name}>
+        {n === 0 ? <SplitFlap key="in" words={[' ', name]} lang={lang} once delay={at} /> : <SplitFlap key={'t' + n} words={[name, name]} lang={lang} once delay={0} />}
+      </button>
+    </h1>
+  )
+}

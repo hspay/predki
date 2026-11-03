@@ -21,6 +21,7 @@ import KeeperPage from './pages/KeeperPage'
 import BookPage from './pages/BookPage'
 import { ChapterUp, LockSheet } from './components/Chapters'
 import PreviewBar from './components/PreviewBar'
+import PageGuard from './components/PageGuard'
 import DemoPage from './components/DemoPage'
 import { openDemo, demoFromHash } from './lib/demo'
 import { screen } from './lib/analytics'
@@ -54,16 +55,18 @@ export default function App() {
       {!ui.onboarding && ui.firstRun && p === 'tree' && <FirstRun />}
       <SkyBackground />
       <div id="app">
-        <Sidebar />
+        <PageGuard name="menu" small><Sidebar /></PageGuard>
         <main id="main">
-          {p === 'tree' && <TreePage />}
-          {p === 'map' && <Suspense fallback={null}><MapPage /></Suspense>}
-          {p === 'progress' && <AlbumPage />}
-          {p === 'gaps' && <GapsPage />}
-          {p === 'keeper' && <KeeperPage />}
-          {p === 'book' && <BookPage />}
-          {p === 'settings' && <SettingsPage />}
-          <PersonPanel />
+          <PageGuard key={p} name={p}>
+            {p === 'tree' && <TreePage />}
+            {p === 'map' && <Suspense fallback={null}><MapPage /></Suspense>}
+            {p === 'progress' && <AlbumPage />}
+            {p === 'gaps' && <GapsPage />}
+            {p === 'keeper' && <KeeperPage />}
+            {p === 'book' && <BookPage />}
+            {p === 'settings' && <SettingsPage />}
+          </PageGuard>
+          <PageGuard name="panel" small resetKey={ui.panel ? ui.panel.mode + ('id' in ui.panel ? ui.panel.id : '') : ''}><PersonPanel /></PageGuard>
         </main>
       </div>
       <AddRelativeModal />

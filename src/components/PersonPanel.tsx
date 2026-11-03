@@ -78,7 +78,6 @@ function Family({ id }: { id: string }) {
       </span> })}</div>
     </div>)}
     {edit && groups.some(g => g.kind === 'sibling' && g.list.some(x => !x.own)) && <p className="fam-note">{t('rel.sib.note')}</p>}
-    {(edit || !groups.length) && <button type="button" className="btn sm fam-link" onClick={() => openModal({ kind: 'link', id })}>{t('rel.link.btn')}</button>}
   </>
 }
 
@@ -118,10 +117,12 @@ function ViewPerson({ id }: { id: string }) {
       </div>
       {ui.frameEdit ? <FrameEditor p={p} /> : <>
       <Clarity p={p} setPhoto={setPhoto} />
-      <Family id={id} />
       <div className="quick-add">
+        {/* linking two people already in the tree used to hide behind «Семья → Изменить»: testers could not find it */}
+        <button className="btn sm qa-link" onClick={() => openModal({ kind: 'link', id })}><LinkIcon />{t('rel.link.btn').replace(/^\+\s*/, '')}</button>
         {(['parent', 'spouse', 'child', 'sibling'] as const).map(k => <button key={k} className="btn sm" onClick={() => addRelative(id, k)}>{t('p.add.' + k)}</button>)}
       </div>
+      <Family id={id} />
       <PetList id={id} />
       <dl className="kv">
         <dt>{t('p.birth')}</dt><dd>{[p.birthDate, p.birthPlace].filter(Boolean).join(' · ') || '—'}</dd>
@@ -390,3 +391,6 @@ function EditPet({ id, owner }: { id: string | null; owner: string }) {
     </form>
   </Frame>
 }
+
+/** two chain links: «Связать с человеком из древа» */
+const LinkIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 14a4.5 4.5 0 0 0 6.4 0l3-3a4.5 4.5 0 0 0-6.4-6.4l-1.2 1.2" /><path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2" /></svg>

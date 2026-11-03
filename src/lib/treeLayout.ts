@@ -1,6 +1,7 @@
 // @ts-nocheck — layout algorithm ported verbatim from the prototype
 // Tree: layered layout. Generations by relaxation, couples as blocks, crossing-minimising sweeps, then x placement.
 import { S, byId, parentsOf, childrenOf, spousesOf, stepParentsOf, stepChildrenOf, linkedSiblingsOf, yearOf } from './core'
+import { logProblem } from './problems'
 
 // square cards: 152×152, 26 px between spouses, 56 px between families, 100 px between generations
 export const DIM={NW:152,NH:152,PG:26,GAP:56,LH:100};
@@ -15,7 +16,17 @@ const byAge=(a,b)=>a.ord!=null&&b.ord!=null?a.ord-b.ord:(yearOf(a.birthDate)||'9
 export function layout(hOf){
   const key=S.people.map(p=>p.id+':'+(p.birthDate||'')+':'+(p.ord??'')+':'+(hOf?hOf(p.id):'')).join('|')+'#'+S.rels.map(r=>r.type[0]+r.a+'>'+r.b+(r.step?'s':'')).join('|');
   if(memo.key===key&&memo.res) return memo.res;
-  const res=layoutNow(hOf); memo={key,res}; return res;
+  let res;
+  try{ res=layoutNow(hOf); }catch(e){ logProblem('tree-layout',e,true); res=null; }
+  // a layout that broke (or put someone at NaN) must not blank the whole Tree: everyone in plain rows instead, and we hear about it
+  if(!res||!isFinite(res.w)||!isFinite(res.h)||Object.values(res.pos).some(p=>!isFinite(p.x)||!isFinite(p.y))){ if(res) logProblem('tree-layout',new Error('NaN in layout'),true); res=rowsLayout(hOf); }
+  memo={key,res}; return res;
+}
+/** the fallback: elder first, eight to a row */
+function rowsLayout(hOf){
+  const pos={}, list=S.people.slice().sort(byAge), per=8; let maxY=0;
+  list.forEach((p,i)=>{ const h=hOf?hOf(p.id):DIM.NH, g=Math.floor(i/per), top=g*(DIM.NH+DIM.LH); pos[p.id]={x:(i%per)*(DIM.NW+DIM.GAP),y:top,h,g,top,rh:DIM.NH,iso:true}; maxY=top+DIM.NH; });
+  return {pos,blocks:[],w:Math.min(list.length,per)*(DIM.NW+DIM.GAP)-DIM.GAP,h:maxY};
 }
 function layoutNow(hOf){
   const self=DIM;

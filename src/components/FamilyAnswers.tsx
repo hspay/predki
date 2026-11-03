@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { LANG, byId, openPerson, toast, cloud } from '../lib/core'
-import { inbox, refreshInbox, decide, describe, closeLink, createLink, linkUrl, type Suggestion } from '../lib/invites'
+import { LANG, byId, openPerson, toast, cloud, avatarSrc } from '../lib/core'
+import { inbox, refreshInbox, decide, describe, closeLink, createLink, linkUrl, photoData, type Suggestion } from '../lib/invites'
 import type { Gap } from '../lib/gaps'
 
 // Owner's side of «Попросить заполнить»: answers from relatives to check and accept, the open links,
@@ -80,7 +80,8 @@ export default function FamilyAnswers() {
               {s.items.map((it, i) => { const d = describe(it), id = 'id' in it ? it.id : it.t === 'person' ? it.of : ''; return (
                 <li key={i} className={it.st ? 'st-' + it.st : ''}>
                   <div className="fa-what">{d.who && (id && byId(id) && it.t !== 'person' ? <button type="button" className="fa-who" onClick={() => openPerson(id)}>{d.who}</button> : <b>{d.who}</b>)}<span>{d.what}</span></div>
-                  <div className="fa-val">{d.value}{d.was && <small>{T.was}: {d.was}</small>}</div>
+                  {it.t === 'photo' ? <SentPhoto pid={it.photo} now={byId(it.id) ? avatarSrc(byId(it.id)!) : ''} done={!!it.st} note={d.value} />
+                    : <div className="fa-val">{d.value}{d.was && <small>{T.was}: {d.was}</small>}</div>}
                   {it.st ? <span className="fa-st">{it.st === 'ok' ? T.accepted : T.declined}</span>
                     : <div className="fa-btns"><button type="button" className="btn sm ghost" onClick={() => run(decide(s, i, 'no'))}>{T.no}</button><button type="button" className="btn sm primary" onClick={() => run(decide(s, i, 'ok'))}>{T.ok}</button></div>}
                 </li>) })}
@@ -90,6 +91,24 @@ export default function FamilyAnswers() {
       </div>
     </section>}
   </>
+}
+
+/** A photo a relative sent: the portrait now → the one suggested */
+function SentPhoto({ pid, now, done, note }: { pid: string; now: string; done: boolean; note: string }) {
+  const [src, setSrc] = useState(''), [gone, setGone] = useState(false)
+  useEffect(() => { if (done) return; let on = true; photoData(pid).then(d => { if (on) { if (d) setSrc(d); else setGone(true) } }).catch(() => on && setGone(true)); return () => { on = false } }, [pid, done])
+  if (done) return <div className="fa-val" />
+  const ru = LANG !== 'en'
+  return (
+    <div className="fa-val fa-photo">
+      <span className="fa-pics">
+        {now && <img className="was" src={now} alt={ru ? 'Сейчас' : 'Now'} />}
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h13M13 7l5 5-5 5" /></svg>
+        {src ? <img src={src} alt={ru ? 'Предложенное фото' : 'Suggested photo'} /> : <i className={'ph' + (gone ? ' gone' : '')} />}
+      </span>
+      {gone ? <small>{ru ? 'Фото больше нет на\u00A0сервере' : 'The photo is no longer on the server'}</small> : note && <small>{note}</small>}
+    </div>
+  )
 }
 
 /** All links made for relatives, collapsed: open one, close access. Shown at the bottom of «Заполнить пробелы». */

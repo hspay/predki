@@ -30,6 +30,8 @@ export type Item =
   | { t: 'story'; id: string; v: string; st?: Decision }
   | { t: 'person'; first: string; last: string; gender: '' | 'm' | 'f'; birth: string; kind: 'parent' | 'child' | 'spouse' | 'sibling'; of: string; note: string; st?: Decision }
   | { t: 'note'; v: string; st?: Decision }
+  /** a photo for the person's portrait; the picture itself waits in suggestion_photos (supabase/suggestion-photos.sql) */
+  | { t: 'photo'; id: string; photo: string; st?: Decision }
 export type Decision = 'ok' | 'no'
 export interface Suggestion { id: string; token: string; author: string; items: Item[]; status: 'new' | 'done'; created_at: string }
 export interface ShareLink { token: string; label: string; created_at: string; expires_at: string; revoked: boolean; mode?: LinkMode | null }
@@ -166,9 +168,28 @@ export function refreshInbox() {
 const today = () => new Date().toLocaleDateString(LANG === 'en' ? 'en-GB' : 'ru-RU')
 const said = (author: string) => (LANG === 'en' ? `as told by ${author}, ${today()}` : `со слов: ${author}, ${today()}`)
 
+// ---------- owner: photos sent by relatives ----------
+const photos = new Map<string, Promise<string>>()
+/** the picture of a photo line (a data: URL), '' when it is gone; asked for once */
+export function photoData(pid: string) {
+  if (!photos.has(pid)) photos.set(pid, (async () => {
+    const { data, error } = await sb.from('suggestion_photos').select('data').eq('id', pid).maybeSingle()
+    if (error) { photos.delete(pid); throw new Error(serverError(error)) }
+    return (data && (data as { data: string }).data) || ''
+  })())
+  return photos.get(pid)!
+}
+const PREV = { ru: 'Прежний портрет', en: 'Previous portrait' }
+
 /** Put one accepted line into the tree. Returns false when the person it is about is gone. */
-function apply(it: Item, author: string) {
+function apply(it: Item, author: string, pic?: string) {
   if (it.t === 'note') return true
+  if (it.t === 'photo') {
+    const p = byId(it.id); if (!p || !pic) return false
+    // the portrait there was stays with the person, among their photos: nothing is lost
+    if (p.avatar && !(p.media || []).some(m => m.data === p.avatar)) { p.media = p.media || []; p.media.push({ id: uid(), type: 'photo', name: PREV[LANG === 'en' ? 'en' : 'ru'], data: p.avatar }) }
+    p.avatar = pic; return true
+  }
   if (it.t === 'person') {
     if (!byId(it.of)) return false
     const p = addPerson({ first: it.first.trim(), last: it.last.trim(), gender: it.gender, birthDate: it.birth.trim(), bio: it.note.trim() ? `${it.note.trim()}\n— ${said(author)}` : '' })
@@ -196,17 +217,24 @@ function apply(it: Item, author: string) {
 
 /** Accept or decline lines of an answer (all of them when `idx` is null) and save the decision on the server. */
 export async function decide(s: Suggestion, idx: number | null, d: Decision) {
-  const items = s.items.map((it, i) => ({ ...it }))
+  const was = s.items, items = s.items.map(it => ({ ...it }))
+  const mine = (it: Item, i: number) => !((idx != null && i !== idx) || it.st)
+  // the pictures of accepted photos come first: a photo that is gone is declined
+  const pics = new Map<string, string>()
+  if (d === 'ok') for (const [i, it] of items.entries()) if (it.t === 'photo' && mine(it, i)) pics.set(it.photo, await photoData(it.photo))
   let changed = false
   items.forEach((it, i) => {
-    if ((idx != null && i !== idx) || it.st) return
-    if (d === 'ok') { it.st = apply(it, s.author) ? 'ok' : 'no'; if (it.st === 'ok' && it.t !== 'note') changed = true } else it.st = 'no'
+    if (!mine(it, i)) return
+    if (d === 'ok') { it.st = apply(it, s.author, it.t === 'photo' ? pics.get(it.photo) : undefined) ? 'ok' : 'no'; if (it.st === 'ok' && it.t !== 'note') changed = true } else it.st = 'no'
   })
   if (changed) { S.settings.answered = (S.settings.answered || 0) + 1; commit() }
   const status = items.every(it => it.st) ? 'done' : 'new'
   s.items = items; s.status = status; bump()
   const { error } = await sb.from('suggestions').update({ items, status }).eq('id', s.id)
   if (error) throw new Error(serverError(error))
+  // a decided photo is not kept on the server: an accepted one now lives in the tree (and goes to the family's own storage)
+  const done = items.filter((it, i) => it.t === 'photo' && it.st && !was[i].st).map(it => (it as { photo: string }).photo)
+  if (done.length) { await sb.from('suggestion_photos').delete().in('id', done); done.forEach(pid => photos.delete(pid)) }
 }
 
 /** «Дата рождения · 12.03.1885 · было 1885» — how a line reads in the inbox */
@@ -217,6 +245,7 @@ export function describe(it: Item): { who: string; what: string; value: string; 
   if (it.t === 'event') { const K: Record<string, string> = ru ? { move: 'Жил(а)', study: 'Учёба', work: 'Работа', service: 'Служба', other: 'Событие' } : { move: 'Lived', study: 'Study', work: 'Work', service: 'Service', other: 'Event' }; return { who: name(it.id), what: K[it.ev.type] || K.other, value: [it.ev.place, it.ev.year, it.ev.note].filter(Boolean).join(' · '), was: '' } }
   if (it.t === 'wedding') return { who: name(it.id), what: (ru ? 'Свадьба с ' : 'Wedding with ') + (byId(it.with) ? byId(it.with)!.first : ''), value: it.v, was: '' }
   if (it.t === 'story') return { who: name(it.id), what: ru ? 'Рассказ' : 'Story', value: it.v, was: '' }
+  if (it.t === 'photo') { const p = byId(it.id); return { who: name(it.id), what: ru ? 'Фото для портрета' : 'Photo for the portrait', value: p && p.avatar ? (ru ? 'Прежний портрет останется в\u00A0фотографиях' : 'The previous portrait stays among the photos') : '', was: '' } }
   if (it.t === 'person') {
     const K = ru ? { parent: 'родитель', child: 'ребёнок', spouse: 'супруг(а)', sibling: 'брат или сестра' } : { parent: 'parent', child: 'child', spouse: 'spouse', sibling: 'sibling' }
     return { who: [it.first, it.last].filter(Boolean).join(' '), what: (ru ? 'Новый человек — ' : 'New person — ') + K[it.kind] + (ru ? '. Кому: ' : '. Related to: ') + name(it.of), value: [it.birth, it.note].filter(Boolean).join(' · '), was: '' }
@@ -233,6 +262,11 @@ export async function fetchShared(token: string): Promise<Shared | null> {
 }
 export async function submitAnswer(token: string, author: string, items: Item[]) {
   const { error } = await sb.rpc('submit_suggestion', { p_token: token, p_author: author, p_items: items })
+  if (error) throw error
+}
+/** a photo for someone's portrait (a data: URL already shrunk in the browser) */
+export async function submitPhoto(token: string, author: string, person: string, data: string) {
+  const { error } = await sb.rpc('submit_photo', { p_token: token, p_author: author, p_person: person, p_data: data })
   if (error) throw error
 }
 export const spouseOptions = (id: string) => spousesOf(id)

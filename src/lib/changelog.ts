@@ -3,6 +3,21 @@ export interface Release { date: string; items: { ru: string; en: string }[] }
 
 export const CHANGELOG: Release[] = [
   {
+    date: '2026-11-02',
+    items: [
+      { ru: 'Исправлен баг с добавлением второго родителя/ребёнка (спасибо, Дина! <3)', en: 'Fixed a bug with adding a second parent or child (thank you, Dina! <3)' },
+      { ru: 'Упрощён интерфейс карточки человека', en: 'A simpler person card' },
+      { ru: 'Ваша семья теперь может предлагать свои фото для древа через «Поделиться»', en: 'Your family can now suggest their photos for the tree via Share' },
+    ],
+  },
+  {
+    date: '2026-10-26',
+    items: [
+      { ru: 'В демо-семьях появились Карта и Книга семьи', en: 'The sample families now have the Map and the Family book' },
+      { ru: 'Исправлены флаги стран', en: 'Country flags fixed' },
+    ],
+  },
+  {
     date: '2026-10-25',
     items: [
       { ru: 'Древом теперь можно поделиться по ссылке в двух форматах: родным для заполнения и в соцсети с базовой безопасной информацией', en: 'The tree can now be shared by link in two ways: with relatives so they can fill it in, and on social networks with only basic, safe details' },

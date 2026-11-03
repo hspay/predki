@@ -60,10 +60,10 @@
 .tree-wrap.intro .link.in{stroke-dasharray:1;stroke-dashoffset:1;animation:lnDraw .75s cubic-bezier(.65,0,.35,1) var(--dl) forwards}
 .tree-wrap.intro .link.in.rev{stroke-dashoffset:-1}
 .tree-wrap.intro :is(.link.in-fade,.cdot,.mar-yr,.ex-mark){animation:dmFade .7s ease var(--dl) both}
-.tree-wrap.intro :is(.tree-title,.gen-scale,.tree-tools){animation:dmFade 1.1s ease var(--end) both}
+.tree-wrap.intro :is(.tree-title,.tflap,.gen-scale,.tree-tools){animation:dmFade 1.1s ease var(--end) both}
 .tree-wrap.intro .dm-cta>*{animation:dmUp .9s var(--ease) var(--end) both}
 @media (prefers-reduced-motion:reduce){
-  .tree-wrap.intro :is(.node .nd-in,.node .av,.node .kn,.node .yr,.link,.cdot,.mar-yr,.tree-title,.gen-scale,.tree-tools,.dm-cta>*){animation:none;stroke-dasharray:none;stroke-dashoffset:0}
+  .tree-wrap.intro :is(.node .nd-in,.node .av,.node .kn,.node .yr,.link,.cdot,.mar-yr,.tree-title,.tflap,.gen-scale,.tree-tools,.dm-cta>*){animation:none;stroke-dasharray:none;stroke-dashoffset:0}
   .tree-wrap.intro :is(.link.marriage.partner,.link.marriage.ex,.link.step,.link.adopt){stroke-dasharray:revert}
 }
 

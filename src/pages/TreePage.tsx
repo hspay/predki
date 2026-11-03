@@ -13,6 +13,8 @@ import { NextStop } from '../components/Chapters'
 import { nextStep } from '../lib/chapters'
 import { distances, FRIEND } from '../lib/demo'
 import ShareDialog, { ShareIcon } from '../components/ShareDialog'
+import { logProblem } from '../lib/problems'
+import FlapTitle, { FT } from '../components/FlapTitle'
 
 /** The demo tree («Смотреть пример древа»): no page header, no adding, labels from the demo family, growth from the face on first open */
 export interface DemoView { labels: Record<string, string>; face: string; intro: number }
@@ -42,7 +44,11 @@ function fitText(s: string, max: number, font = NM_FONT, track = 0) {
 const up = (s: string) => s.toLocaleUpperCase(LANG === 'en' ? 'en' : 'ru')
 type View = { x: number; y: number; k: number }
 // pan/zoom survive switching pages, like in the prototype
-const TV = { view: { x: 0, y: 0, k: 1 } as View, fitted: false, lastN: -1, lastSz: '', refit: -1, lastTop: -1, introAt: 0, tk: 0, raf: 0, pan: null as null | { x: number; y: number } }
+const TV = { view: { x: 0, y: 0, k: 1 } as View, fitted: false, lastN: -1, lastSz: '', refit: -1, lastTop: -1, introAt: 0, tk: 0, raf: 0, pan: null as null | { x: number; y: number },
+  /** where the open card stood: when links change and the tree rearranges, the camera follows it */
+  selAt: null as null | { id: string; x: number; y: number }, broke: false }
+/** a broken view (NaN after a bad gesture or a bad layout) used to leave the Tree blank until the page was reloaded */
+const okView = (v: View | null | undefined): v is View => !!v && isFinite(v.x) && isFinite(v.y) && isFinite(v.k) && v.k > 0
 // growth: who has just appeared in the tree (their branch draws, the card blooms)
 const GROW = { known: null as Set<string> | null, refit: -1, ids: new Set<string>(), until: 0, n: 0, timer: 0 as ReturnType<typeof setTimeout> | 0 }
 const GROW_MS = 4700
@@ -101,7 +107,7 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
   const roots = st.ghosts === false ? [] : S.people.filter(p => lay.pos[p.id] && lay.pos[p.id].g === 0 && !lay.pos[p.id].iso && !parentsOf(p.id).length
     // brothers and sisters linked directly share one pair of empty places, above the leftmost of them
     && !S.rels.some(r => r.type === 'sibling' && (r.a === p.id || r.b === p.id) && lay.pos[r.a === p.id ? r.b : r.a] && lay.pos[r.a === p.id ? r.b : r.a].x < lay.pos[p.id].x))
-  const GH = roots.length ? 84 : 0, TH = title ? 96 : 0, TOP = GH + TH
+  const GH = roots.length ? 84 : 0, TH = title ? FT.H + 28 : 0, TOP = GH + TH
   // approximate birth year of each generation row, drawn as a scale on the left
   const scale = (() => {
     const rows = new Map<number, number[]>(); let minX = Infinity
@@ -112,6 +118,8 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
   const SC = scale ? 130 : 0
   const [, setMemoTick] = useState(0)
   const [sharing, setSharing] = useState(false)
+  /** taps on the family's board above the tree */
+  const [flapN, setFlapN] = useState(0)
   const memo0 = dv ? null : Progress.nearestBirthday()
   const memo = memoHidden(memo0) ? null : memo0
   // «Следующая остановка» and the memorial date share the bottom-left corner
@@ -138,7 +146,13 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
   const growing = GROW.until > now ? GROW.ids : new Set<string>()
   useEffect(() => { if (!growing.size) return; clearTimeout(GROW.timer as ReturnType<typeof setTimeout>); GROW.timer = setTimeout(bump, GROW.until - Date.now() + 50) }, [GROW.n])
 
-  const apply = (anim?: boolean, ms = 900) => { const g = gRef.current; if (!g) return; const v = TV.view; if (anim) { g.style.transition = `transform ${ms}ms cubic-bezier(${ms > 900 ? '.5,.05,.25,1' : '.22,.61,.36,1'})`; setTimeout(() => { g.style.transition = '' }, ms + 50) } g.setAttribute('transform', `translate(${v.x},${v.y}) scale(${v.k})`); if (TV.tk !== v.k) { TV.tk = v.k; g.style.setProperty('--tk', String(v.k)) } }
+  const apply = (anim?: boolean, ms = 900) => {
+    const g = gRef.current; if (!g) return
+    if (!okView(TV.view)) { // never draw a broken view: show the whole tree instead (and tell us once, to find the cause)
+      if (!TV.broke) { TV.broke = true; logProblem('tree-view', new Error('bad view ' + JSON.stringify(TV.view) + ' lay ' + [lay.w, lay.h].join('x')), true) }
+      const f = fitView(); TV.view = okView(f) ? f : { x: 0, y: 0, k: 1 }; anim = false
+    }
+    const v = TV.view; if (anim) { g.style.transition = `transform ${ms}ms cubic-bezier(${ms > 900 ? '.5,.05,.25,1' : '.22,.61,.36,1'})`; setTimeout(() => { g.style.transition = '' }, ms + 50) } g.setAttribute('transform', `translate(${v.x},${v.y}) scale(${v.k})`); if (TV.tk !== v.k) { TV.tk = v.k; g.style.setProperty('--tk', String(v.k)) } }
   /** wheel and pinch can fire faster than the screen redraws: one update per frame */
   const applySoon = () => { if (!TV.raf) TV.raf = requestAnimationFrame(() => { TV.raf = 0; apply() }) }
   const fitView = (): View | null => {
@@ -147,7 +161,7 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
     const lw = (lay.w || NW) + SC, lh = (lay.h || NH) + TOP; const k = Math.min(1.1, Math.max(dv ? .16 : .25, Math.min((W - (dv ? 32 : 80)) / lw, (H - 80 - pad) / lh)))
     return { k, x: (W - lw * k) / 2 + SC * k, y: (H - pad - lh * k) / 2 + TOP * k }
   }
-  const fit = (anim?: boolean) => { const v = fitView(); if (v) { TV.view = v; apply(anim) } }
+  const fit = (anim?: boolean) => { TV.pan = null; if (panRef.current) panRef.current.style.transform = ''; const v = fitView(); if (v) { TV.view = v; apply(anim) } }
   /** demo, first open: where the camera stops — the face with about a row and a half of relatives above and below it
    *  (a big family shown whole is too small to read); null when the whole family fits at that size anyway */
   const closeUp = (P: { x: number; y: number; h: number }): View | null => {
@@ -198,7 +212,12 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
   useLayoutEffect(() => {
     const svg = svgRef.current; if (!svg) return; const sz = svg.clientWidth + 'x' + svg.clientHeight
     if (intro && TV.introAt !== dv!.intro) { TV.introAt = dv!.intro; TV.fitted = true; TV.lastN = S.people.length; TV.lastSz = sz; TV.refit = ui.treeRefit; TV.lastTop = TOP; startIntro(); return }
-    if (!TV.fitted || TV.lastN !== S.people.length || TV.lastSz !== sz || TV.refit !== ui.treeRefit || TV.lastTop !== TOP) { if (TV.fitted && TV.lastN !== S.people.length && growing.size > 0 && TV.lastSz === sz) focus(growing); else fit(); TV.fitted = true; TV.lastN = S.people.length; TV.lastSz = sz; TV.refit = ui.treeRefit; TV.lastTop = TOP } else apply()
+    const P = sel ? lay.pos[sel] : null, was = TV.selAt
+    if (!TV.fitted || TV.lastN !== S.people.length || TV.lastSz !== sz || TV.refit !== ui.treeRefit || TV.lastTop !== TOP) { if (TV.fitted && TV.lastN !== S.people.length && growing.size > 0 && TV.lastSz === sz) focus(growing); else fit(); TV.fitted = true; TV.lastN = S.people.length; TV.lastSz = sz; TV.refit = ui.treeRefit; TV.lastTop = TOP }
+    // a new link rearranged the tree (a second parent, a marriage): the open card stays where it was on screen
+    else if (P && was && was.id === sel && (was.x !== P.x || was.y !== P.y) && okView(TV.view)) { const v = TV.view; TV.view = { ...v, x: v.x - (P.x - was.x) * v.k, y: v.y - (P.y - was.y) * v.k }; apply(true, 700) }
+    else apply()
+    TV.selAt = P && sel ? { id: sel, x: P.x, y: P.y } : null
   })
   // keep the selected card in view when the profile panel opens
   useEffect(() => {
@@ -217,22 +236,24 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
     const down = (e: PointerEvent) => {
       if (e.pointerType === 'mouse') e.preventDefault() // no text selection while dragging
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); svg.setPointerCapture(e.pointerId)
-      if (pts.size === 1) { drag = { x: e.clientX, y: e.clientY, vx: TV.view.x, vy: TV.view.y, node: (e.target as Element).closest('.petb, .node, .ghost') }; moved = false }
-      else if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), k: TV.view.k }; drag = null }
+      if (pts.size === 1) { drag = { x: e.clientX, y: e.clientY, vx: TV.view.x, vy: TV.view.y, node: (e.target as Element).closest('.petb, .node, .ghost, .tflap') }; moved = false }
+      else if (pts.size === 2) { const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y); pinch = d > 8 ? { d, k: TV.view.k } : null; drag = null }
     }
     const move = (e: PointerEvent) => {
       if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
-      if (pts.size === 2 && pinch) { settle(); const [a, b] = [...pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); const r = svg.getBoundingClientRect(); const cx = (a.x + b.x) / 2 - r.left, cy = (a.y + b.y) / 2 - r.top; const nk = Math.min(3, Math.max(.15, pinch.k * d / pinch.d)); const rr = nk / TV.view.k; TV.view = { k: nk, x: cx - (cx - TV.view.x) * rr, y: cy - (cy - TV.view.y) * rr }; applySoon(); moved = true; return }
+      if (pts.size === 2 && pinch) { settle(); const [a, b] = [...pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); if (!(d > 0)) return; const r = svg.getBoundingClientRect(); const cx = (a.x + b.x) / 2 - r.left, cy = (a.y + b.y) / 2 - r.top; const nk = Math.min(3, Math.max(.15, pinch.k * d / pinch.d)); const rr = nk / TV.view.k; TV.view = { k: nk, x: cx - (cx - TV.view.x) * rr, y: cy - (cy - TV.view.y) * rr }; applySoon(); moved = true; return }
       if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) { moved = true; svg.classList.add('dragging') }
         if (moved) { TV.pan = { x: dx, y: dy }; if (panRef.current) panRef.current.style.transform = `translate(${dx}px, ${dy}px)` } }
     }
     const up = (e: PointerEvent) => {
       pts.delete(e.pointerId); if (pts.size < 2) pinch = null
-      if (pts.size === 0) { settle(); svg.classList.remove('dragging'); if (!moved) { const n = drag && drag.node as SVGGElement | null; if (n && n.dataset.ghost) addRelative(n.dataset.ghost, 'parent'); else if (n && n.dataset.pet) openPet(n.dataset.pet); else if (n && n.dataset.id) openPerson(n.dataset.id); else closePanel() } drag = null }
+      if (pts.size === 0) { settle(); svg.classList.remove('dragging'); if (!moved) { const n = drag && drag.node as SVGGElement | null; if (n && n.classList.contains('tflap')) setFlapN(x => x + 1); else if (n && n.dataset.ghost) addRelative(n.dataset.ghost, 'parent'); else if (n && n.dataset.pet) openPet(n.dataset.pet); else if (n && n.dataset.id) openPerson(n.dataset.id); else closePanel() } drag = null }
     }
+    // a finger lifted outside the page (or over a window that opened) leaves no «up»: it must not stay as a ghost second finger
+    const lost = (e: PointerEvent) => { if (pts.has(e.pointerId)) up(e) }
     const resize = () => setTimeout(fit, 50)
-    svg.addEventListener('wheel', wheel, { passive: false }); svg.addEventListener('pointerdown', down); svg.addEventListener('pointermove', move); svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up); window.addEventListener('resize', resize)
-    return () => { svg.removeEventListener('wheel', wheel); svg.removeEventListener('pointerdown', down); svg.removeEventListener('pointermove', move); svg.removeEventListener('pointerup', up); svg.removeEventListener('pointercancel', up); window.removeEventListener('resize', resize) }
+    svg.addEventListener('wheel', wheel, { passive: false }); svg.addEventListener('pointerdown', down); svg.addEventListener('pointermove', move); svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up); svg.addEventListener('lostpointercapture', lost); window.addEventListener('resize', resize)
+    return () => { svg.removeEventListener('wheel', wheel); svg.removeEventListener('pointerdown', down); svg.removeEventListener('pointermove', move); svg.removeEventListener('pointerup', up); svg.removeEventListener('pointercancel', up); svg.removeEventListener('lostpointercapture', lost); window.removeEventListener('resize', resize) }
   })
 
   // ---- links: marriages, then lines from the couple (or single parent) down to each child: smooth S-curves or straight steps
@@ -339,7 +360,8 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
             <radialGradient id="frGlow"><stop offset="0" stopColor="#8C96FF" stopOpacity=".5" /><stop offset="1" stopColor="#8C96FF" stopOpacity="0" /></radialGradient>
           </defs>
           <g id="treeView" ref={gRef}>
-            {title && <text className="tree-title" x={(lay.w || NW) / 2} y={-GH - 34} textAnchor="middle">{up(title)}</text>}
+            {title && <FlapTitle key={'ft' + (intro ? dv!.intro : 0)} word={title} cx={(lay.w || NW) / 2} y={-GH - TH + 6} maxW={Math.max(lay.w || NW, 720)} play={flapN}
+              start={intro ? Math.round(introEnd * 1000) : null} />}
             {roots.map(p => { const P = lay.pos[p.id], w = (NW - 10) / 2, y = P.top - 64; return (
               <g key={'gh' + p.id} className="ghost" data-ghost={p.id} role="button" aria-label={t('ts.ghost') + ': ' + fullName(p)}>
                 <title>{t('ts.ghost')}</title>

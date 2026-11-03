@@ -28,7 +28,7 @@ import { demo } from '../lib/core'
 type L = 'ru' | 'en'
 const TX = {
   ru: {
-    l1: 'Ваши предки', from: 'из', cities: ['Ташкента', 'Москвы', 'Токио', 'Читы', 'Берлина', 'Пензы', 'Риги', 'Казани', 'Одессы', 'Тбилиси'],
+    l1: 'Ваши предки', from: 'из', cities: ['Ташкента', 'Москвы', 'Кореи', 'Читы', 'Берлина', 'Пензы', 'Риги', 'Казани', 'Одессы', 'Тбилиси'],
     sub: 'Исследуйте историю семьи и постройте древо вместе с родными', start: 'Построить древо', demo: 'Смотреть пример древа', back: 'Вернуться к древу', scroll: 'Листайте',
     grow: 'Построй древо семьи за пару минут',
     tree: [['Ренесми', 'Каллен', '2006'], ['Эдвард', 'Каллен', '1901'], ['Белла', 'Свон', '1987'], ['Карлайл', 'Каллен', '1640'], ['Эсми', 'Каллен', '1895'], ['Чарли', 'Свон', '1964'], ['Рене', 'Дуайер', '1966']],
@@ -43,7 +43,7 @@ const TX = {
     places: { lon: 'Лондон', vol: 'Вольтерра', chi: 'Чикаго', for: 'Форкс', phx: 'Финикс', col: 'Колумбус', jax: 'Джэксонвилл' },
   },
   en: {
-    l1: 'Your ancestors', from: 'are from', cities: ['Tashkent', 'Moscow', 'Tokyo', 'Chita', 'Berlin', 'Penza', 'Riga', 'Kazan', 'Odesa', 'Tbilisi'],
+    l1: 'Your ancestors', from: 'are from', cities: ['Tashkent', 'Moscow', 'Korea', 'Chita', 'Berlin', 'Penza', 'Riga', 'Kazan', 'Odesa', 'Tbilisi'],
     sub: 'Explore your family history and build the tree together with your relatives', start: 'Build the tree', demo: 'See a sample tree', back: 'Back to the tree', scroll: 'Scroll',
     grow: 'Build your family tree in a couple of minutes',
     tree: [['Renesmee', 'Cullen', '2006'], ['Edward', 'Cullen', '1901'], ['Bella', 'Swan', '1987'], ['Carlisle', 'Cullen', '1640'], ['Esme', 'Cullen', '1895'], ['Charlie', 'Swan', '1964'], ['Renée', 'Dwyer', '1966']],

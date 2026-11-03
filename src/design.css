@@ -225,6 +225,13 @@ main{border-radius:var(--r-card);background:var(--mainbg);border-color:var(--edg
 .link.marriage{stroke-width:2.25;opacity:.85}
 .mar-yr{font:500 10px var(--f-mono);letter-spacing:.04em}
 .tree-title{font-family:var(--f-head);font-weight:800;font-size:64px;letter-spacing:.02em;fill:var(--tt)}
+/* the family's name as a split-flap board (components/FlapTitle.tsx): black tiles whatever the background, like a real board */
+.tflap{cursor:pointer}
+.tflap text{font-family:var(--f-head);font-weight:800;fill:#F4F2EC;pointer-events:none}
+.tflap .tf-sh{fill:#0C0C0F;filter:url(#frShadow)}
+.tflap .tf-t{fill:#18181C}
+.tflap .tf-b{fill:#111114}
+.tflap .tf-hinge{fill:#000}
 /* empty places for the parents of the oldest relatives */
 .ghost rect{fill:rgba(37,51,255,.06);stroke:rgba(140,150,255,.5);stroke-opacity:1;stroke-dasharray:5 5;stroke-width:1.5;transition:fill .3s,stroke .3s}
 .ghost text{fill:var(--sky);fill-opacity:1;font:500 18px var(--f-mono)}
@@ -353,6 +360,8 @@ main{border-radius:var(--r-card);background:var(--mainbg);border-color:var(--edg
 .quick-add .btn{height:42px;border-radius:8px;border:1px solid var(--edge-2);background:rgba(37,51,255,.1);font-weight:600;font-size:14px}
 .quick-add .btn:hover{border-color:var(--sky);background:rgba(37,51,255,.26)}
 :root[data-theme="light"] .quick-add .btn{background:rgba(37,51,255,.05)}
+.quick-add .qa-link{grid-column:1/-1;gap:8px}
+.quick-add .qa-link svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round}
 .kv{grid-template-columns:auto 1fr;gap:9px 10px;margin:22px 0 4px;font-size:14px}
 .kv dt{color:var(--ink-2)}
 .kv dd{display:flex;align-items:baseline;gap:10px;text-align:right;font:400 12.5px/1.45 var(--f-mono);color:var(--sky)}
@@ -759,6 +768,8 @@ main{border-radius:var(--r-card);background:var(--mainbg);border-color:var(--edg
 .bt-look{grid-column:span 4}
 .bt-look .look-seg{margin:0}
 .bt-btns{display:flex;flex-wrap:wrap;gap:8px}
+.bt-btns .bt-io{gap:8px}
+.bt-io svg{width:22px;height:22px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
 .bt-look .bt-h2{margin-top:10px}
 .lang-seg{display:grid;grid-template-columns:repeat(2,1fr);gap:4px;padding:4px;border-radius:14px;background:var(--well);border:1px solid var(--edge);max-width:440px}
 .lang-seg button{height:44px;border-radius:10px;font-size:14px;font-weight:600;color:var(--ink-2)}
@@ -989,6 +1000,10 @@ main{border-radius:var(--r-card);background:var(--mainbg);border-color:var(--edg
 /* ---------- a tree opened by link (components/SharedTree.tsx), on the demo's layout ---------- */
 #demo.shared :is(.dm-brand,.dm-btn){text-decoration:none}
 #demo.shared .sh-fam{margin:0;font:800 40px/.9 var(--f-head);letter-spacing:.02em;text-transform:uppercase;text-align:center}
+/* the family's name as a split-flap board (the cells come from landing2.css) */
+#demo.shared .sh-board{--ln-head:var(--f-head);--ln-white:#F4F2EC;--cw:min(34px,calc((100vw - 40px - (var(--n) - 1) * 5px) / var(--n)));font-size:0;line-height:0}
+#demo.shared .sh-board button{display:block;cursor:pointer;border-radius:8px}
+#demo.shared .sh-board .sf-c{font-size:calc(var(--cw) * 1.12);box-shadow:inset 0 0 0 1px rgba(255,255,255,.07),0 8px 18px -10px rgba(0,0,20,.7)}
 #demo.shared .dm-sub{font-size:12px}
 .sh-who{justify-self:end;position:relative}
 .sh-who-btn{height:42px;padding:0 14px 0 12px;display:inline-flex;align-items:center;gap:8px;border-radius:10px;border:1.5px solid var(--edge-2);background:var(--chrome);color:var(--ink);font-size:14px;font-weight:600}
@@ -1023,12 +1038,26 @@ main{border-radius:var(--r-card);background:var(--mainbg);border-color:var(--edg
 .sh-sent .ok{width:52px;height:52px;border-radius:50%;background:rgba(143,227,184,.16);display:grid;place-items:center}
 .sh-sent .ok svg{width:24px;height:24px;fill:none;stroke:var(--good);stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round}
 .sh-sent .btn{height:42px}
-.dm-card .sh-add{margin-top:8px;height:44px;justify-content:center;width:100%}
+.dm-card .sh-card-btns{margin-top:8px;display:flex;flex-direction:column;gap:8px}
+.dm-card .sh-add{height:44px;justify-content:center;width:100%}
+.dm-card .sh-pic-b{height:40px;justify-content:center;width:100%;gap:8px;font-weight:600}
+:is(.sh-pic-b,.sh-pic-acts .btn) svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round}
+/* «Фото для портрета» in the relative's form */
+.sh-pic{display:flex;gap:14px;align-items:flex-start;padding:12px;border-radius:12px;border:1.5px dashed var(--edge-2)}
+.sh-pic.on{border-style:solid;border-color:rgba(143,227,184,.55);background:rgba(143,227,184,.06)}
+.sh-pic img{width:64px;height:64px;flex:none;border-radius:50%;object-fit:cover;border:2px solid var(--edge-2)}
+.sh-pic.on img{border-color:var(--good)}
+.sh-pic>div{display:flex;flex-direction:column;gap:4px;min-width:0}
+.sh-pic b{font-size:14px}
+.sh-pic small{font-size:12.5px;line-height:1.45;color:var(--ink-2)}
+.sh-pic-acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+.sh-pic-acts .btn{gap:6px}
 .dm-card .sh-done{font-size:12.5px;color:var(--good)}
 @media (max-width:860px){
   #demo.shared .dm-top{grid-template-areas:"brand x" "mid mid"}
   #demo.shared .dm-brand{text-decoration:none}
 #demo.shared .sh-fam{font-size:32px}
+  #demo.shared .sh-board{--cw:min(28px,calc((100vw - 32px - (var(--n) - 1) * 4px) / var(--n)));font-size:0}
   #demo.shared .dm-sub{flex-direction:row;flex-wrap:wrap;justify-content:center;font-size:10.5px}
   .sh-who{grid-area:x}
   .sh-who-btn{height:40px;padding:0 10px;font-size:13.5px}

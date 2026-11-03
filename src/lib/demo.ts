@@ -50,8 +50,8 @@ export function buildFamily(f: DemoFamily): Data {
   Object.entries(f.ev || {}).forEach(([id, list]) => {
     const p = people.find(x => x.id === id); if (!p) return
     p.events = list.map(([type, year, pk, note, date, w], i) => {
-      const g = f.geo?.[pk]
-      return { id: `${id}e${i}`, type, year, place: place(pk), lat: g ? g[0] : null, lon: g ? g[1] : null, note: tr(note), ...(date ? { date } : {}), ...(w ? { with: w } : {}) }
+      const off = pk.startsWith('~'), k = off ? pk.slice(1) : pk, g = off ? undefined : f.geo?.[k]
+      return { id: `${id}e${i}`, type, year, place: place(k), lat: g ? g[0] : null, lon: g ? g[1] : null, note: tr(note), ...(date ? { date } : {}), ...(w ? { with: w } : {}) }
     })
   })
   if (f.lifeFromPlaces) {

@@ -1002,7 +1002,7 @@ body.no-select,body.no-select *{-webkit-user-select:none!important;user-select:n
 .lk-list{display:flex;flex-direction:column;gap:2px;max-height:min(320px,40vh);overflow:auto;margin:0 -8px}
 .lk-list button{display:flex;align-items:center;gap:12px;padding:8px;border-radius:12px;text-align:left;color:var(--ink)}
 .lk-list button:hover{background:var(--glass-2)}
-.lk-list span{display:flex;flex-direction:column;gap:1px;min-width:0}
+.lk-list button>span:not(.avatar){display:flex;flex-direction:column;gap:1px;min-width:0}
 .lk-list b{font-weight:600;font-size:14px}
 .lk-list small{font-family:var(--f-mono);font-size:11px;color:var(--muted)}
 .lk-list .muted{padding:8px;font-size:13px;margin:0}
@@ -1335,3 +1335,20 @@ body.no-select,body.no-select *{-webkit-user-select:none!important;user-select:n
 .tree-pan:has(#treeSvg.dragging){will-change:transform}
 #treeSvg.dragging{overflow:visible}
 #treeSvg.dragging *{pointer-events:none}
+
+/* a page that failed to draw (components/PageGuard.tsx) */
+.page-err{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:24px;text-align:center;z-index:5}
+.page-err b{font-size:18px}
+.page-err span{color:var(--ink-2);max-width:34ch;font-size:13px}
+.page-err .btn{margin-top:6px}
+.page-err.small{position:fixed;inset:auto 16px 16px auto;max-width:320px;border-radius:var(--r-card);background:var(--surface-2);border:1px solid var(--edge-2);box-shadow:var(--shadow-lg);z-index:60}
+/* a photo sent by a relative, in «Ответы от родных» */
+.fa-photo{white-space:normal}
+.fa-pics{display:flex;align-items:center;gap:10px;margin:6px 0 2px}
+.fa-pics img,.fa-pics .ph{width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid var(--edge-2);background:var(--glass)}
+.fa-pics img.was{width:40px;height:40px;opacity:.7;border-width:1px}
+.fa-pics .ph{display:block;animation:faPulse 1.2s ease-in-out infinite alternate}
+.fa-pics .ph.gone{animation:none;border-style:dashed}
+.fa-pics svg{width:16px;height:16px;fill:none;stroke:var(--muted);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+@keyframes faPulse{from{opacity:.45}to{opacity:.9}}
+.page-err.root{position:fixed;background:var(--bg)}

@@ -53,7 +53,7 @@ export default function SettingsPage() {
   }
   const importJson = () => {
     const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json'
-    inp.onchange = () => { const f = inp.files && inp.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { try { importData(JSON.parse(String(r.result))); toast(t('set.imported')) } catch { toast(LANG === 'en' ? 'Invalid JSON' : 'Файл не похож на экспорт Predki') } }; r.readAsText(f) }
+    inp.onchange = () => { const f = inp.files && inp.files[0]; if (!f) return; const r = new FileReader(); r.onload = () => { try { importData(JSON.parse(String(r.result))); toast(t('set.imported')) } catch { toast(LANG === 'en' ? 'This file is not Predki data' : 'Файл не\u00A0похож на\u00A0данные Predki') } }; r.readAsText(f) }
     inp.click()
   }
   const T = TX[LANG === 'en' ? 'en' : 'ru']
@@ -105,8 +105,8 @@ export default function SettingsPage() {
           <div className="acc-part acc-files">
             <p className="bt-p">{t(cloud.session ? 'set.data.p.cloud' : 'set.data.p')}</p>
             <div className="bt-btns">
-              <button className="btn" onClick={exportJson}>{t('set.export')}</button>
-              <button className="btn" onClick={importJson}>{t('set.import')}</button>
+              <button className="btn bt-io" onClick={exportJson}><Floppy out={false} />{t('set.export')}</button>
+              <button className="btn bt-io" onClick={importJson}><Floppy out />{t('set.import')}</button>
               <button className="btn ghost danger" onClick={() => { if (confirm(t('set.clear.confirm'))) { clearData(); toast(t('set.cleared')) } }}>{t('set.clear')}</button>
             </div>
           </div>
@@ -132,4 +132,13 @@ export default function SettingsPage() {
       {dlg === 'report' && <ReportDialog onClose={() => setDlg('')} />}
     </section>
   )
+}
+
+/** a floppy disk and an arrow: into it for «Скачать данные» (saved to a file), out of it (out) for «Загрузить данные» */
+function Floppy({ out }: { out: boolean }) {
+  return <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M9.5 8H5.5A1.5 1.5 0 0 0 4 9.5v11A1.5 1.5 0 0 0 5.5 22h13a1.5 1.5 0 0 0 1.5-1.5V11l-3-3h-2.5" />
+    <path d="M7.5 22v-5.5h9V22" />
+    {out ? <path d="M12 13.5V2M8.5 5.5 12 2l3.5 3.5" /> : <path d="M12 2v11.5M8.5 10l3.5 3.5 3.5-3.5" />}
+  </svg>
 }

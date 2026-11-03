@@ -33,7 +33,12 @@ export function linkPeople(id: string, otherId: string, kind: RelKind) {
     if (other.gender === 'm') parentsOf(id).filter(x => x.auto && x.gender === 'm' && x.id !== other.id && !parentsOf(x.id).length && childrenOf(x.id).length === 1).forEach(x => removePerson(x.id))
     const before = parentsOf(id).filter(x => x.id !== otherId)
     addRel('parent', otherId, id)
-    if (before.length === 1) addRel('spouse', before[0].id, otherId) // the second parent is the first one's spouse
+    if (before.length === 1) {
+      const one = before[0], first = isFirstSpouse(one.id, otherId)
+      addRel('spouse', one.id, otherId) // the second parent is the first one's spouse
+      // a husband added to the grandmother through one of her sons: her other children with no second parent become his too
+      if (first) shareChildren(one.id, otherId)
+    }
     // brothers and sisters linked directly share the new parent too
     linkedSiblingsOf(id).forEach(s => { if (!parentsOf(s.id).length) addRel('parent', otherId, s.id) })
     tidySiblings()
@@ -59,12 +64,14 @@ export function linkPeople(id: string, otherId: string, kind: RelKind) {
   } else if (kind === 'stepchild') {
     addRel('parent', id, otherId, '', true)
   } else if (kind === 'spouse' || kind === 'partner' || kind === 'ex') {
+    const first = isFirstSpouse(id, otherId)
     const r = coupleRel(id, otherId)
     if (r) { r.partner = kind === 'partner' ? true : undefined; if (!r.partner) delete r.partner } // the same couple, a new status
     else addRel('spouse', id, otherId, '', false, kind === 'partner' ? { partner: true } : kind === 'ex' ? { ex: true } : undefined)
     // a wife added to a grandfather who is the only known parent of the mother becomes the mother's mother too:
     // a child with one known parent gets the new spouse as the second one
-    if (kind !== 'ex') { childrenOf(id).forEach(c => { if (parentsOf(c.id).length !== 1) return; const adopt = S.rels.some(r => r.type === 'parent' && r.a === id && r.b === c.id && r.adopt); addRel('parent', otherId, c.id, '', false, adopt ? { adopt: true } : undefined) }); tidySiblings() }
+    // only for the first husband or wife: with an earlier marriage in the tree it is not known whose children they are
+    if (kind !== 'ex' && first) { shareChildren(id, otherId); tidySiblings() }
   } else if (kind === 'sibling') {
     const P = parentsOf(id), Q = parentsOf(otherId)
     if (P.length && !Q.length) P.forEach(x => addRel('parent', x.id, otherId))
@@ -76,6 +83,17 @@ export function linkPeople(id: string, otherId: string, kind: RelKind) {
       else [...group].forEach(a => [...group].forEach(b => { if (a < b) addRel('sibling', a, b) }))
     }
   }
+}
+
+/** «other» is (or is about to be) the only husband, wife or partner of «id» */
+function isFirstSpouse(id: string, otherId: string) { return !spousesOf(id).some(s => s.id !== otherId) }
+/** The children of «id» with no second parent known get «otherId» as that parent (adopted ones — as an adoptive parent). */
+function shareChildren(id: string, otherId: string) {
+  childrenOf(id).forEach(c => {
+    if (c.id === otherId || parentsOf(c.id).length !== 1) return
+    const adopt = S.rels.some(r => r.type === 'parent' && r.a === id && r.b === c.id && r.adopt)
+    addRel('parent', otherId, c.id, '', false, adopt ? { adopt: true } : undefined)
+  })
 }
 
 /** a direct sibling link is dropped once the two share a parent */
