@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { S, ui, t, LANG, bump, go, generations } from '../lib/core'
+import { S, ui, t, LANG, bump, go } from '../lib/core'
 import { Progress } from '../lib/progress'
 import { stickerSrc, outlineSrc } from '../lib/stickers'
 import { openShare } from '../components/ShareSheet'
@@ -87,8 +87,6 @@ export default function AlbumPage() {
 
   const got = N.filter(n => ST[n.id] === 'done').length
   const years = S.people.flatMap(p => [p.birthDate, p.deathDate, ...(p.events || []).map(e => e.year)]).map(v => { const m = String(v || '').match(/(\d{4})/); return m ? +m[1] : 0 }).filter(y => y > 0)
-  const age = years.length ? new Date().getFullYear() - Math.min(...years) : 0, gens = S.people.length ? generations() : 0
-  const stats = [[gens, T.gens], [S.people.length, T.people], [M.cities || 0, T.cities], [age, T.years]] as [number, string[]][]
   const list: Node[] = (ch ? ch.st : collectionIds()).map((id: string) => P.byN(id)).filter(Boolean)
   const pgGot = list.filter(n => ST[n.id] === 'done').length
   const ru = LANG !== 'en'
@@ -139,7 +137,6 @@ export default function AlbumPage() {
             <span className="go">{T.passGo}<svg viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6" /></svg></span>
           </button>}
           {/* the family in four numbers, at the end of the album */}
-          <div className="al-stats al-stats-end">{stats.map(([v, f], i) => <div className="al-stat" key={i}><b>{P.nf(v)}</b><span>{plr(v, f)}</span></div>)}</div>
         </div>
       </div>
       {sheet && P.byN(sheet) && <Sheet id={sheet} look={lookOf(P.byN(sheet), pasting)} paste={paste} open={open} />}

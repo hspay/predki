@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { S, ui, t, LANG, byId, yearOf, showYear, parentsOf, childrenOf, yearsOf, avatarSmall, fullName, fillPercent, generations, openPerson, openPet, closePanel, editPerson, bump, coupleRel, isAdoptive, persist, toast, openModal, type Person } from '../lib/core'
+import { S, ui, t, LANG, byId, yearOf, showYear, parentsOf, childrenOf, yearsOf, avatarSmall, fullName, fillPercent, generations, openPerson, openPet, closePanel, editPerson, bump, coupleRel, isAdoptive, persist, toast, openModal, retryLoad, signOut, cloud, type Person } from '../lib/core'
 import { addRelative } from '../lib/relations'
 import { frameOf, frameArt } from '../lib/frames'
 import { petsOf, petSpot, petIcon, petYears, kindName, PET_R } from '../lib/pets'
@@ -28,6 +28,7 @@ export const introStep = (maxD: number) => Math.min(.5, 6.5 / Math.max(1, maxD))
 function treeSub(n: number, g: number) {
   const ru = LANG !== 'en', pl = (k: number, f: string[]) => { const a = k % 10, b = k % 100; return f[(a === 1 && b !== 11) ? 0 : (a >= 2 && a <= 4 && (b < 12 || b > 14)) ? 1 : 2] }
   return t('tree.sub', { n, g, people: ru ? pl(n, ['человек', 'человека', 'человек']) : n === 1 ? 'person' : 'people', gens: ru ? pl(g, ['поколение', 'поколения', 'поколений']) : g === 1 ? 'generation' : 'generations' })
+    .replace(/(\d) /g, '$1\u00a0').replace(' · ', '\u00a0· ') // a number stays with its word, the dot with the first half
 }
 
 // Names are measured with the same font the card uses, so long surnames get an ellipsis inside the card.
@@ -499,11 +500,11 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
     <section className="page active" data-page="tree">
       {!dv && <div className="topbar">
         <h2><span>{t('nav.tree')}</span><span className="sub" id="treeSub">{S.people.length ? treeSub(S.people.length, generations()) : ''}</span></h2>
-        <div className="tb-acts">
-          {S.people.length > 1 && <button className={'btn rnd tb-find' + (finding ? ' on' : '')} id="btnFind" onClick={() => setFinding(!finding)} aria-label={t('tree.find')} title={t('tree.find')} aria-expanded={finding}><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg></button>}
+        {!ui.loadFailed && <div className="tb-acts">
           <button className="btn rnd add" id="btnAddPerson" onClick={() => editPerson(null)} aria-label={t('tree.add')} title={t('tree.add')}><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg></button>
+          {S.people.length > 1 && <button className={'btn rnd tb-find' + (finding ? ' on' : '')} id="btnFind" onClick={() => setFinding(!finding)} aria-label={t('tree.find')} title={t('tree.find')} aria-expanded={finding}><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg></button>}
           <button className="btn rnd" id="btnShare" onClick={() => setSharing(true)} aria-label={LANG === 'en' ? 'Share' : 'Поделиться'} title={LANG === 'en' ? 'Share' : 'Поделиться'}><ShareIcon /></button>
-        </div>
+        </div>}
       </div>}
       {sharing && <ShareDialog onClose={() => setSharing(false)} />}
       <div className={'tree-wrap th-' + theme.k + (theme.light ? ' th-light' : '') + (intro ? ' intro' : '')} style={intro ? { '--end': introEnd - .5 + 's' } as React.CSSProperties : undefined}>
@@ -570,15 +571,18 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
             {!kin.blood[sel] && <span className="m">{t(kin.linked(sel) ? 'kin.marriage' : 'kin.none')}</span>}
           </div>
         })()}
-        {!S.people.length && <div className="empty" id="treeEmpty">
+        {ui.loadFailed && <div className="empty tree-fail" role="alert">
+          <h3>{t('tree.fail.h')}</h3><p className="muted">{t('tree.fail.p')}</p>
+          <button className="btn primary" disabled={cloud.busy} onClick={retryLoad}>{t('tree.fail.retry')}</button>
+          {cloud.session && <p className="tf-who">{t('tree.fail.who', { email: cloud.session.user.email || '' })} · <button type="button" onClick={() => signOut()}>{t('tree.fail.out')}</button></p>}
+        </div>}
+        {!S.people.length && !ui.loadFailed && <div className="empty" id="treeEmpty">
           <h3>{t('tree.empty.h')}</h3><p className="muted" style={{ maxWidth: '36ch' }}>{t('tree.empty.p')}</p>
           <button className="btn add" onClick={() => editPerson(null)}>{t('tree.add')}</button>
         </div>}
         {finding && !dv && <TreeSearch onPick={flyTo} onClose={() => setFinding(false)} labelOf={id => kin?.label[id]} />}
         {cd && cd.over && byId(cd.over) && byId(cd.id) && <div className="tree-drop" aria-live="polite">{t('drag.over', { a: fullName(byId(cd.id)), b: fullName(byId(cd.over)) })}</div>}
         <div className="tree-tools">
-          {/* on a phone the header has no room for a third button: the search sits with the tools */}
-          {!dv && S.people.length > 1 && <button className={'btn icon tool-find' + (finding ? ' on' : '')} title={t('tree.find')} aria-label={t('tree.find')} onClick={() => setFinding(!finding)}><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg></button>}
           {!dv && S.people.some(p => p.at) && <button className="btn icon" title={t('drag.reset')} aria-label={t('drag.reset')} onClick={resetPlaces}><svg viewBox="0 0 24 24"><path d="M4 4v6h6" /><path d="M5.6 15a7 7 0 1 0 1.1-7.3L4 10" /></svg></button>}
           <TreeStyle />
           <button className="btn icon" title="+" onClick={() => zoomBy(1.25)}><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg></button>

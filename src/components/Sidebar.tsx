@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useState } from 'react'
+import { Fragment, useLayoutEffect, useMemo, useState } from 'react'
 import { S, ui, go, t, LANG, generations, bump, type Page } from '../lib/core'
 import { globeSvg } from '../lib/globe'
 import { Progress } from '../lib/progress'
@@ -26,6 +26,8 @@ const NAV: [Page, JSX.Element][] = [
 ]
 
 const MINI_KEY = 'predki:sbMini'
+/** wide pages: the menu folds to icons on its own when one opens, and goes back to the saved choice on leaving */
+const WIDE: Page[] = ['map', 'guide']
 /** a closed part keeps its place in the menu; the hint says which chapter opens it */
 const bookLabel = () => (LANG === 'en' ? 'Family book' : 'Книга семьи')
 const lockTitle = (f: 'map' | 'calendar' | 'passport' | 'book', name: string) => isOpen(f) ? name : `${name} · ${LANG === 'en' ? 'opens with chapter' : 'откроется в главе'} ${openedBy(f) + 1}`
@@ -36,7 +38,14 @@ export default function Sidebar() {
   // desktop only: the menu can shrink to icons; the choice is remembered in this browser
   const [mini, setMiniState] = useState(() => { try { return localStorage.getItem(MINI_KEY) === '1' } catch { return false } })
   const setMini = (v: boolean) => { setMiniState(v); try { v ? localStorage.setItem(MINI_KEY, '1') : localStorage.removeItem(MINI_KEY) } catch { /* private mode */ } }
-  useEffect(() => { document.body.classList.toggle('sb-mini', mini) }, [mini])
+  // on a wide page the menu starts folded; opening it there lasts until the page is left
+  const [over, setOver] = useState<{ page: Page; v: boolean } | null>(null)
+  const wide = WIDE.includes(ui.page)
+  if (over && over.page !== ui.page) setOver(null) // left the page: next time it folds again
+  const folded = wide ? (over?.page === ui.page ? over.v : true) : mini
+  const toggle = () => wide ? setOver({ page: ui.page, v: !folded }) : setMini(!mini)
+  // before the page's own effects run, so the map measures its final width on the first draw
+  useLayoutEffect(() => { document.body.classList.toggle('sb-mini', folded) }, [folded])
   return (
     <aside className="sidebar">
       <div className="brand-row">
@@ -45,8 +54,8 @@ export default function Sidebar() {
           <span className="brand-mark" dangerouslySetInnerHTML={{ __html: logo }} />
           <div><span className="brand-name">Predki</span><span className="brand-tag">{t('brand.tag')}</span></div>
         </button>
-        <button className="sb-toggle" type="button" onClick={() => setMini(!mini)} aria-label={mini ? t('sb.open') : t('sb.close')} title={mini ? t('sb.open') : t('sb.close')}>
-          <svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="3.5" /><path d="M9.5 4.5v15" /><path d={mini ? 'm13.5 10 2 2-2 2' : 'm16 10-2 2 2 2'} /></svg>
+        <button className="sb-toggle" type="button" onClick={toggle} aria-label={folded ? t('sb.open') : t('sb.close')} title={folded ? t('sb.open') : t('sb.close')}>
+          <svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="3.5" /><path d="M9.5 4.5v15" /><path d={folded ? 'm13.5 10 2 2-2 2' : 'm16 10-2 2 2 2'} /></svg>
         </button>
       </div>
       <nav className="nav" id="nav">

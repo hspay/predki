@@ -504,6 +504,9 @@ main{position:relative;min-width:0;overflow:hidden;border-radius:var(--r-card);b
 #firstRun .fr-veil.out .fr-dlg{transform:scale(.97) translateY(10px)}
 #firstRun .fr-form{display:flex;flex-direction:column;padding:34px 36px 26px;min-height:0;min-width:0}
 #firstRun .fr-head{display:flex;flex-direction:column;gap:14px}
+#firstRun .fr-top{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 16px}
+#firstRun .fr-acct{font-size:13px;color:var(--muted);min-width:0;overflow-wrap:anywhere}
+#firstRun .fr-acct button{font:inherit;color:var(--accent);background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
 #firstRun .fr-eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent)}
 #firstRun h1{font-family:"Inter Tight",var(--f-display);font-weight:800;font-size:34px;letter-spacing:-.01em;line-height:1.05}
 #firstRun .fr-bars{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin-top:6px}

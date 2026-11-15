@@ -501,7 +501,10 @@ export function mountMap(root) {
   }
   on(map, 'pointerup', up); on(map, 'pointercancel', up); on(map, 'pointerleave', () => { tip.hidden = true })
   on($('zin'), 'click', () => zoomAt(W / 2, H / 2, 1.5)); on($('zout'), 'click', () => zoomAt(W / 2, H / 2, 1 / 1.5)); on($('zfit'), 'click', () => fit(true))
-  const ro = new ResizeObserver(() => { const r = map.getBoundingClientRect(); if (!r.width) return; if (M && M.has) tlLabels(); const first = !W; W = r.width; H = r.height; crisp = null; if (first && !MV.view) fit(false); else draw() })
+  const ro = new ResizeObserver(() => { const r = map.getBoundingClientRect(); if (!r.width) return; if (M && M.has) tlLabels(); const first = !W
+    // the menu folds or opens beside the map: keep the same place in the middle instead of sliding it sideways
+    if (!first && MV.view && !A.follow) MV.view = { ...MV.view, tx: MV.view.tx + (r.width - W) / 2, ty: MV.view.ty + (r.height - H) / 2 }
+    W = r.width; H = r.height; crisp = null; if (first && !MV.view) fit(false); else draw() })
   ro.observe(map)
 
   // ---------- data changes ----------

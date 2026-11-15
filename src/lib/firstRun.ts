@@ -7,7 +7,7 @@ import { presetType, PRESET_TYPES, PRESET_SRC } from './avatars'
 
 const TXT = {
   ru: {
-    eyebrow: 'Ваше древо', title: 'Начнём сначала', of: 'из', next: 'Далее', back: 'Назад', create: 'Создать древо', preview: 'превью вашего древа',
+    eyebrow: 'Ваше древо', title: 'Начнём сначала', has: 'Уже есть древо?', signIn: 'Войти', signOut: 'Выйти', of: 'из', next: 'Далее', back: 'Назад', create: 'Создать древо', preview: 'превью вашего древа',
     s1: ['Выберите стиль древа', 'Это фон, на котором будет расти ваша семья. Его можно поменять в любой момент.'],
     s2: ['Как ваша фамилия?', 'Она станет названием вашего древа.', 'Фамилия', 'Например, Ветрова'],
     s3: ['Как вас зовут?', 'С вас начнётся древо. Остальных родных добавим постепенно.', 'Имя', 'Ваше имя'],
@@ -17,7 +17,7 @@ const TXT = {
     mom: 'мама', dad: 'папа', fam: 'семейное древо', people: n => `${n} ${n % 10 === 1 && n % 100 !== 11 ? 'человек' : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 10 || n % 100 >= 20) ? 'человека' : 'человек'}`,
   },
   en: {
-    eyebrow: 'Your tree', title: 'Let’s begin', of: 'of', next: 'Next', back: 'Back', create: 'Create the tree', preview: 'preview of your tree',
+    eyebrow: 'Your tree', title: 'Let’s begin', has: 'Already have a tree?', signIn: 'Sign in', signOut: 'Sign out', of: 'of', next: 'Next', back: 'Back', create: 'Create the tree', preview: 'preview of your tree',
     s1: ['Choose a style for the tree', 'This is the background your family will grow on. You can change it any time.'],
     s2: ['What is your surname?', 'It becomes the name of your tree.', 'Surname', 'For example, Smith'],
     s3: ['What is your name?', 'The tree starts with you. We will add the rest of the family step by step.', 'First name', 'Your name'],
@@ -48,7 +48,7 @@ export function mount(root, opts) {
 
   root.innerHTML = `<div class="fr-veil"><div class="fr-dlg" role="dialog" aria-modal="true" aria-labelledby="frTitle">
     <form class="fr-form" autocomplete="off" novalidate>
-      <div class="fr-head"><span class="fr-eyebrow">${T.eyebrow}</span><h1 id="frTitle">${T.title}</h1><div class="fr-bars" aria-hidden="true">${'<i></i>'.repeat(5)}</div></div>
+      <div class="fr-head"><div class="fr-top"><span class="fr-eyebrow">${T.eyebrow}</span><span class="fr-acct">${opts.email ? `${esc(opts.email)} · <button type="button" data-a="out">${T.signOut}</button>` : `${T.has} <button type="button" data-a="in">${T.signIn}</button>`}</span></div><h1 id="frTitle">${T.title}</h1><div class="fr-bars" aria-hidden="true">${'<i></i>'.repeat(5)}</div></div>
       <div class="fr-steps">
         <section class="fr-step" data-s="0"><span class="n">1 ${T.of} 5</span><h2>${T.s1[0]}</h2><p class="hint">${T.s1[1]}</p>
           <div class="fr-swatches" role="radiogroup" aria-label="${T.s1[0]}">${THEMES.map(t => `<button type="button" class="fr-sw" role="radio" aria-checked="${t.k === S.theme}" data-k="${t.k}"><span class="chip th-${t.k}"></span>${esc(themeName(t))}</button>`).join('')}</div></section>
@@ -150,6 +150,8 @@ export function mount(root, opts) {
     setTimeout(() => opts.onDone({ theme: S.theme, familyName: familyTitle(S.last), me: { first: S.first, last: cap(S.last), gender: S.gender || '', birthDate: S.birth, birthPlace: S.place }, mom: S.mom, dad: S.dad }), reduce ? 0 : 600)
   })
   show(0)
+  // a way out of the dialog: whoever already has a tree signs in (or switches account) instead of starting a new one
+  $('.fr-acct').addEventListener('click', e => { const b = e.target.closest('button'); if (!b) return; b.dataset.a === 'out' ? opts.onSignOut() : opts.onSignIn() })
   return () => { fog.destroy(); root.innerHTML = '' }
 }
 export const FirstRun = { mount }

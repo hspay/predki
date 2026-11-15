@@ -106,7 +106,7 @@ export default function GapsPage() {
       <div className="scroll gp">
         <FamilyAnswers />
         {gaps.length ? <>
-          <div className="gp-hero"><b className="gp-big">{midYears}</b><div className="gp-hero-r"><p>{T.lede(midYears, answerable)}</p><button type="button" className="btn wax" onClick={() => askFill(null)}><LinkIcon />{T.invite}</button></div></div>
+          <div className="gp-hero"><b className="gp-big">{midYears}</b><div className="gp-hero-r"><p>{T.lede(midYears, answerable)}</p><button type="button" className="btn wax" onClick={() => askFill(null)}><LinkIcon />{T.invite}</button><GuideLink to="talk">{LANG === 'en' ? 'How to talk with relatives' : 'Как говорить с родными'}</GuideLink></div></div>
           <div className="gp-h-row"><h3 className="gp-h gp-h-solo">{T.first}</h3>
             <span className="gp-legend" aria-hidden="true"><span><i className="k" />{T.lgKnown}</span><span><i className="g" />{T.lgGap}</span></span></div>
           <div className="gp-cards">

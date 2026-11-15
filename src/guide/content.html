@@ -4,6 +4,7 @@
     <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c-3 3.5-3 14.5 0 18M12 3c3 3.5 3 14.5 0 18"/></symbol>
     <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
     <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
+    <symbol id="i-tg" viewBox="0 0 24 24"><path d="M21.2 4.3 2.9 11.4c-.9.4-.9 1.4 0 1.7l4.5 1.4 1.7 5.3c.2.7 1 .9 1.5.4l2.5-2.3 4.7 3.5c.6.4 1.4.1 1.6-.6L22.6 5.6c.2-1-.6-1.7-1.4-1.3Z"/><path d="m7.4 14.5 10.1-6.4-7.6 7.4"/></symbol>
   <symbol id="i-guide" viewBox="0 0 24 24"><path d="M9 4.5H7A2.5 2.5 0 0 0 4.5 7v12A2.5 2.5 0 0 0 7 21.5h10a2.5 2.5 0 0 0 2.5-2.5V7A2.5 2.5 0 0 0 17 4.5h-2"/><rect x="9" y="3" width="6" height="3.2" rx="1"/><path d="m7.8 11.2 1.3 1.3 2.3-2.5M13.6 11.2h3M7.8 16.4l1.3 1.3 2.3-2.5M13.6 16.4h3"/></symbol>
   </defs>
 </svg>
@@ -96,10 +97,6 @@
     </div>
     <div class="stack">
       <img class="photo" src="%photo:talk-album%" alt="Семейный альбом и старые снимки на столе" width="768" height="512" loading="lazy" decoding="async">
-      <div class="cols two tips">
-        <div><h4>Не спорьте с памятью</h4><p class="muted">Запишите обе версии.</p></div>
-        <div><h4>Берегите тяжёлые темы</h4><p class="muted">Если человек замолкает, не давите.</p></div>
-      </div>
     </div>
   </div>
 
@@ -149,16 +146,7 @@
     <h2 id="photosH">Фото и альбомы</h2>
   </div>
 
-  <div class="cols">
-    <div><h3>Сканируйте</h3><p>600 dpi, маленькие снимки — 1200. Без сканера снимайте при дневном свете, без вспышки.</p></div>
-    <div><h3>Обе стороны</h3><p>На обороте бывают даты, имена и штамп ателье.</p></div>
-    <div><h3>Не отрывайте</h3><p>Приклеенные снимки сканируйте прямо в альбоме.</p></div>
-    <div><h3>Подписывайте карандашом</h3><p>Ручка продавливает фото насквозь.</p></div>
-    <div><h3>Храните в темноте</h3><p>В шкафу, а не на балконе или в подвале.</p></div>
-    <div><h3>Делайте копии</h3><p>В облаке и на диске. Имя файла: «1957_Пенза_свадьба».</p></div>
-  </div>
-
-  <div class="panels">
+  <div class="panels first">
     <div>
       <h3>Что читать на обороте</h3>
       <ul class="dash">
@@ -179,7 +167,16 @@
     </div>
   </div>
 
-  <div class="app" style="margin-top:16px"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-globe"/></svg><p><b>В Predki</b> фото прикрепляется к человеку, а родные могут предложить снимок по ссылке.</p></div>
+  <div class="cols">
+    <div><h3>Сканируйте</h3><p>600 dpi, маленькие снимки — 1200. Без сканера снимайте при дневном свете, без вспышки.</p></div>
+    <div><h3>Обе стороны</h3><p>На обороте бывают даты, имена и штамп ателье.</p></div>
+    <div><h3>Не отрывайте</h3><p>Приклеенные снимки сканируйте прямо в альбоме.</p></div>
+    <div><h3>Подписывайте карандашом</h3><p>Ручка продавливает фото насквозь.</p></div>
+    <div><h3>Храните в темноте</h3><p>В шкафу, а не на балконе или в подвале.</p></div>
+    <div><h3>Делайте копии</h3><p>В облаке и на диске. Имя файла: «1957_Пенза_свадьба».</p></div>
+  </div>
+
+  <div class="app" style="margin-top:40px"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-globe"/></svg><p><b>В Predki</b> фото прикрепляется к человеку, а родные могут предложить снимок по ссылке.</p></div>
 </section>
 
 <!-- ================= 4. VIDEO ================= -->
@@ -272,7 +269,6 @@
     <div class="tpl-top"><p id="tplNote"></p><button type="button" class="copy" id="copyBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-copy"/></svg>Скопировать</button></div>
     <pre id="tplText"></pre>
   </div>
-  <p class="muted" style="margin-top:12px;font-size:14px">Выделенное замените своими данными. Адрес ЦАМО: 142100, Московская область, г. Подольск, ул. Кирова, д. 74.</p>
 </section>
 
 <!-- ================= 7. NAMES ================= -->
@@ -325,7 +321,7 @@
   </div>
 
   <div class="term">
-    <span class="big-num">6 мес.</span>
+    <span class="big-num">6 месяцев</span>
     <p><b>Срок, чтобы принять наследство.</b> Через нотариуса или фактически: жить в квартире, платить за неё. Пропущенный срок восстанавливают через суд.</p>
   </div>
 
@@ -399,7 +395,10 @@
   <div>
     <h2>Знаете, что добавить?</h2>
     <p>Напишите нам.</p>
-    <button type="button" class="mail" id="mailBtn" aria-label="Скопировать адрес hello@predki.me"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-mail"/></svg>hello@predki.me</button>
+    <div class="contacts">
+      <button type="button" class="mail" id="mailBtn" aria-label="Скопировать адрес hello@predki.me"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-mail"/></svg>hello@predki.me</button>
+      <a class="mail tg" href="https://t.me/HSpay" target="_blank" rel="noopener noreferrer"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tg"/></svg>@HSpay</a>
+    </div>
   </div>
   <p class="note">Проверено<br>5 ноября 2026</p>
 </footer>

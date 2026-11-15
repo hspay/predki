@@ -319,7 +319,7 @@ main{border-radius:var(--r-card);background:var(--mainbg);border-color:var(--edg
 .ph-portrait .cm.a{left:10px;top:10px;border-left-width:1.5px;border-top-width:1.5px}.ph-portrait .cm.b{right:10px;top:10px;border-right-width:1.5px;border-top-width:1.5px}
 .ph-portrait .cm.c{left:10px;bottom:10px;border-left-width:1.5px;border-bottom-width:1.5px}.ph-portrait .cm.d{right:10px;bottom:10px;border-right-width:1.5px;border-bottom-width:1.5px}
 .ph-portrait .ph-cap{position:absolute;right:34px;bottom:14px;max-width:calc(100% - 60px);padding:5px 9px;border-radius:3px;background:var(--paper);color:var(--ultra);font:600 11px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.profile-hero .ph-portrait .ph-cam{left:auto;right:16px;top:16px;bottom:auto;width:36px;height:36px;border-radius:10px;border:1px solid rgba(244,242,236,.45);background:rgba(11,18,64,.55);color:var(--paper)}
+.profile-hero .ph-portrait .ph-cam{left:16px;right:auto;top:16px;bottom:auto;width:36px;height:36px;border-radius:10px;border:1px solid rgba(244,242,236,.45);background:rgba(11,18,64,.55);color:var(--paper)}
 .profile-hero .ph-portrait .ph-cam:hover{background:rgba(11,18,64,.9);color:var(--paper);border-color:var(--paper)}
 .profile-hero .ph-portrait .ph-cam.rm:hover{color:#FFB3A3;border-color:#FFB3A3}
 .profile-hero .ph-frame{align-self:flex-start;display:inline-flex;align-items:center;gap:7px;margin-top:10px;height:30px;padding:0 11px;border-radius:8px;border:1px solid var(--edge-2);background:transparent;color:var(--ink-2);font-size:12.5px;font-weight:500}
@@ -598,6 +598,15 @@ main{border-radius:var(--r-card);background:var(--mainbg);border-color:var(--edg
   [data-page="tree"] .topbar h2{min-width:0;flex:1;margin-right:0;flex-direction:column;align-items:flex-start;gap:4px}
   [data-page="tree"] .topbar .sub{max-width:100%;margin-left:0}
   [data-page="tree"] .topbar .btn.add{flex:none}
+  /* search, add and share sit together on the right, a little smaller, so the count keeps its line */
+  [data-page="tree"] .topbar{padding:12px 10px 12px 18px;gap:8px;align-items:center}
+  [data-page="tree"] .topbar .tb-acts{gap:6px}
+  [data-page="tree"] .topbar .btn.rnd{width:34px;height:34px;border-width:1.3px}
+  [data-page="tree"] .topbar .btn.rnd.add{box-shadow:0 2px 0 #3E9C70}
+  [data-page="tree"] .topbar .btn.rnd svg{width:16px;height:16px}
+  [data-page="tree"] .topbar .btn.rnd.add svg{width:17px;height:17px}
+  /* the count stays on one line: a touch smaller on narrow phones */
+  @media (max-width:400px){[data-page="tree"] .topbar .sub{font-size:12px;letter-spacing:0}}
   @media (max-width:360px){[data-page="tree"] .topbar .sub{font-size:11.5px;white-space:normal;line-height:1.35}}
   /* the memorial-date notice: more compact */
   .tree-memo{left:12px;bottom:12px;gap:10px;padding:7px 12px 7px 7px;border-radius:10px}
@@ -1119,11 +1128,12 @@ main{border-radius:var(--r-card);background:var(--mainbg);border-color:var(--edg
 .tree-find .lk-list{margin:8px 0 0;max-height:min(360px,46vh)}
 .tree-find .lk-list button.on{background:var(--glass-2)}
 .btn.rnd.on{border-color:var(--sky);background:var(--glass-3)}
-.tree-tools .tool-find{display:none}
-@media (max-width:860px){
-  .btn.rnd.tb-find{display:none}
-  .tree-tools .tool-find{display:grid}
-}
+/* the account's tree did not arrive: try again, nothing here is a new family */
+.tree-fail{padding:24px}
+.tree-fail p.muted{max-width:38ch;margin:0}
+.tree-fail .btn{margin-top:6px}
+.tree-fail .tf-who{margin:6px 0 0;font:500 12.5px/1.5 var(--f-mono);color:var(--muted)}
+.tree-fail .tf-who button{font:inherit;color:var(--sky);text-decoration:underline;text-underline-offset:3px;padding:0;background:none;border:0;cursor:pointer}
 .node:focus{outline:none}
 .node:focus-visible .card{stroke:var(--sky);stroke-width:4}
 .th-light .node:focus-visible .card{stroke:var(--ultra)}

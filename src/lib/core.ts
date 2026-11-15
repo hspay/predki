@@ -249,13 +249,22 @@ async function doSync(soft: boolean) {
     cloud.synced = true; cloud.offline = false
     await saveLocal()
     if (dirty) pushNow()
-  } catch (e) { logProblem('load', e); cloud.offline = true; if (!soft) toast(t('cloud.loadFail')) }
+  } catch (e) { logProblem('load', e); cloud.offline = true; if (!soft && own().people.length) toast(t('cloud.loadFail')) } // no copy here: the Tree says so itself
   if (owner !== id) return
   if (demo.on) { afterDemo = afterDemo || changed || !soft; return } // the demo is on screen: the own tree is updated quietly, shown when it closes
-  if (!soft) afterLoad(); else if (changed) refreshAfterRemote()
+  if (!soft) afterLoad(); else if (changed || ui.loadFailed) refreshAfterRemote()
 }
 /** fresh edits from another window are on screen: recount progress, keep the view where it is (no re-fit of the Tree) */
-function refreshAfterRemote() { assignPresets(); Progress.check(true); syncChapters(true); ui.firstRun = !!S.settings.onboarded && !S.people.length; bump() }
+function refreshAfterRemote() { if (!startState()) { assignPresets(); Progress.check(true); syncChapters(true) } bump() }
+/** What an empty tree means. Signed in, but the account's tree never arrived (no connection, no copy on this device):
+ *  that is not a new family — no «Начнём сначала», the Tree offers to try again instead (and nothing is saved meanwhile). */
+function startState() {
+  const failed = !!owner && !cloud.synced && !S.people.length
+  ui.loadFailed = failed; ui.firstRun = !failed && !!S.settings.onboarded && !S.people.length
+  return failed
+}
+/** «Повторить» on the Tree after a failed load */
+export function retryLoad() { syncFromCloud() }
 /** lib/demo.ts: the demo closed and the own tree is back in S */
 export function demoClosed() {
   if (afterDemo) { afterDemo = false; afterLoad() }
@@ -331,7 +340,7 @@ export const ui = {
   frameEdit: false,
   /** the «Семья» block of the profile shows remove buttons and «Связать» */
   relEdit: false,
-  onboarding: false, firstRun: false, loaded: false, treeRefit: 0, mapRefit: 0, share: false,
+  onboarding: false, firstRun: false, loadFailed: false, loaded: false, treeRefit: 0, mapRefit: 0, share: false,
   /** «Календарь семьи» is open over the page */
   calendar: false,
   /** «Путеводитель» opens at this section (a link from another page), then forgets it */
@@ -649,14 +658,16 @@ export function completeFirstRun(d: { theme: string; familyName: string; me: Par
 function afterLoad() {
   const l = pickedLang(); S.settings.lang = l
   setLangValue(l); document.documentElement.lang = l
-  Progress.check(true); syncChapters(true)
-  if (assignPresets()) persist()
-  if (!S.settings.since) { // first day in Predki: the earliest achievement, otherwise today
+  // an empty window that is only waiting for the account's tree recounts nothing: no sticker or chapter changes on a blank copy
+  const failed = startState()
+  if (!failed) { Progress.check(true); syncChapters(true) }
+  if (!failed && assignPresets()) persist()
+  if (!failed && !S.settings.since) { // first day in Predki: the earliest achievement, otherwise today
     const ds = Object.values(S.achDates || {}).map(v => new Date(v)).filter(d => !isNaN(+d)); const d = ds.length ? new Date(Math.min(...ds.map(Number))) : new Date()
     S.settings.since = `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${d.getFullYear()}`; persist()
   }
   // a link from our e-mail (a new password, or one that no longer works) goes straight to the sign-in card, not to the landing
-  ui.onboarding = !S.settings.onboarded && !cloud.recovery && !cloud.linkError; ui.firstRun = !!S.settings.onboarded && !S.people.length
+  ui.onboarding = !S.settings.onboarded && !cloud.recovery && !cloud.linkError
   ui.treeRefit++; ui.mapRefit++; bump()
 }
 setProblemContext(() => ({ screen: demo.on ? 'demo' : ui.page, people: own().people.length, synced: cloud.synced, offline: cloud.offline, unsaved: dirty, lang: LANG }))
@@ -665,7 +676,7 @@ export async function boot() {
   const saved = await loadState()
   if (saved && Array.isArray(saved.people)) S = migrateDates(Object.assign(blank(), saved))
   // preview build: no account, no landing — straight into the first-run dialog of an empty family
-  if (import.meta.env.VITE_PREVIEW === '1') { setSkipped(true); S.settings.onboarded = true }
+  if (import.meta.env.VITE_PREVIEW === '1') { cloud.skipped = true; S.settings.onboarded = true } // only for this run: not remembered, so the usual build still asks to sign in
   setLangValue(pickedLang()); document.documentElement.lang = pickedLang()
   await initSession()
   // Sign-in is shared by all tabs of a browser: signing into another account (or out) in one tab changes it in the others too.
