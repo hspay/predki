@@ -79,4 +79,12 @@ test('питомец без хозяина уходит, «я» без чело�
   const m = merge3(b, l, clone(b))
   assert.equal(m.pets!.length, 0); assert.equal(m.settings.meId, undefined)
 })
+test('карточку передвинули на древе: место сохраняется, а удалённого в другом окне человека это не возвращает', () => {
+  const l = clone(base); l.people[0].at = { x: 120, y: -40 }
+  const r = clone(base); r.people[1].bio = 'remote'
+  assert.deepEqual(merge3(base, l, r).people[0].at, { x: 120, y: -40 })
+  const l2 = clone(base); l2.people[1].at = { x: 10, y: 10 }
+  const r2 = clone(base); r2.people = r2.people.filter((p: any) => p.id !== 'b'); r2.rels = []
+  assert.equal(merge3(base, l2, r2).people.some((p: any) => p.id === 'b'), false)
+})
 console.log(`\n${n} проверок прошли`)

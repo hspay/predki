@@ -1,7 +1,8 @@
-import React from 'react'
+import React, { lazy, Suspense } from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
-import { ShareGate } from './components/SharedTree'
+// the page a relative opens by link (?s=…) loads only then: the app itself never needs it
+const ShareGate = lazy(() => import('./components/SharedTree').then(m => ({ default: m.ShareGate })))
 import PageGuard from './components/PageGuard'
 import { tokenFromUrl } from './lib/invites'
 import './fonts'
@@ -30,4 +31,4 @@ onThemeChange(() => {
 const shareToken = tokenFromUrl()
 if (!shareToken) initAnalytics()
 watchErrors() // uncaught errors are reported (live site only), on the relatives' page too
-ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><PageGuard name={shareToken ? 'shared' : 'app'} root>{shareToken ? <ShareGate token={shareToken} /> : <App />}</PageGuard></React.StrictMode>)
+ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><PageGuard name={shareToken ? 'shared' : 'app'} root>{shareToken ? <Suspense fallback={null}><ShareGate token={shareToken} /></Suspense> : <App />}</PageGuard></React.StrictMode>)

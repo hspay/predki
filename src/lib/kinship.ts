@@ -1,7 +1,7 @@
 // What each person is to «you»: «бабушка», «тёща», «троюродный брат», «муж двоюродной бабушки».
 // Blood relatives are named by the nearest shared ancestor (steps up from you, steps down to them),
 // people who married in by the relative they married, your spouse's family by your spouse.
-import { S, LANG, byId, fullName, parentsOf, spousesOf, currentSpousesOf, stepParentsOf, coupleRel, type Person } from './core'
+import { S, LANG, byId, fullName, parentsOf, spousesOf, currentSpousesOf, stepParentsOf, coupleRel, isAdoptive, type Person } from './core'
 
 type G = 'm' | 'f' | ''
 type AB = { a: number; b: number; s: number; c: string; ad: boolean }
@@ -15,7 +15,7 @@ function gOf(p: Person): G {
 const N = (m: string, f: string, g: G) => (g === 'm' ? m : g === 'f' ? f : m + '/' + f)
 
 /** an adoptive link: the parent adopted the child */
-const adopted = (parent: string, child: string) => S.rels.some(r => r.type === 'parent' && r.adopt && r.a === parent && r.b === child)
+const adopted = isAdoptive
 /** every ancestor of id with the number of steps up (id itself = 0); down[x] = the child through whom x was reached.
  *  ad[x]: the way up to x goes through an adoption (by birth is preferred when both ways are as short) */
 type Ups = Record<string, number> & { ad?: Record<string, boolean> }

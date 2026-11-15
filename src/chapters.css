@@ -480,7 +480,7 @@ button.chs-f:hover{filter:brightness(1.12);transform:translateY(-1px)}
 .nav .nav-calendar + .nav-book{margin-top:0}
 .nav .nav-book + .nav-settings{margin-top:0}
 @media (max-width:860px){
-  .nav .nav-book{display:none} /* the phone bar: Древо, Карта, Альбом, Пробелы, Хранитель, Настройки */
+  .nav .nav-book,.nav .nav-guide{display:none} /* the phone bar: Древо, Карта, Альбом, Пробелы, Хранитель, Настройки */
   .nav .nav-settings{display:flex}
 }
 

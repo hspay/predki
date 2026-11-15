@@ -1,0 +1,496 @@
+<!-- «Путеводитель»: the page markup. Edit texts here; behaviour lives in lib/guide.ts, styles in guide.css -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-compass" viewBox="0 0 64 64"><g style="stroke:var(--ic-ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;fill:none">
+      <circle cx="32" cy="32" r="25" style="fill:var(--ic-b)"/><circle cx="32" cy="32" r="19" style="fill:var(--ic-c)"/>
+      <path d="M32 6v5M32 53v5M6 32h5M53 32h5"/>
+      <path d="M32 14 39 32H25Z" style="fill:var(--ic-a)"/><path d="M25 32h14L32 50Z" style="fill:var(--ic-c)"/>
+      <circle cx="32" cy="32" r="2.6" style="fill:var(--ic-ink)"/></g></symbol>
+    <symbol id="i-talk" viewBox="0 0 64 64"><g style="stroke:var(--ic-ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;fill:none">
+      <path d="M9 10h28a4 4 0 0 1 4 4v15a4 4 0 0 1-4 4H21l-9 7v-7H9a4 4 0 0 1-4-4V14a4 4 0 0 1 4-4z" style="fill:var(--ic-a)"/>
+      <path d="M13 19h18M13 25h12" style="stroke:var(--ic-c)"/>
+      <path d="M27 28h28a4 4 0 0 1 4 4v14a4 4 0 0 1-4 4h-3v8l-9-8H27a4 4 0 0 1-4-4V32a4 4 0 0 1 4-4z" style="fill:var(--ic-c)"/>
+      <circle cx="33" cy="39" r="2" style="fill:var(--ic-ink);stroke:none"/><circle cx="41" cy="39" r="2" style="fill:var(--ic-ink);stroke:none"/><circle cx="49" cy="39" r="2" style="fill:var(--ic-ink);stroke:none"/></g></symbol>
+    <symbol id="i-photo" viewBox="0 0 64 64"><g style="stroke:var(--ic-ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;fill:none">
+      <g transform="rotate(-7 32 32)"><rect x="12" y="6" width="40" height="52" rx="1.5" style="fill:var(--ic-c)"/>
+      <rect x="17" y="11" width="30" height="33" style="fill:var(--ic-b)"/>
+      <circle cx="32" cy="23" r="6" style="fill:var(--ic-a)"/><path d="M20.5 44c.8-7.5 5.5-11 11.5-11s10.7 3.5 11.5 11z" style="fill:var(--ic-a)"/>
+      <path d="M19 50.5h15"/></g></g></symbol>
+    <symbol id="i-cassette" viewBox="0 0 64 64"><g style="stroke:var(--ic-ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;fill:none">
+      <rect x="5" y="15" width="54" height="34" rx="3" style="fill:var(--ic-a)"/>
+      <rect x="11" y="19" width="42" height="11" rx="1.5" style="fill:var(--ic-c)"/><path d="M15 24.5h17"/>
+      <rect x="17" y="33" width="30" height="11" rx="5.5" style="fill:var(--ic-b)"/>
+      <circle cx="24" cy="38.5" r="3.2" style="fill:var(--ic-c)"/><circle cx="40" cy="38.5" r="3.2" style="fill:var(--ic-c)"/></g></symbol>
+    <symbol id="i-search" viewBox="0 0 64 64"><g style="stroke:var(--ic-ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;fill:none">
+      <path d="M6 12h21a5 5 0 0 1 5 5v35a4 4 0 0 0-4-4H6z" style="fill:var(--ic-c)"/>
+      <path d="M58 12H37a5 5 0 0 0-5 5v35a4 4 0 0 1 4-4h22z" style="fill:var(--ic-c)"/>
+      <path d="M11 20h15M11 26h15M11 32h10M37 20h15"/>
+      <path d="M49 46l9 9" style="stroke:var(--ic-a);stroke-width:6"/>
+      <circle cx="43" cy="38" r="10" style="fill:var(--ic-b)"/><path d="M38 35a6 6 0 0 1 5-3" /></g></symbol>
+    <symbol id="i-letter" viewBox="0 0 64 64"><g style="stroke:var(--ic-ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;fill:none">
+      <rect x="5" y="15" width="54" height="36" rx="2" style="fill:var(--ic-c)"/>
+      <path d="M5 17l27 19 27-19"/><path d="M13 43h14M13 47h9"/>
+      <rect x="44" y="19" width="10" height="13" style="fill:var(--ic-d);stroke-dasharray:2.2 1.6"/>
+      <circle cx="42" cy="34" r="6" style="stroke:var(--ic-a);stroke-dasharray:3 2"/></g></symbol>
+    <symbol id="i-names" viewBox="0 0 64 64"><g style="stroke:var(--ic-ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;fill:none">
+      <path d="M9 13h30l11 10-11 10H9a3 3 0 0 1-3-3V16a3 3 0 0 1 3-3z" style="fill:var(--ic-c)" transform="rotate(-6 28 23)"/>
+      <path d="M12 21h18" transform="rotate(-6 28 23)"/><path d="M10 25l22-4" style="stroke:var(--ic-d);stroke-width:2.6"/>
+      <path d="M17 31h32l11 10-11 10H17a3 3 0 0 1-3-3V34a3 3 0 0 1 3-3z" style="fill:var(--ic-b)"/>
+      <circle cx="49" cy="41" r="2.4" style="fill:var(--ic-c)"/>
+      <path d="M20 41h20" style="stroke:var(--ic-a);stroke-width:4.5"/></g></symbol>
+    <symbol id="i-key" viewBox="0 0 64 64"><g style="stroke:var(--ic-ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;fill:none">
+      <path d="M28 28h31v8h-4v8h-6v-8h-4v6h-6v-6H28z" style="fill:var(--ic-a)"/>
+      <circle cx="18" cy="32" r="13" style="fill:var(--ic-b)"/><circle cx="18" cy="32" r="8" style="fill:var(--ic-a)"/><circle cx="18" cy="32" r="3.2" style="fill:var(--ic-c)"/></g></symbol>
+    <symbol id="i-faq" viewBox="0 0 64 64"><g style="stroke:var(--ic-ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;fill:none">
+      <circle cx="32" cy="32" r="25" style="fill:var(--ic-b)"/>
+      <path d="M24.5 25a7.5 7.5 0 1 1 11 6.6c-2.3 1.2-3.5 3-3.5 5.4v1.5" style="stroke:var(--ic-a);stroke-width:5"/>
+      <circle cx="32" cy="46.5" r="3" style="fill:var(--ic-a);stroke:none"/></g></symbol>
+    <symbol id="i-triangle" viewBox="0 0 64 64"><g style="stroke:var(--ic-ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;fill:none">
+      <path d="M6 16h52L32 54z" style="fill:var(--ic-c)"/><path d="M19 16l13 19 13-19"/>
+      <path d="M24 42l8-5M27 47l5-3"/><circle cx="44" cy="24" r="5.5" style="stroke:var(--ic-d);stroke-dasharray:2.6 1.8"/></g></symbol>
+    <symbol id="i-medal" viewBox="0 0 64 64"><g style="stroke:var(--ic-ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;fill:none">
+      <path d="M21 5h22v17l-11 6-11-6z" style="fill:var(--ic-a)"/><path d="M28 5v19M36 5v19" style="stroke:var(--ic-c);stroke-width:2.6"/>
+      <circle cx="32" cy="42" r="15" style="fill:var(--ic-b)"/><circle cx="32" cy="42" r="10.5" style="fill:var(--ic-c)"/>
+      <path d="M32 35.5l1.6 4.4 4.7.2-3.7 2.9 1.3 4.5L32 44.9l-3.9 2.6 1.3-4.5-3.7-2.9 4.7-.2z" style="fill:var(--ic-a)"/></g></symbol>
+    <symbol id="i-phone" viewBox="0 0 64 64"><g style="stroke:var(--ic-ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;fill:none">
+      <path d="M10 54l6-21h32l6 21z" style="fill:var(--ic-a)"/>
+      <circle cx="32" cy="43" r="8" style="fill:var(--ic-c)"/><circle cx="32" cy="43" r="2.5" style="fill:var(--ic-b)"/>
+      <path d="M6 27c0-8 11-13 26-13s26 5 26 13v2H47v-5H17v5H6z" style="fill:var(--ic-a)"/></g></symbol>
+    <symbol id="i-passport" viewBox="0 0 64 64"><g style="stroke:var(--ic-ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;fill:none">
+      <rect x="15" y="6" width="34" height="52" rx="3" style="fill:var(--ic-a)"/>
+      <circle cx="32" cy="25" r="8" style="stroke:var(--ic-c)"/><path d="M24 25h16M32 17c-3 4-3 12 0 16M32 17c3 4 3 12 0 16" style="stroke:var(--ic-c);stroke-width:1.5"/>
+      <path d="M23 43h18M26 48h12" style="stroke:var(--ic-c)"/></g></symbol>
+    <symbol id="i-book" viewBox="0 0 64 64"><g style="stroke:var(--ic-ink);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;fill:none">
+      <path d="M12 8h36a3 3 0 0 1 3 3v45H15a3 3 0 0 1-3-3z" style="fill:var(--ic-b)"/>
+      <path d="M12 53a3 3 0 0 1 3-3h36" /><rect x="20" y="15" width="24" height="15" rx="1.5" style="fill:var(--ic-c)"/>
+      <path d="M24 21h16M24 25h10"/><path d="M42 50v10l-3-2-3 2V50" style="fill:var(--ic-d)"/></g></symbol>
+    <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c-3 3.5-3 14.5 0 18M12 3c3 3.5 3 14.5 0 18"/></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/></symbol>
+    <symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></symbol>
+  <symbol id="i-guide" viewBox="0 0 24 24"><path d="M9 4.5H7A2.5 2.5 0 0 0 4.5 7v12A2.5 2.5 0 0 0 7 21.5h10a2.5 2.5 0 0 0 2.5-2.5V7A2.5 2.5 0 0 0 17 4.5h-2"/><rect x="9" y="3" width="6" height="3.2" rx="1"/><path d="m7.8 11.2 1.3 1.3 2.3-2.5M13.6 11.2h3M7.8 16.4l1.3 1.3 2.3-2.5M13.6 16.4h3"/></symbol>
+  </defs>
+</svg>
+<header class="bar">
+  <div class="wrap">
+    <span class="brand"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-guide"/></svg>Путеводитель</span>
+    <nav class="chips" id="chips" aria-label="Разделы путеводителя">
+      <a href="#start">С чего начать</a>
+      <a href="#talk">Разговор с родными</a>
+      <a href="#photos">Фото и альбомы</a>
+      <a href="#video">Видеокассеты</a>
+      <a href="#search">Где искать</a>
+      <a href="#requests">Запрос в архив</a>
+      <a href="#names">Смена фамилий</a>
+      <a href="#inheritance">Наследство</a>
+      <a href="#faq">Вопросы</a>
+    </nav>
+  </div>
+</header>
+<div class="gd-main" lang="ru">
+<section class="hero wrap blue" aria-labelledby="heroH">
+  <h1 id="heroH"><button type="button" class="board" id="board" aria-label="Путеводитель"></button></h1>
+  <p class="hero-sub">FAQ, чек-лист для исследования и инструкции для обращения в госархивы</p>
+</section>
+
+<!-- ================= 1. START ================= -->
+<section class="sec wrap blue" id="start" aria-labelledby="startH">
+  <div class="sec-head">
+    <h2 id="startH">С чего начать</h2>
+  </div>
+
+  <ol class="ladder" aria-label="Шесть ступеней поиска">
+    <li><b>Запишите, что знаете</b><small>Начните с себя, родителей, бабушек и дедушек.</small></li>
+    <li><b>Соберите домашний архив</b><small>Документы, письма и фото. Отсканируйте их.</small></li>
+    <li><b>Поговорите с родными</b><small>Начните со старших.</small></li>
+    <li><b>Проверьте <a href="#search">открытые базы</a></b><small>Бесплатно и из дома.</small></li>
+    <li><b>Запросите <a href="#requests">документы</a></b><small>В ЗАГСе и архивах.</small></li>
+    <li><b>Идите вглубь веков</b><small>Метрические книги и ревизские сказки ведут до XVIII века.</small></li>
+  </ol>
+
+  <div class="cols">
+    <div><h3>Записывайте источник</h3><p>Даже «со слов тёти Нины». Если данные разойдутся, будет понятно, кому верить.</p></div>
+    <div><h3>Пишите примерно</h3><p>«Около 1910 года» лучше пустого поля.</p></div>
+    <div><h3>Сохраняйте все написания</h3><p>Кутянин, Кутянинъ, Кутенин. Ищут по каждому варианту.</p></div>
+    <div><h3>Старый и новый стиль</h3><p>До февраля 1918 года даты писали по юлианскому календарю. К датам XIX века прибавьте 12 дней, к 1900–1918 годам — 13.</p></div>
+    <div><h3>Старая орфография</h3><p>До 1918 года писали «Сергѣевъ». В поиске пробуйте оба варианта.</p></div>
+    <div><h3>Фамилии появились не сразу</h3><p>У многих крестьян только во второй половине XIX века.</p></div>
+  </div>
+
+  <div class="gloss">
+    <div>
+      <h3>Словарь</h3>
+      <h4 style="margin-top:18px">Шифр документа</h4>
+      <p class="muted">Адрес документа в архиве. Запишите его рядом с находкой, чтобы заказать копию.</p>
+      <div class="cite" aria-label="Из чего состоит шифр"><span><b>ф. 203</b><i>фонд: чьи это бумаги</i></span><span><b>оп. 745</b><i>опись: список папок</i></span><span><b>д. 1121</b><i>дело: одна папка</i></span><span><b>л. 14 об.</b><i>лист: страница, «об.» — оборот</i></span></div>
+    </div>
+    <dl>
+      <div><dt>Архивная справка</dt><dd>Официальная выписка из документа. Годится для нотариуса и суда.</dd></div>
+      <div><dt>Волость, уезд, губерния</dt><dd>Деление до 1920-х: примерно сельсовет, район и область.</dd></div>
+      <div><dt>ЗАГС</dt><dd>Записи о рождении, браке и смерти с 1918 года. Хранит их 100 лет.</dd></div>
+      <div><dt>Исповедная ведомость</dt><dd>Ежегодный список прихожан по семьям, с возрастом.</dd></div>
+      <div><dt>Метрическая книга</dt><dd>Церковный журнал рождений, браков и смертей до 1918 года.</dd></div>
+      <div><dt>Похозяйственная книга</dt><dd>Список семей сельсовета с 1930-х годов.</dd></div>
+      <div><dt>Приход</dt><dd>Церковь и сёла вокруг неё.</dd></div>
+      <div><dt>Ревизская сказка</dt><dd>Перепись налогоплательщиков 1719–1858 годов.</dd></div>
+      <div><dt>Сословие</dt><dd>Крестьяне, мещане, купцы, дворяне, духовенство. Подсказывает, где искать.</dd></div>
+    </dl>
+  </div>
+</section>
+
+<!-- ================= 2. TALK ================= -->
+<section class="sec wrap" id="talk" aria-labelledby="talkH">
+  <div class="sec-head">
+    <h2 id="talkH">Разговор с родными</h2>
+  </div>
+
+  <div class="cols two">
+    <div>
+      <p class="kicker">Чек-лист встречи</p>
+      <ul class="check" id="checklist">
+        <li><label for="c1"><input type="checkbox" id="c1"><span>Откройте древо: по схеме вспоминать проще.</span></label></li>
+        <li><label for="c2"><input type="checkbox" id="c2"><span>Возьмите старые фото.</span></label></li>
+        <li><label for="c3"><input type="checkbox" id="c3"><span>Спросите разрешения и включите диктофон.</span></label></li>
+        <li><label for="c4"><input type="checkbox" id="c4"><span>Одна встреча — одна тема, не дольше часа.</span></label></li>
+        <li><label for="c5"><input type="checkbox" id="c5"><span>Уточняйте, как пишутся имена и сёла.</span></label></li>
+        <li><label for="c6"><input type="checkbox" id="c6"><span>Спросите, у кого ещё есть фото и документы.</span></label></li>
+        <li><label for="c7"><input type="checkbox" id="c7"><span>В тот же день перенесите главное в древо.</span></label></li>
+      </ul>
+      <div class="check-foot"><span id="checkCount">0 из 7</span><button type="button" id="checkReset">Сбросить</button></div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:22px">
+      <figure class="ph" data-photo="talk-album" style="--ar:4/3">
+        <div class="ph-box"><svg class="ic" aria-hidden="true"><use href="#i-talk"/></svg><span>Место для фото</span></div>
+        <figcaption>Разговор над семейным альбомом</figcaption>
+      </figure>
+      <div class="cols two" style="margin-top:0;gap:24px">
+        <div><h4>Не спорьте с памятью</h4><p class="muted">Запишите обе версии.</p></div>
+        <div><h4>Берегите тяжёлые темы</h4><p class="muted">Если человек замолкает, не давите.</p></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pull-wrap" style="margin-top:64px">
+    <p class="pull"><mark class="hl">«Спрашивайте про места и вещи, а не про даты»</mark></p>
+    <p class="muted" style="max-width:40ch">На «в каком году?» отвечают «не помню». На «какой был ваш дом?» рассказывают полчаса.</p>
+  </div>
+
+  <h3 style="margin-top:60px">Вопросы по темам</h3>
+  <div class="qs">
+    <div><h4>Детство и дом</h4><ul>
+      <li>Где вы родились?</li>
+      <li>Кто жил с вами в доме?</li>
+      <li>Как отмечали праздники?</li>
+    </ul></div>
+    <div><h4>Бабушки и дедушки</h4><ul>
+      <li>Как их звали, какие были девичьи фамилии?</li>
+      <li>Откуда они родом и кем работали?</li>
+      <li>Были ли у них братья и сёстры?</li>
+    </ul></div>
+    <div><h4>Переезды</h4><ul>
+      <li>Откуда и почему переехала семья?</li>
+      <li>Кто остался на старом месте?</li>
+      <li>Есть ли родня в других городах и странах?</li>
+    </ul></div>
+    <div><h4>Война, служба, работа</h4><ul>
+      <li>Кто воевал или служил и где?</li>
+      <li>Остались ли письма и награды?</li>
+      <li>Где и кем работали?</li>
+    </ul></div>
+    <div><h4>Имена и прозвища</h4><ul>
+      <li>Как звали родных дома?</li>
+      <li>Менял ли кто-то имя или фамилию?</li>
+      <li>В честь кого называли детей?</li>
+    </ul></div>
+    <div><h4>Вещи и традиции</h4><ul>
+      <li>Что в доме осталось от предков?</li>
+      <li>Какие рецепты и песни передаются?</li>
+      <li>Где хранятся старые документы?</li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- ================= 3. PHOTOS ================= -->
+<section class="sec wrap blue" id="photos" aria-labelledby="photosH">
+  <div class="sec-head">
+    <h2 id="photosH">Фото и альбомы</h2>
+  </div>
+
+  <div class="cols">
+    <div><h3>Сканируйте</h3><p>600 dpi, маленькие снимки — 1200. Без сканера снимайте при дневном свете, без вспышки.</p></div>
+    <div><h3>Обе стороны</h3><p>На обороте бывают даты, имена и штамп ателье.</p></div>
+    <div><h3>Не отрывайте</h3><p>Приклеенные снимки сканируйте прямо в альбоме.</p></div>
+    <div><h3>Подписывайте карандашом</h3><p>Ручка продавливает фото насквозь.</p></div>
+    <div><h3>Храните в темноте</h3><p>В шкафу, а не на балконе или в подвале.</p></div>
+    <div><h3>Делайте копии</h3><p>В облаке и на диске. Имя файла: «1957_Пенза_свадьба».</p></div>
+  </div>
+
+  <div class="spread">
+    <figure class="ph" data-photo="photo-back" style="--ar:16/10">
+      <div class="ph-box"><svg class="ic" aria-hidden="true"><use href="#i-photo"/></svg><span>Место для фото</span></div>
+      <figcaption>Оборот снимка с подписью</figcaption>
+    </figure>
+    <figure class="ph" data-photo="studio-card">
+      <div class="ph-box"><svg class="ic" aria-hidden="true"><use href="#i-book"/></svg><span>Место для фото</span></div>
+      <figcaption>Паспарту фотоателье</figcaption>
+    </figure>
+  </div>
+
+  <div class="cols two" style="margin-top:56px">
+    <div>
+      <h3>Что читать на обороте</h3>
+      <ul class="dash">
+        <li><b>Подписи.</b> «Сестре Шуре от Вани» — два человека и их родство.</li>
+        <li><b>Дату и город.</b> Даже год сужает поиск.</li>
+        <li><b>Штамп ателье.</b> Город и примерные годы.</li>
+        <li><b>Старую орфографию.</b> Скорее всего, снимок до 1918 года.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Что искать на снимке</h3>
+      <ul class="dash">
+        <li><b>Форму и награды.</b> Род войск и годы.</li>
+        <li><b>Одежду.</b> Мода датирует снимок до десятилетия.</li>
+        <li><b>Фон.</b> Вывески, машины, здания.</li>
+        <li><b>Людей рядом.</b> Возможно, их ещё нет в древе.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="app" style="margin-top:36px"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-globe"/></svg><p><b>В Predki</b> фото прикрепляется к человеку, а родные могут предложить снимок по ссылке.</p></div>
+</section>
+
+<!-- ================= 4. VIDEO ================= -->
+<section class="sec wrap" id="video" aria-labelledby="videoH">
+  <div class="sec-head">
+    <h2 id="videoH">Видеокассеты</h2>
+  </div>
+
+  <p class="formats">Самые популярные форматы: VHS, VHS-C, Video8, Hi8 и MiniDV.</p>
+
+  <div class="cols two">
+    <div><h3>Как посмотреть</h3><p>Нужен видеомагнитофон: у знакомых или на сайтах объявлений. Для VHS-C понадобится кассета-адаптер, для Video8, Hi8 и MiniDV — видеокамера того же формата.</p><p><a href="https://ru.wikihow.com/%D0%BF%D0%BE%D0%B4%D0%BA%D0%BB%D1%8E%D1%87%D0%B8%D1%82%D1%8C-%D0%B2%D0%B8%D0%B4%D0%B5%D0%BE%D0%BC%D0%B0%D0%B3%D0%BD%D0%B8%D1%82%D0%BE%D1%84%D0%BE%D0%BD-%D0%BA-%D1%82%D0%B5%D0%BB%D0%B5%D0%B2%D0%B8%D0%B7%D0%BE%D1%80%D1%83" target="_blank" rel="noopener">Как подключить видеомагнитофон к телевизору</a></p></div>
+    <div><h3>Оцифровать самому</h3><p>Видеомагнитофон, USB-карта видеозахвата и бесплатная OBS Studio. Запись идёт в реальном времени: три часа кассеты — три часа записи.</p></div>
+  </div>
+
+  <div class="pull-wrap" style="margin-top:64px">
+    <figure class="ph" data-photo="vhs-stack" style="--ar:16/10">
+      <div class="ph-box"><svg class="ic" aria-hidden="true"><use href="#i-cassette"/></svg><span>Место для фото</span></div>
+      <figcaption>Кассеты с подписанными корешками</figcaption>
+    </figure>
+    <div>
+      <h3>Что смотреть в кадре</h3>
+      <ol class="num">
+        <li>Дату в углу кадра.</li>
+        <li>Голоса, в том числе того, кто снимает.</li>
+        <li>Повод и гостей.</li>
+        <li>Квартиры, дачи, улицы.</li>
+        <li>Песни, тосты, шутки.</li>
+      </ol>
+      <p class="muted" style="margin-top:14px">Записывайте с таймкодом: «02:14 — дед Коля поёт».</p>
+    </div>
+  </div>
+</section>
+
+<!-- ================= 5. SEARCH ================= -->
+<section class="sec wrap blue" id="search" aria-labelledby="searchH">
+  <div class="sec-head">
+    <h2 id="searchH">Где искать</h2>
+  </div>
+
+  <div class="res-h"><h3>Открытые базы</h3></div>
+  <div class="res">
+    <a class="card" href="https://pamyat-naroda.ru" target="_blank" rel="noopener"><span class="era">1941–1945</span><b>Память народа</b><small>Участники войны: награды, потери, боевой путь.</small><span class="url">pamyat-naroda.ru</span></a>
+    <a class="card" href="https://obd-memorial.ru" target="_blank" rel="noopener"><span class="era">1941–1945</span><b>ОБД «Мемориал»</b><small>Погибшие и пропавшие без вести.</small><span class="url">obd-memorial.ru</span></a>
+    <a class="card" href="https://podvignaroda.ru" target="_blank" rel="noopener"><span class="era">1941–1945</span><b>Подвиг народа</b><small>Наградные листы и приказы.</small><span class="url">podvignaroda.ru</span></a>
+    <a class="card" href="https://gwar.mil.ru" target="_blank" rel="noopener"><span class="era">1914–1918</span><b>Памяти героев Великой войны</b><small>Потери и награды Первой мировой.</small><span class="url">gwar.mil.ru</span></a>
+    <a class="card" href="https://yandex.ru/archive" target="_blank" rel="noopener"><span class="era">XVIII — начало XX века</span><b>Поиск по архивам Яндекса</b><small>Метрические книги и ревизские сказки с поиском по тексту.</small><span class="url">yandex.ru/archive</span></a>
+    <a class="card" href="https://www.familysearch.org" target="_blank" rel="noopener"><span class="era">XVIII — XX век</span><b>FamilySearch</b><small>Оцифрованные метрические книги. Бесплатно после регистрации.</small><span class="url">familysearch.org</span></a>
+    <a class="card" href="https://ru.openlist.wiki" target="_blank" rel="noopener"><span class="era">1917–1991</span><b>Открытый список</b><small>Жертвы политических репрессий.</small><span class="url">ru.openlist.wiki</span></a>
+    <a class="card" href="https://forum.vgd.ru" target="_blank" rel="noopener"><span class="era">Сообщество</span><b>Форум ВГД</b><small>Генеалоги обсуждают фамилии, сёла и архивы.</small><span class="url">forum.vgd.ru</span></a>
+    <div><span class="era">По регионам</span><b>Сайты областных архивов</b><small>У многих свои базы. Ищите «[область] архив метрические книги».</small></div>
+  </div>
+
+  <div class="res-h"><h3>Архивы для запросов</h3></div>
+  <div class="res">
+    <div><span class="era">Последние 100 лет</span><b>ЗАГС</b><small>Рождения, браки, смерти, перемена имени.</small></div>
+    <div><span class="era">Главный для генеалогии</span><b>Региональный госархив</b><small>Метрические книги, ревизские сказки, колхозы.</small></div>
+    <div><span class="era">XX век</span><b>Муниципальные архивы</b><small>Сельсоветы, похозяйственные книги, предприятия.</small></div>
+    <div><span class="era">С 1941 года</span><b>ЦАМО, Подольск</b><small>Армия: личные дела, потери, награды.</small></div>
+    <div><span class="era">1918–1941</span><b>РГВА, Москва</b><small>Красная армия до войны, военнопленные.</small></div>
+    <div><span class="era">До 1918 года</span><b>РГВИА, Москва</b><small>Армия империи, послужные списки.</small></div>
+    <div><span class="era">XIX — начало XX века</span><b>РГИА, Санкт-Петербург</b><small>Дворянство, духовенство, имперские учреждения.</small></div>
+    <div><span class="era">До XIX века</span><b>РГАДА, Москва</b><small>Древние акты и первые ревизии.</small></div>
+    <div><span class="era">Репрессии</span><b>Архивы УФСБ и ИЦ МВД</b><small>Дела репрессированных и раскулаченных.</small></div>
+  </div>
+
+  <div class="cols two" style="margin-top:44px">
+    <div class="warn"><b>Срок закрытия 75 лет.</b> Личные документы моложе 75 лет выдают только самому человеку или наследникам. Приложите документы о родстве.</div>
+    <div class="app" style="margin:0"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-globe"/></svg><p><b>Границы менялись.</b> Нет документов в архиве своей области — проверьте соседнюю.</p></div>
+  </div>
+</section>
+
+<!-- ================= 6. REQUESTS ================= -->
+<section class="sec wrap" id="requests" aria-labelledby="reqH">
+  <div class="sec-head">
+    <h2 id="reqH">Запрос в архив</h2>
+  </div>
+
+  <ol class="how">
+    <li><b>Выберите архив</b>До 1918 года — госархив, после — ЗАГС.</li>
+    <li><b>Найдите приёмную</b>На сайте архива или на Госуслугах.</li>
+    <li><b>Опишите человека</b>ФИО, годы, место, сословие, вера.</li>
+    <li><b>Приложите родство</b>Копии свидетельств.</li>
+    <li><b>Ждите ответа</b>До 30 дней. Поиск предков обычно платный.</li>
+  </ol>
+
+  <div class="tpl-tabs" role="tablist" aria-label="Шаблоны запросов">
+    <button type="button" role="tab" id="tab-zags" aria-controls="tpl" aria-selected="true" data-t="zags">В ЗАГС</button>
+    <button type="button" role="tab" id="tab-arch" aria-controls="tpl" aria-selected="false" data-t="arch">В региональный архив</button>
+    <button type="button" role="tab" id="tab-camo" aria-controls="tpl" aria-selected="false" data-t="camo">В ЦАМО</button>
+  </div>
+  <div class="tpl" id="tpl" role="tabpanel">
+    <div class="tpl-top"><p id="tplNote"></p><button type="button" class="copy" id="copyBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-copy"/></svg>Скопировать</button></div>
+    <pre id="tplText"></pre>
+  </div>
+  <p class="muted" style="margin-top:12px;font-size:14px">Выделенное замените своими данными. Адрес ЦАМО: 142100, Московская область, г. Подольск, ул. Кирова, д. 74.</p>
+</section>
+
+<!-- ================= 7. NAMES ================= -->
+<section class="sec wrap blue" id="names" aria-labelledby="namesH">
+  <div class="sec-head">
+    <h2 id="namesH">Смена фамилий</h2>
+  </div>
+
+  <div class="cols">
+    <div><h3>Брак</h3><p>До замужества ищите женщину под девичьей фамилией.</p></div>
+    <div><h3>Писари</h3><p>Записывали на слух: Кутянин становился Кутениным.</p></div>
+    <div><h3>Получение фамилии</h3><p>Крестьяне получали её по отцу, прозвищу или помещику, священники — в семинарии.</p></div>
+    <div><h3>Новые имена</h3><p>В 1920–30-е годы появились Владлены, Октябрины, Нинели.</p></div>
+    <div><h3>Скрыть происхождение</h3><p>Дворяне и раскулаченные меняли фамилии, чтобы уйти от преследований.</p></div>
+    <div><h3>Неудобные фамилии</h3><p>В Первую мировую русифицировали немецкие фамилии.</p></div>
+    <div><h3>Отчим</h3><p>Дети часто брали его фамилию.</p></div>
+    <div><h3>Окончания</h3><p>В XX веке добавляли -ов и -ев, после 1991 года в ряде стран их убирали.</p></div>
+    <div><h3>Псевдонимы</h3><p>Иногда становились настоящей фамилией.</p></div>
+  </div>
+
+  <div class="pull-wrap" style="margin-top:64px">
+    <div>
+      <p class="pull"><mark class="hl">«Евдокия, Авдотья и Дуня — один человек»</mark></p>
+    </div>
+    <div>
+      <p class="muted">Имя записывали по святцам, а звали иначе.</p>
+      <div class="variants" aria-label="Примеры вариантов имён">
+        <span>Иоанн <i>→</i> Иван</span><span>Феодор <i>→</i> Фёдор</span><span>Агриппина <i>→</i> Аграфена, Груня</span><span>Ксения <i>→</i> Аксинья</span><span>Георгий <i>→</i> Егор, Юрий</span><span>Параскева <i>→</i> Прасковья</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cols two" style="margin-top:60px">
+    <div>
+      <h3>Как искать такого предка</h3>
+      <ol class="num">
+        <li>Соберите все варианты имени и фамилии.</li>
+        <li>Ищите по тому, что не меняется: дате, месту, именам родителей.</li>
+        <li>Запросите в ЗАГСе запись о перемене имени.</li>
+        <li>Для женщин найдите запись о браке.</li>
+        <li>В поиске по архивам Яндекса «*» заменяет слово: «Александр * Пушкин».</li>
+      </ol>
+    </div>
+    <figure class="ph" data-photo="name-change" style="--ar:4/3">
+      <div class="ph-box"><svg class="ic" aria-hidden="true"><use href="#i-passport"/></svg><span>Место для фото</span></div>
+      <figcaption>Документ с исправленной фамилией</figcaption>
+    </figure>
+  </div>
+  <div class="app" style="margin-top:36px"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-globe"/></svg><p><b>В Predki</b> у человека есть поле для прежней фамилии.</p></div>
+</section>
+
+<!-- ================= 8. INHERITANCE ================= -->
+<section class="sec wrap" id="inheritance" aria-labelledby="inhH">
+  <div class="sec-head">
+    <h2 id="inhH">Наследство</h2>
+  </div>
+
+  <div class="term">
+    <span class="big-num">6 мес.</span>
+    <p><b>Срок, чтобы принять наследство.</b> Через нотариуса или фактически: жить в квартире, платить за неё. Пропущенный срок восстанавливают через суд.</p>
+  </div>
+
+  <div class="cols">
+    <div><h3>Недвижимость</h3><p>Квартира, дом, дача, земля.</p></div>
+    <div><h3>Деньги</h3><p>Счета и вклады. На похороны можно сразу получить до 100 000 ₽.</p></div>
+    <div><h3>Старые вклады</h3><p>Вклады в Сбербанке до 20 июня 1991 года: наследникам положена компенсация.</p></div>
+    <div><h3>Транспорт и бумаги</h3><p>Машины, акции, доли в компаниях.</p></div>
+    <div><h3>Пенсионные накопления</h3><p>Заявление в Соцфонд в течение 6 месяцев.</p></div>
+    <div><h3>Авторские права</h3><p>Действуют 70 лет после смерти автора.</p></div>
+  </div>
+
+  <div class="cols two" style="margin-top:56px">
+    <div>
+      <h3>Как найти наследство</h3>
+      <ol class="num">
+        <li>Получите свидетельство о смерти.</li>
+        <li><span>Проверьте реестр наследственных дел на <a href="https://notariat.ru" target="_blank" rel="noopener">notariat.ru</a>. Это бесплатно.</span></li>
+        <li>Нет дела — откройте его у нотариуса по последнему адресу умершего.</li>
+        <li>Нотариус сам найдёт счета, имущество и завещание.</li>
+        <li>Через 6 месяцев получите свидетельство о наследстве.</li>
+      </ol>
+    </div>
+    <div>
+      <h3>Кто наследует без завещания</h3>
+      <dl class="order">
+        <div><dt>1 очередь</dt><dd style="margin:0">Дети, супруг, родители.</dd></div>
+        <div><dt>2 очередь</dt><dd style="margin:0">Братья, сёстры, бабушки, дедушки.</dd></div>
+        <div><dt>3 очередь</dt><dd style="margin:0">Дяди, тёти, двоюродные братья и сёстры.</dd></div>
+        <div><dt>Дальше</dt><dd style="margin:0">Дальняя родня, затем государство.</dd></div>
+      </dl>
+    </div>
+  </div>
+
+  <div class="cols two" style="margin-top:44px">
+    <div class="warn"><b>Долги наследуются</b> в пределах стоимости наследства.</div>
+    <div class="warn" style="border-color:var(--line-2)"><b style="color:var(--ink)">Дом прадеда не вернуть:</b> реституции в России нет.</div>
+  </div>
+  <p class="muted" style="margin-top:14px;font-size:14px">Это ориентир, а не юридическая консультация.</p>
+
+  <div class="pull-wrap" style="margin-top:72px">
+    <div>
+      <h3>Наследие</h3>
+      <p class="muted" style="max-width:44ch">То, что не оформить у нотариуса. Записывайте, пока помнят.</p>
+      <div class="legacy" aria-label="Что входит в семейное наследие">
+        <span>Рецепты</span><span>Песни</span><span>Словечки</span><span>Ремёсла</span><span>Праздники</span><span>Вещи с историей</span><span>Приметы</span>
+      </div>
+    </div>
+    <figure class="ph" data-photo="recipes" style="--ar:4/5">
+      <div class="ph-box"><svg class="ic" aria-hidden="true"><use href="#i-book"/></svg><span>Место для фото</span></div>
+      <figcaption>Тетрадь с рецептами</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ================= 9. FAQ ================= -->
+<section class="sec wrap blue" id="faq" aria-labelledby="faqH">
+  <div class="sec-head">
+    <h2 id="faqH">Вопросы</h2>
+  </div>
+  <div class="faq">
+    <details><summary>С чего начать, если никто ничего не помнит?</summary><div class="ans"><p>Со своего свидетельства о рождении. В нём родители, в их свидетельствах — бабушки и дедушки. Запросите их в ЗАГСе.</p></div></details>
+    <details><summary>Сколько стоит поиск?</summary><div class="ans"><p>Базы бесплатны, в ЗАГСе — госпошлина. Поиск предков силами архива обычно платный, цены на его сайте.</p></div></details>
+    <details><summary>Сколько ждать ответа?</summary><div class="ans"><p>По закону до 30 дней, на практике до полугода.</p></div></details>
+    <details><summary>Можно ли прийти в архив самому?</summary><div class="ans"><p>Да, в читальный зал с паспортом, часто по записи. Это бесплатно и быстрее.</p></div></details>
+    <details><summary>Даты в документах не совпадают. Чему верить?</summary><div class="ans"><p>Запишите все версии. Обычно точнее документ, составленный ближе к событию.</p></div></details>
+    <details><summary>Нашёл однофамильца. Это родственник?</summary><div class="ans"><p>Не обязательно. Сверяйте место и имена родителей.</p></div></details>
+    <details><summary>Почему в архиве нет записей о моём селе?</summary><div class="ans"><p>Документы могли сгореть или лежать в архиве соседней области. Спросите архив, где книги вашего прихода.</p></div></details>
+    <details><summary>Стоит ли делать ДНК-тест?</summary><div class="ans"><p>Он найдёт дальнюю родню, но не заменит документы. Проверьте, где хранят ваши данные.</p></div></details>
+    <details><summary>Безопасно ли делиться древом?</summary><div class="ans"><p>Ссылка для соцсетей показывает живых только по имени. Ссылку для родных отправляйте лично.</p></div></details>
+  </div>
+</section>
+
+<footer class="wrap end">
+  <div>
+    <h2>Знаете, что добавить?</h2>
+    <p>Напишите нам.</p>
+    <button type="button" class="mail" id="mailBtn" aria-label="Скопировать адрес hello@predki.me"><svg viewBox="0 0 24 24" aria-hidden="true"><use href="#i-mail"/></svg>hello@predki.me</button>
+  </div>
+  <p class="note">Проверено<br>5 ноября 2026</p>
+</footer>
+</div>

@@ -6,6 +6,7 @@ import { openCalendar } from './FamilyCalendar'
 import { newCount } from '../lib/invites'
 import { ChapterRing, LockIcon, FeatureIcon } from './Chapters'
 import { isOpen, openedBy, pending } from '../lib/chapters'
+import { GuideIcon } from './GuideIcon'
 
 /** a calendar page with two rings and a few marked days */
 const CalendarIcon = () => <svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4" /><path d="M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01" strokeWidth="2.4" strokeLinecap="round" /></svg>
@@ -19,6 +20,8 @@ const NAV: [Page, JSX.Element][] = [
   ['gaps', <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6.5" /><path d="m20 20-4.4-4.4" /></svg>],
   // «Хранитель»: the keeper of the family — you, your chapter and what you have collected
   ['keeper', <svg viewBox="0 0 24 24"><circle cx="12" cy="9" r="3.4" /><path d="M5.6 19.2c1.2-3 3.6-4.6 6.4-4.6s5.2 1.6 6.4 4.6" /><rect x="2.8" y="2.8" width="18.4" height="18.4" rx="5" /></svg>],
+  // «Путеводитель»: a clipboard with a checklist (on the phone it opens from «Хранитель» and the links on the pages)
+  ['guide', <GuideIcon />],
   ['settings', <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" /></svg>],
 ]
 
@@ -50,7 +53,7 @@ export default function Sidebar() {
         {NAV.map(([k, icon]) => <Fragment key={k}>
           {k === 'settings' && S.people.length > 0 && <button className={'nav-calendar' + (ui.calendar ? ' active' : '') + (isOpen('calendar') ? '' : ' locked')} onClick={openCalendar} title={lockTitle('calendar', t('nav.calendar'))}><CalendarIcon /><span>{t('nav.calendar')}</span>{!isOpen('calendar') && <LockIcon />}</button>}
           {k === 'settings' && S.people.length > 0 && <button className={'nav-book' + (ui.page === 'book' ? ' active' : '') + (isOpen('book') ? '' : ' locked')} onClick={() => go('book')} title={lockTitle('book', bookLabel())}><FeatureIcon f="book" /><span>{bookLabel()}</span>{!isOpen('book') && <LockIcon />}</button>}
-          <button className={(ui.page === k ? 'active' : '') + (k === 'settings' ? ' nav-settings' : '') + (k === 'keeper' ? ' nav-keeper' : '') + (k === 'map' && !isOpen('map') ? ' locked' : '')} onClick={() => go(k)} title={k === 'map' ? lockTitle('map', t('nav.map')) : t('nav.' + k)}>
+          <button className={(ui.page === k ? 'active' : '') + (k === 'settings' ? ' nav-settings' : '') + (k === 'keeper' ? ' nav-keeper' : '') + (k === 'guide' ? ' nav-guide' : '') + (k === 'map' && !isOpen('map') ? ' locked' : '')} onClick={() => go(k)} title={k === 'map' ? lockTitle('map', t('nav.map')) : t('nav.' + k)}>
             {icon}<span>{t('nav.' + k)}</span>
             {k === 'map' && !isOpen('map') && <LockIcon />}
             {k === 'keeper' && pending() && <i className="ch-dot" aria-label={LANG === 'en' ? 'A chapter is done' : 'Глава пройдена'} />}

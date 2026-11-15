@@ -26,6 +26,7 @@ React 18 + TypeScript + Vite · Supabase (вход, база, хранилище
 npm install
 npm run dev        # http://localhost:5173
 npm run build      # проверка типов и сборка в dist/
+npm test           # тесты: слияние копий древа, раскладка, родство, связи
 ```
 
 Нужен Node.js 18+. `VITE_PREVIEW=1 npm run dev` запускает тестовую сборку без аккаунта и лендинга, с панелью «Превью» для быстрого прохождения глав. В рабочий сайт эта панель не попадает.
@@ -64,6 +65,7 @@ src/
   lib/demoFamilies.ts     демо-древа
   design.css, chapters.css  оформление (поверх styles.css)
 public/privacy.html       политика конфиденциальности
+tests/                    тесты (npm test); запускаются и перед каждой публикацией
 supabase/                 SQL для сервера
 ```
 

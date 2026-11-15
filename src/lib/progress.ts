@@ -1,6 +1,6 @@
 // @ts-nocheck — achievement logic ported from the prototype as-is
 // Progress: achievement constellation (Род · Летопись · Мир). Data + evaluation live here, the page draws it.
-import { S, LANG, fullName, go, editPerson, openPerson, fillPercent, toast, t, ui, persist, bump } from './core'
+import { S, LANG, byId, parentsOf, fullName, go, editPerson, openPerson, fillPercent, toast, t, ui, persist, bump } from './core'
 
 export const Progress=(function(){
   const L=()=>LANG==='en'?'en':'ru';
@@ -26,8 +26,9 @@ export const Progress=(function(){
   const yr=d=>{ const m=String(d||'').match(/(\d{4})/); return m?+m[1]:0; };
   const dist=(a,b)=>{ const R=6371,r=Math.PI/180; const h=Math.sin((b.lat-a.lat)*r/2)**2+Math.cos(a.lat*r)*Math.cos(b.lat*r)*Math.sin((b.lon-a.lon)*r/2)**2; return 2*R*Math.asin(Math.sqrt(h)); };
   function metrics(){
-    const P=S.people, byI=id=>P.find(p=>p.id===id);
-    const par=id=>S.rels.filter(r=>r.type==='parent'&&!r.step&&r.b===id).map(r=>byI(r.a)).filter(Boolean);
+    // the same lookups as before (first person with the id; parents by birth or adoption, in the order of the links), through core's indexes
+    const P=S.people, byI=byId;
+    const par=parentsOf;
     const memo={}; const depth=id=>{ if(memo[id]!=null) return memo[id]; memo[id]=0; const ps=par(id); return memo[id]=ps.length?1+Math.max(...ps.map(p=>depth(p.id))):0; };
     const anc=(id,k)=>{ let l=[id]; for(let i=0;i<k;i++) l=[...new Set(l.flatMap(x=>par(x).map(p=>p.id)))]; return l; };
     const bio=p=>(p.bio||'').length>=100;

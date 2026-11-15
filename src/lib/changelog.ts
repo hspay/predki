@@ -3,6 +3,16 @@ export interface Release { date: string; items: { ru: string; en: string }[] }
 
 export const CHANGELOG: Release[] = [
   {
+    date: '2026-11-15',
+    items: [
+      { ru: 'Карточки на древе теперь можно перетаскивать и расставлять по-своему (спасибо, Дина <3)', en: 'Cards on the tree can now be dragged and arranged your own way (thank you, Dina <3)' },
+      { ru: 'Перетащите карточку на другого человека, чтобы связать их или убрать связь', en: 'Drag a card onto another person to link them or remove the link' },
+      { ru: 'Появился поиск по древу', en: 'You can now search the tree' },
+      { ru: 'Новый раздел — Путеводитель: FAQ, чек-лист и инструкции для обращения в госархивы', en: 'New section — Guide: FAQ, a checklist and instructions for requests to state archives' },
+      { ru: 'Древо стало быстрее на больших семьях, сайт открывается быстрее', en: 'The tree is faster on big families, and the site opens faster' },
+    ],
+  },
+  {
     date: '2026-11-02',
     items: [
       { ru: 'Исправлен баг с добавлением второго родителя/ребёнка (спасибо, Дина! <3)', en: 'Fixed a bug with adding a second parent or child (thank you, Dina! <3)' },

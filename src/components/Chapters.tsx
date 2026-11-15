@@ -5,11 +5,21 @@ import { S, ui, bump, LANG, go } from '../lib/core'
 import { Progress } from '../lib/progress'
 import { CHAPTERS, FEATURE, TASK, SKIP, tx, counted, current, finished, share, nextStep, openChapter, setSkip, isSkipped, isOpen, openedBy, plural, collectionIds, stepAction, pending, claim, type Feature } from '../lib/chapters'
 import { stickerSrc } from '../lib/stickers'
+import { GuideLink } from './GuideIcon'
+import type { GuideSection } from '../lib/guide'
 import { SplitFlap } from './Landing'
 import { PassportIcon } from './ShareSheet'
 
 const ru = () => LANG !== 'en'
 const L = (r: string, e: string) => (ru() ? r : e)
+/** chapter tasks that «Путеводитель» explains: the next-stop notice links to that section */
+const GUIDE_FOR: Record<string, [GuideSection, [string, string]]> = {
+  v_ask: ['talk', ['Как говорить с родными', 'How to talk to relatives']],
+  x_roots: ['talk', ['Что спросить у родных', 'What to ask relatives']],
+  c_doc: ['requests', ['Как запросить документ', 'How to request a document']],
+  c_face: ['photos', ['Как оцифровать старые фото', 'How to scan old photos']],
+  k_maiden: ['names', ['Как искать девичьи фамилии', 'How to find maiden names']],
+}
 
 /* ---------- icons of the parts a chapter opens ---------- */
 export function FeatureIcon({ f }: { f: Feature }) {
@@ -88,6 +98,7 @@ export function NextStop() {
     <div className="ns-acts">
       <button type="button" className="btn sm ns-go" onClick={act.run}>{act.label}</button>
       {SKIP[n.id] && <button type="button" className="btn sm ghost ns-skip" onClick={() => setSkip(n.id, true)}>{tx(SKIP[n.id])}</button>}
+      {GUIDE_FOR[n.id] && <GuideLink to={GUIDE_FOR[n.id][0]}>{L(...GUIDE_FOR[n.id][1])}</GuideLink>}
     </div>
     <button type="button" className="ns-x" onClick={() => setHide(true)} aria-label={L('Скрыть', 'Hide')}><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></svg></button>
   </div>

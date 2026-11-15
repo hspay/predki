@@ -13,6 +13,8 @@ import { countryAt, findCity } from '../lib/world'
 import Avatar from '../components/Avatar'
 import { openShare, PassportIcon } from '../components/ShareSheet'
 import { FeatureIcon, LockIcon } from '../components/Chapters'
+import { GuideIcon } from '../components/GuideIcon'
+import { openGuide } from '../lib/guide'
 import { CHAPTERS, COLLECTION, FEATURE, tx, counted, current, closed, openChapter, isOpen, openedBy, collectionIds, isSkipped, plural, pending, claim } from '../lib/chapters'
 
 export default function KeeperPage() {
@@ -88,6 +90,11 @@ export default function KeeperPage() {
               <span className="ic"><FeatureIcon f="book" /></span>
               <span className="tx"><b>{tx(FEATURE.book.t)}</b><small>{isOpen('book') ? L('Жизнь каждого по годам', 'Each life year by year') : L(`Откроется в главе ${openedBy('book') + 1}`, `Opens with chapter ${openedBy('book') + 1}`)}</small></span>
               {!isOpen('book') && <LockIcon />}
+            </button>
+            {/* «Путеводитель» is always open: it helps to pass the chapters (on the phone this tile is its only menu entry) */}
+            <button type="button" className="kp-tile" onClick={() => openGuide()}>
+              <span className="ic"><GuideIcon /></span>
+              <span className="tx"><b>{t('nav.guide')}</b><small>{L('Советы, архивы, шаблоны', 'Tips, archives, templates')}</small></span>
             </button>
             <div className="kp-tile soon">
               <span className="ic"><FeatureIcon f="bookPdf" /></span>

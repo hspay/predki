@@ -21,6 +21,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # a failed test stops the publish: the site keeps the previous version
+      - run: npm test
       - run: npm run build
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3

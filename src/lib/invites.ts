@@ -115,6 +115,8 @@ export async function buildTreeSnapshot(mode: LinkMode): Promise<Snapshot> {
   snap.people.forEach(p => { p.ord = ord.get(p.id) })
   const own = new Map(S.people.map(p => [p.id, p]))
   snap.people.forEach(p => { const f = own.get(p.id)?.frame; if (f) p.frame = f })
+  // cards moved by hand stand where the family put them
+  snap.people.forEach(p => { const a = own.get(p.id)?.at; if (a) p.at = a })
   // photos within a budget: the snapshot must stay under the database's limit (about 800 KB)
   let budget = 560_000
   for (const p of snap.people) {

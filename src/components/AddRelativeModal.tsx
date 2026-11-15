@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { ui, t, byId, fullName, yearsOf, commit, toast, closeModal, coupleRel, normDate, dateValid, bindDateMask, type RelKind } from '../lib/core'
-import { REL_KINDS, linkPeople, linkCandidates } from '../lib/relations'
+import { S, ui, t, byId, fullName, yearsOf, commit, toast, closeModal, coupleRel, parentsOf, adoptParentsOf, currentSpousesOf, normDate, dateValid, bindDateMask, type RelKind } from '../lib/core'
+import { REL_KINDS, linkPeople, linkCandidates, relativesOf, unlinkPeople } from '../lib/relations'
 import Avatar from './Avatar'
 
 /** «Связать с человеком из древа»: pick how someone is related, then who it is. Opened from «Семья → Изменить». */
 export default function RelModal() {
   if (ui.modal?.kind === 'pair') return <PairModal key={ui.modal.a + ui.modal.b} a={ui.modal.a} b={ui.modal.b} />
+  if (ui.modal?.kind === 'link' && ui.modal.other) return <DropModal key={ui.modal.id + ui.modal.other} id={ui.modal.id} other={ui.modal.other} />
   return <LinkModal />
 }
 
@@ -38,6 +39,48 @@ function LinkModal() {
               : <p className="muted">{t('rel.link.none')}</p>}
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+/** A card dropped onto another card on the Tree. «other» (the card that was carried) becomes «kind» of «id» (the card it was dropped on).
+ *  A link the two already have can be removed right here; a child given new parents can leave the previous ones. */
+function DropModal({ id, other }: { id: string; other: string }) {
+  const T = byId(id), D = byId(other)
+  const [kind, setKind] = useState<RelKind | null>(null)
+  const [move, setMove] = useState<boolean | null>(null)
+  if (!T || !D) return null
+  const now = relativesOf(id).filter(g => g.list.some(x => x.p.id === other && x.own))
+  const can = (k: RelKind) => linkCandidates(id, k).some(x => x.id === other)
+  // a child who already has parents: the new ones can take their place (offered by default when both parents are known)
+  const stay = new Set([id, ...currentSpousesOf(id).map(x => x.id)]), adopted = new Set(adoptParentsOf(other).map(x => x.id))
+  const olds = (kind === 'child' ? parentsOf(other).filter(p => !adopted.has(p.id)) : kind === 'adoptchild' ? adoptParentsOf(other) : []).filter(p => !stay.has(p.id))
+  const moving = olds.length > 0 && (move ?? olds.length > 1)
+  const link = () => {
+    if (!kind) return
+    if (moving) { const gone = new Set(olds.map(p => p.id)); S.rels = S.rels.filter(r => !(r.type === 'parent' && !r.step && r.b === other && gone.has(r.a))) }
+    linkPeople(id, other, kind); commit(); toast(t('rel.linked')); closeModal()
+  }
+  const unlink = (k: RelKind) => { if (confirm(t('rel.unlink.confirm', { a: fullName(D), b: fullName(T) }))) { unlinkPeople(id, other, k); closeModal() } }
+  return (
+    <div className="modal-bg open" id="modalBg" onClick={e => { if ((e.target as HTMLElement).id === 'modalBg') closeModal() }}>
+      <div className="modal lk onto" id="modal" role="dialog" aria-label={t('drop.h')}>
+        <div className="panel-head"><h3>{t('drop.h')}</h3><button className="btn icon ghost" onClick={closeModal} aria-label={t('p.cancel')}><X /></button></div>
+        <div className="panel-body">
+          <div className="lk-who"><Avatar p={D} size={28} /><span>{fullName(D)}</span></div>
+          <div className="eyebrow">{t('rel.link.kind')}</div>
+          <div className="lk-kinds" role="radiogroup" aria-label={t('rel.link.kind')}>
+            {REL_KINDS.map(k => <button key={k} type="button" role="radio" aria-checked={kind === k} disabled={!can(k)} onClick={() => { setKind(k); setMove(null) }}>{t('rel.k.' + k)}</button>)}
+          </div>
+          <div className="eyebrow">{t('drop.to')}</div>
+          <div className="lk-who"><Avatar p={T} size={28} /><span>{fullName(T)}</span></div>
+          {olds.length > 0 && <label className="ts-toggle drop-move"><input type="checkbox" checked={moving} onChange={e => setMove(e.target.checked)} />
+            <span><b>{t('drop.move')}</b><small>{olds.map(fullName).join(', ')}</small></span></label>}
+          {now.map(g => <div key={g.kind} className="drop-now"><span>{t('drop.now')}: <b>{t('rel.k.' + g.kind)}</b></span>
+            <button type="button" className="btn sm" onClick={() => unlink(g.kind)}>{t('rel.unlink')}</button></div>)}
+        </div>
+        <div className="panel-foot"><button className="btn ghost" onClick={closeModal}>{t('p.cancel')}</button><button className="btn primary" disabled={!kind} onClick={link}>{t('drop.go')}</button></div>
       </div>
     </div>
   )

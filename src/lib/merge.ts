@@ -13,8 +13,8 @@ export function stable(v: unknown): string {
   return v === undefined ? 'undefined' : JSON.stringify(v)
 }
 export const same = (a: unknown, b: unknown) => stable(a) === stable(b)
-/** fields the app fills in by itself (the default portrait): a change there is not an edit that should save a deleted person */
-const AUTO = ['preset']
+/** fields the app fills in by itself (the default portrait) and the card's place on the Tree: a change there is not an edit that should save a deleted person */
+const AUTO = ['preset', 'at']
 const sameByHand = (a: Obj, b: Obj) => { const strip = (x: Obj) => { const y = { ...x }; AUTO.forEach(k => delete y[k]); return y }; return same(strip(a), strip(b)) }
 
 /** a list of things with their own id (people, links, photos, life events, pets) */

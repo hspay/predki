@@ -3,6 +3,7 @@ import { S, commit, LANG, t, byId, fullName, avatarSmall, openPerson, editPerson
 import { familyGaps, life, kinFrom, GAP_MIN, question, question2, message, factLabel, witnessLabel, missing, type Gap } from '../lib/gaps'
 import { rootPerson } from '../lib/treeLayout'
 import FamilyAnswers, { FamilyLinks, AskLink, LinkIcon } from '../components/FamilyAnswers'
+import { GuideLink } from '../components/GuideIcon'
 
 // «Заполнить пробелы»: years of family history with no record, who may remember them, and a question worded for that person.
 const TX = {
@@ -124,7 +125,7 @@ export default function GapsPage() {
                   <div className="gp-witn">
                     {g.w.length ? <><span className="lbl">{T.who}</span>{g.w.map(w => { const wp = byId(w)!, lab = witnessLabel(g.id, w), by = life(w).by
                       return <Chip key={w} p={wp} small={[lab, by].filter(Boolean).join(' · ')} onClick={() => setAsk({ g, w, text: message(g, w) })} /> })}</>
-                      : <span className="lbl">{T.nobody}</span>}
+                      : <><span className="lbl">{T.nobody}</span><GuideLink to="search">{LANG === 'en' ? 'Where to search' : 'Где искать'}</GuideLink></>}
                   </div>
                   <div className="gp-acts">
                     <button type="button" className="btn sm gp-askfill" onClick={() => askFill(g)}><LinkIcon />{T.askFill}</button>

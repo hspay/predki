@@ -15,6 +15,7 @@ import { goal } from '../lib/analytics'
 import Avatar from './Avatar'
 import FrameEditor from './FrameEditor'
 import MediaViewer from './MediaViewer'
+import { GuideLink } from './GuideIcon'
 import { KINDS, kindName, petIcon, petsOf, petById, petYears, savePet, removePet } from '../lib/pets'
 
 // «Служба»: army service, one of the most common reasons to move in the USSR
@@ -139,7 +140,7 @@ function ViewPerson({ id }: { id: string }) {
             <button className="btn sm ghost" onClick={() => editEvent(id, e.id)}>✎</button></div>
         )) : <div className="muted" style={{ fontSize: 13 }}>{t('p.noevents')}</div>}
       </div>
-      <div className="section-t"><h3>{t('p.gallery')}</h3></div>
+      <div className="section-t"><h3>{t('p.gallery')}</h3><GuideLink to="photos">{LANG === 'en' ? 'How to scan old photos' : 'Как оцифровать старые фото'}</GuideLink></div>
       <div className="gallery">
         {(p.media || []).map((m, i) => {
           const pic = m.type === 'photo' || isPicture(m.data)

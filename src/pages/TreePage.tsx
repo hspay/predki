@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { S, ui, t, LANG, byId, yearOf, showYear, parentsOf, childrenOf, yearsOf, avatarSmall, fullName, fillPercent, generations, openPerson, openPet, closePanel, editPerson, bump, type Person } from '../lib/core'
+import { S, ui, t, LANG, byId, yearOf, showYear, parentsOf, childrenOf, yearsOf, avatarSmall, fullName, fillPercent, generations, openPerson, openPet, closePanel, editPerson, bump, coupleRel, isAdoptive, persist, toast, openModal, type Person } from '../lib/core'
 import { addRelative } from '../lib/relations'
 import { frameOf, frameArt } from '../lib/frames'
 import { petsOf, petSpot, petIcon, petYears, kindName, PET_R } from '../lib/pets'
@@ -15,6 +15,7 @@ import { distances, FRIEND } from '../lib/demo'
 import ShareDialog, { ShareIcon } from '../components/ShareDialog'
 import { logProblem } from '../lib/problems'
 import FlapTitle, { FT } from '../components/FlapTitle'
+import TreeSearch from '../components/TreeSearch'
 
 /** The demo tree («Смотреть пример древа»): no page header, no adding, labels from the demo family, growth from the face on first open */
 export interface DemoView { labels: Record<string, string>; face: string; intro: number }
@@ -52,6 +53,28 @@ const okView = (v: View | null | undefined): v is View => !!v && isFinite(v.x) &
 // growth: who has just appeared in the tree (their branch draws, the card blooms)
 const GROW = { known: null as Set<string> | null, refit: -1, ids: new Set<string>(), until: 0, n: 0, timer: 0 as ReturnType<typeof setTimeout> | 0 }
 const GROW_MS = 4700
+
+// ---- cards moved by hand. The layout still decides where everyone stands; a person carried to another place keeps the shift
+// from that place (Person.at), so the card follows its family when the tree rearranges.
+type Shift = { x: number; y: number }
+/** the card in hand right now: its shift at this moment (x, y), the shift it had when taken (ox, oy), where the pointer took it
+ *  (gx, gy: tree coordinates), the card it is held over (letting go there links the two) and whether it has moved at all */
+const CD = { cur: null as null | { id: string; x: number; y: number; ox: number; oy: number; gx: number; gy: number; over: string | null; went: boolean }, told: false }
+/** how long a finger rests on a card before it is picked up (a mouse takes it at once) */
+const HOLD_MS = 380
+const NONE: Shift = { x: 0, y: 0 }
+const shiftOf = (p: Person): Shift => { const a = p.at; return a && isFinite(a.x) && isFinite(a.y) ? a : NONE }
+/** the layout with the hand-made shifts applied; x0, y0 — its top-left corner once a card stands left of the tree or above it */
+function placed(base: any, cur: typeof CD.cur) {
+  let x0 = 0, y0 = 0, w = base.w, h = base.h, pos = base.pos
+  S.people.forEach(p => {
+    const P = base.pos[p.id], a: Shift = cur && cur.id === p.id ? cur : shiftOf(p); if (!P || (!a.x && !a.y)) return
+    if (pos === base.pos) pos = { ...base.pos }
+    const Q = pos[p.id] = { ...P, x: P.x + a.x, y: P.y + a.y, top: P.top + a.y, moved: true }
+    x0 = Math.min(x0, Q.x); y0 = Math.min(y0, Q.y); w = Math.max(w, Q.x + NW); h = Math.max(h, Q.y + Q.h)
+  })
+  return { ...base, pos, x0, y0, w, h }
+}
 
 // Square cards, all the same size. A frame goes along the card's own edge and the content shrinks a little to fit inside it.
 
@@ -100,7 +123,17 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
   const svgRef = useRef<SVGSVGElement>(null), gRef = useRef<SVGGElement>(null), panRef = useRef<HTMLDivElement>(null)
   const sel = ui.panel && ui.panel.mode === 'view' ? ui.panel.id : null
   const selPet = ui.panel && ui.panel.mode === 'pet' ? ui.panel.id : null
-  const lay = layout(() => NH)
+  const [, redraw] = useState(0)
+  /** the gesture on the tree (see the pointer handlers below): kept between redraws */
+  const G = useRef({ drag: null as null | { x: number; y: number; vx: number; vy: number; node: Element | null }, moved: false, pinch: null as null | { d: number; k: number },
+    pts: new Map<number, { x: number; y: number }>(), pick: null as null | { id: string; armed: boolean }, hold: 0 as ReturnType<typeof setTimeout> | 0, raf: 0 }).current
+  // base: where the layout puts everyone; lay: the same with the cards moved by hand (and the one in hand right now)
+  const base = layout(() => NH), cd = dv ? null : CD.cur
+  const lay = placed(base, cd)
+  /** rows of the generations: a carried card snaps to them */
+  const rows = [...new Set(Object.values(base.pos).map((q: any) => q.y as number))]
+  // while a card is carried the Tree is redrawn on every frame: colours and kinship labels cannot change meanwhile, they are worked out once
+  const keep = useRef<null | { kin: ReturnType<typeof kinship> | null; col: ReturnType<typeof familyColors> }>(null)
   // the family's look: title above the tree, dashed places for the parents of the oldest relatives
   const st = S.settings, theme = themeOf(st.theme)
   const title = (st.familyName || '').trim()
@@ -111,13 +144,15 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
   // approximate birth year of each generation row, drawn as a scale on the left
   const scale = (() => {
     const rows = new Map<number, number[]>(); let minX = Infinity
-    S.people.forEach(p => { const P = lay.pos[p.id]; if (!P || P.iso) return; minX = Math.min(minX, P.x); const ry = P.top + P.rh / 2; if (!rows.has(ry)) rows.set(ry, []); const y = +yearOf(p.birthDate); if (y) rows.get(ry)!.push(y) })
+    S.people.forEach(p => { const P = base.pos[p.id]; if (!P || P.iso) return; minX = Math.min(minX, P.x); const ry = P.top + P.rh / 2; if (!rows.has(ry)) rows.set(ry, []); const y = +yearOf(p.birthDate); if (y) rows.get(ry)!.push(y) })
     const list = [...rows.entries()].filter(([, ys]) => ys.length).map(([y, ys]) => ({ y, label: (ys.length > 1 ? '≈' : '') + Math.round(ys.reduce((a, b) => a + b, 0) / ys.length) })).sort((a, b) => a.y - b.y)
     return rows.size > 1 && list.length ? { x: minX - 28, list } : null
   })()
   const SC = scale ? 130 : 0
   const [, setMemoTick] = useState(0)
   const [sharing, setSharing] = useState(false)
+  /** «Найти человека» is open */
+  const [finding, setFinding] = useState(false)
   /** taps on the family's board above the tree */
   const [flapN, setFlapN] = useState(0)
   const memo0 = dv ? null : Progress.nearestBirthday()
@@ -127,7 +162,7 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
   const dock = (memo ? 64 : 0) + (ns ? 96 : 0) + (memo && ns ? 12 : 0)
   // «бабушка», «тёща»… under the names, relative to «you»; the chain of relatives for the selected person
   const me = st.kin === false ? null : rootPerson()
-  const kin = me ? kinship(me.id) : null
+  const kin = cd && keep.current ? keep.current.kin : me ? kinship(me.id) : null
   if (kin && dv) Object.assign(kin.label, dv.labels)
   // demo, first open: how many steps each person is from the face (the order of growth)
   const intro = dv && dv.intro ? distances(dv.face) : null
@@ -158,15 +193,15 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
   const fitView = (): View | null => {
     const svg = svgRef.current; if (!svg) return null; const W = svg.clientWidth || 800, H = svg.clientHeight || 600; const pad = dock ? dock : dv ? 120 : 0
     // the demo shows the whole family at once, even when the cards get small on a phone
-    const lw = (lay.w || NW) + SC, lh = (lay.h || NH) + TOP; const k = Math.min(1.1, Math.max(dv ? .16 : .25, Math.min((W - (dv ? 32 : 80)) / lw, (H - 80 - pad) / lh)))
-    return { k, x: (W - lw * k) / 2 + SC * k, y: (H - pad - lh * k) / 2 + TOP * k }
+    const lw = ((lay.w - lay.x0) || NW) + SC, lh = ((lay.h - lay.y0) || NH) + TOP; const k = Math.min(1.1, Math.max(dv ? .16 : .25, Math.min((W - (dv ? 32 : 80)) / lw, (H - 80 - pad) / lh)))
+    return { k, x: (W - lw * k) / 2 + (SC - lay.x0) * k, y: (H - pad - lh * k) / 2 + (TOP - lay.y0) * k }
   }
   const fit = (anim?: boolean) => { TV.pan = null; if (panRef.current) panRef.current.style.transform = ''; const v = fitView(); if (v) { TV.view = v; apply(anim) } }
   /** demo, first open: where the camera stops — the face with about a row and a half of relatives above and below it
    *  (a big family shown whole is too small to read); null when the whole family fits at that size anyway */
   const closeUp = (P: { x: number; y: number; h: number }): View | null => {
     const svg = svgRef.current; if (!svg) return null; const W = svg.clientWidth || 800, H = svg.clientHeight || 600, pad = 120
-    const tops = [...new Set(Object.values(lay.pos).map((q: any) => Math.round(q.top ?? q.y)))].sort((a, b) => a - b)
+    const tops = [...new Set(Object.values(base.pos).map((q: any) => Math.round(q.top ?? q.y)))].sort((a, b) => a - b)
     const gaps = tops.slice(1).map((t, i) => t - tops[i]).filter(d => d > 0).sort((a, b) => a - b); if (!gaps.length) return null
     const pitch = gaps[Math.floor(gaps.length / 2)], k = Math.min(1.1, (H - pad - 40) / (3.6 * pitch))
     const whole = fitView(); if (!whole || k <= whole.k * 1.15) return null
@@ -212,7 +247,7 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
   useLayoutEffect(() => {
     const svg = svgRef.current; if (!svg) return; const sz = svg.clientWidth + 'x' + svg.clientHeight
     if (intro && TV.introAt !== dv!.intro) { TV.introAt = dv!.intro; TV.fitted = true; TV.lastN = S.people.length; TV.lastSz = sz; TV.refit = ui.treeRefit; TV.lastTop = TOP; startIntro(); return }
-    const P = sel ? lay.pos[sel] : null, was = TV.selAt
+    const P = sel ? base.pos[sel] : null, was = TV.selAt
     if (!TV.fitted || TV.lastN !== S.people.length || TV.lastSz !== sz || TV.refit !== ui.treeRefit || TV.lastTop !== TOP) { if (TV.fitted && TV.lastN !== S.people.length && growing.size > 0 && TV.lastSz === sz) focus(growing); else fit(); TV.fitted = true; TV.lastN = S.people.length; TV.lastSz = sz; TV.refit = ui.treeRefit; TV.lastTop = TOP }
     // a new link rearranged the tree (a second parent, a marriage): the open card stays where it was on screen
     else if (P && was && was.id === sel && (was.x !== P.x || was.y !== P.y) && okView(TV.view)) { const v = TV.view; TV.view = { ...v, x: v.x - (P.x - was.x) * v.k, y: v.y - (P.y - was.y) * v.k }; apply(true, 700) }
@@ -225,41 +260,150 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
     const W = svg.clientWidth, H = svg.clientHeight, v = TV.view, p = lay.pos[sel]; const sx = p.x * v.k + v.x, sy = p.y * v.k + v.y; const panelW = W > 860 && !dv ? 400 : 0
     if (sx < 40 || sx > W - panelW - NW * v.k - 40 || sy < 40 || sy > H - 100) { TV.view = { ...v, x: (W - panelW) / 2 - (p.x + NW / 2) * v.k, y: H / 2 - (p.y + p.h / 2) * v.k }; apply(true) }
   }, [sel])
-  // wheel zoom, drag pan, pinch zoom, tap to open
+  // wheel zoom, drag pan, pinch zoom, tap to open — and a card carried to another place.
+  // The gesture lives in a ref (G): the Tree can be redrawn in the middle of it (a photo arrives, the card in hand moves),
+  // and that must not drop it.
   useEffect(() => {
-    const svg = svgRef.current!; let drag: { x: number; y: number; vx: number; vy: number; node: Element | null } | null = null, moved = false, pinch: { d: number; k: number } | null = null
-    const pts = new Map<number, { x: number; y: number }>()
+    const svg = svgRef.current!, pts = G.pts
     const wheel = (e: WheelEvent) => { e.preventDefault(); const r = svg.getBoundingClientRect(); zoomBy(Math.exp(-e.deltaY * 0.0015), e.clientX - r.left, e.clientY - r.top, true) }
     // a drag moves the drawn tree as one ready picture (CSS transform of the whole SVG, no redrawing of the cards);
     // the real position is written once, when the finger or the mouse is released
     const settle = () => { const p = TV.pan; if (!p) return; TV.pan = null; TV.view = { ...TV.view, x: TV.view.x + p.x, y: TV.view.y + p.y }; if (panRef.current) panRef.current.style.transform = ''; apply() }
+    /** the pointer in the tree's own coordinates */
+    const spot = (e: { clientX: number; clientY: number }) => { const r = svg.getBoundingClientRect(), v = TV.view; return { x: (e.clientX - r.left - v.x) / v.k, y: (e.clientY - r.top - v.y) / v.k } }
+    const again = () => { if (!G.raf) G.raf = requestAnimationFrame(() => { G.raf = 0; redraw(n => n + 1) }) }
+    /** pick a card up */
+    const lift = (id: string, from: { clientX: number; clientY: number }) => {
+      const p = byId(id); if (!p || !base.pos[id] || !okView(TV.view)) return
+      const g = spot(from), a = shiftOf(p)
+      CD.cur = { id, x: a.x, y: a.y, ox: a.x, oy: a.y, gx: g.x, gy: g.y, over: null, went: false }
+      svg.classList.add('carrying'); again()
+    }
+    const carry = (e: PointerEvent) => {
+      const c = CD.cur!, P = base.pos[c.id]; if (!P) return
+      const g = spot(e); let x = c.ox + g.x - c.gx, y = c.oy + g.y - c.gy
+      // a light magnet: the card's own column, and the rows of the generations
+      if (Math.abs(x) < 10) x = 0
+      let row = P.y; rows.forEach(r => { if (Math.abs(P.y + y - r) < Math.abs(P.y + y - row)) row = r }); if (Math.abs(P.y + y - row) < 22) y = row - P.y
+      // held over another card: letting go there links the two people instead of moving the card
+      let over: string | null = null
+      for (const q of S.people) { const Q = q.id !== c.id && lay.pos[q.id]; if (Q && g.x >= Q.x && g.x <= Q.x + NW && g.y >= Q.y && g.y <= Q.y + Q.h) { over = q.id; break } }
+      c.x = x; c.y = y; c.over = over; c.went = true; again()
+    }
+    /** let the card go: onto another card — the two get linked (a window asks how); anywhere else — it stays there */
+    const drop = (cancel: boolean) => {
+      const c = CD.cur; if (!c) return
+      CD.cur = null; svg.classList.remove('carrying'); if (G.raf) { cancelAnimationFrame(G.raf); G.raf = 0 }
+      const p = byId(c.id)
+      if (!cancel && c.went && p) {
+        if (c.over && byId(c.over)) { openModal({ kind: 'link', id: c.over, other: c.id }); return }
+        const x = Math.round(c.x), y = Math.round(c.y), was = p.at
+        if (x !== c.ox || y !== c.oy) {
+          if (x || y) p.at = { x, y }; else delete p.at
+          persist()
+          // the first time, say what happened and offer the way back (after that the button in the corner is enough)
+          if (!CD.told) { CD.told = true; toast(t('drag.moved'), undefined, { act: { label: t('drag.undo'), run: () => { const q = byId(c.id); if (!q) return; if (was) q.at = was; else delete q.at; persist(); bump() } } }) }
+        }
+      }
+      bump()
+    }
     const down = (e: PointerEvent) => {
       if (e.pointerType === 'mouse') e.preventDefault() // no text selection while dragging
       pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); svg.setPointerCapture(e.pointerId)
-      if (pts.size === 1) { drag = { x: e.clientX, y: e.clientY, vx: TV.view.x, vy: TV.view.y, node: (e.target as Element).closest('.petb, .node, .ghost, .tflap') }; moved = false }
-      else if (pts.size === 2) { const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y); pinch = d > 8 ? { d, k: TV.view.k } : null; drag = null }
+      clearTimeout(G.hold as ReturnType<typeof setTimeout>)
+      if (pts.size === 1) {
+        const node = (e.target as Element).closest('.petb, .node, .ghost, .tflap')
+        G.drag = { x: e.clientX, y: e.clientY, vx: TV.view.x, vy: TV.view.y, node }; G.moved = false
+        // a card can be carried: a mouse takes it at once, a finger after a short hold (a quick swipe still moves the whole tree)
+        const id = !dv && e.button === 0 && node && node.classList.contains('node') ? (node as SVGGElement).dataset.id || '' : ''
+        G.pick = id ? { id, armed: e.pointerType === 'mouse' } : null
+        if (id && e.pointerType !== 'mouse') { const from = { clientX: e.clientX, clientY: e.clientY }
+          G.hold = setTimeout(() => { if (G.pick && G.pick.id === id && !G.moved && pts.size === 1 && !CD.cur) { lift(id, from); try { navigator.vibrate?.(12) } catch { /* no vibration */ } } }, HOLD_MS) }
+      }
+      else if (pts.size === 2) { drop(true); G.pick = null; const [a, b] = [...pts.values()], d = Math.hypot(a.x - b.x, a.y - b.y); G.pinch = d > 8 ? { d, k: TV.view.k } : null; G.drag = null }
     }
     const move = (e: PointerEvent) => {
       if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, { x: e.clientX, y: e.clientY })
-      if (pts.size === 2 && pinch) { settle(); const [a, b] = [...pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); if (!(d > 0)) return; const r = svg.getBoundingClientRect(); const cx = (a.x + b.x) / 2 - r.left, cy = (a.y + b.y) / 2 - r.top; const nk = Math.min(3, Math.max(.15, pinch.k * d / pinch.d)); const rr = nk / TV.view.k; TV.view = { k: nk, x: cx - (cx - TV.view.x) * rr, y: cy - (cy - TV.view.y) * rr }; applySoon(); moved = true; return }
-      if (drag) { const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) { moved = true; svg.classList.add('dragging') }
-        if (moved) { TV.pan = { x: dx, y: dy }; if (panRef.current) panRef.current.style.transform = `translate(${dx}px, ${dy}px)` } }
+      const pinch = G.pinch
+      if (pts.size === 2 && pinch) { settle(); const [a, b] = [...pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); if (!(d > 0)) return; const r = svg.getBoundingClientRect(); const cx = (a.x + b.x) / 2 - r.left, cy = (a.y + b.y) / 2 - r.top; const nk = Math.min(3, Math.max(.15, pinch.k * d / pinch.d)); const rr = nk / TV.view.k; TV.view = { k: nk, x: cx - (cx - TV.view.x) * rr, y: cy - (cy - TV.view.y) * rr }; applySoon(); G.moved = true; return }
+      if (CD.cur) { carry(e); return }
+      const drag = G.drag; if (!drag) return
+      const dx = e.clientX - drag.x, dy = e.clientY - drag.y
+      // a finger waiting to pick a card up trembles a little: only a clear move starts moving the tree
+      if (!G.moved && Math.abs(dx) + Math.abs(dy) > (G.pick && !G.pick.armed ? 9 : 3)) {
+        if (G.pick && G.pick.armed) { lift(G.pick.id, { clientX: drag.x, clientY: drag.y }); if (CD.cur) { carry(e); return } }
+        G.moved = true; G.pick = null; clearTimeout(G.hold as ReturnType<typeof setTimeout>); svg.classList.add('dragging')
+      }
+      if (G.moved) { TV.pan = { x: dx, y: dy }; if (panRef.current) panRef.current.style.transform = `translate(${dx}px, ${dy}px)` }
     }
     const up = (e: PointerEvent) => {
-      pts.delete(e.pointerId); if (pts.size < 2) pinch = null
-      if (pts.size === 0) { settle(); svg.classList.remove('dragging'); if (!moved) { const n = drag && drag.node as SVGGElement | null; if (n && n.classList.contains('tflap')) setFlapN(x => x + 1); else if (n && n.dataset.ghost) addRelative(n.dataset.ghost, 'parent'); else if (n && n.dataset.pet) openPet(n.dataset.pet); else if (n && n.dataset.id) openPerson(n.dataset.id); else closePanel() } drag = null }
+      pts.delete(e.pointerId); if (pts.size < 2) G.pinch = null
+      if (pts.size === 0) {
+        clearTimeout(G.hold as ReturnType<typeof setTimeout>)
+        if (CD.cur) drop(e.type !== 'pointerup') // a gesture the system took away puts the card back
+        else { settle(); if (!G.moved) { const n = G.drag && G.drag.node as SVGGElement | null; if (n && n.classList.contains('tflap')) setFlapN(x => x + 1); else if (n && n.dataset.ghost) addRelative(n.dataset.ghost, 'parent'); else if (n && n.dataset.pet) openPet(n.dataset.pet); else if (n && n.dataset.id) openPerson(n.dataset.id); else closePanel() } }
+        svg.classList.remove('dragging'); G.drag = null; G.pick = null
+      }
     }
     // a finger lifted outside the page (or over a window that opened) leaves no «up»: it must not stay as a ghost second finger
     const lost = (e: PointerEvent) => { if (pts.has(e.pointerId)) up(e) }
+    /** Esc puts the card in hand back */
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape' && CD.cur) { drop(true); G.pick = null; G.drag = null; G.moved = true } }
     const resize = () => setTimeout(fit, 50)
-    svg.addEventListener('wheel', wheel, { passive: false }); svg.addEventListener('pointerdown', down); svg.addEventListener('pointermove', move); svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up); svg.addEventListener('lostpointercapture', lost); window.addEventListener('resize', resize)
-    return () => { svg.removeEventListener('wheel', wheel); svg.removeEventListener('pointerdown', down); svg.removeEventListener('pointermove', move); svg.removeEventListener('pointerup', up); svg.removeEventListener('pointercancel', up); svg.removeEventListener('lostpointercapture', lost); window.removeEventListener('resize', resize) }
+    svg.addEventListener('wheel', wheel, { passive: false }); svg.addEventListener('pointerdown', down); svg.addEventListener('pointermove', move); svg.addEventListener('pointerup', up); svg.addEventListener('pointercancel', up); svg.addEventListener('lostpointercapture', lost); window.addEventListener('resize', resize); window.addEventListener('keydown', esc)
+    return () => { svg.removeEventListener('wheel', wheel); svg.removeEventListener('pointerdown', down); svg.removeEventListener('pointermove', move); svg.removeEventListener('pointerup', up); svg.removeEventListener('pointercancel', up); svg.removeEventListener('lostpointercapture', lost); window.removeEventListener('resize', resize); window.removeEventListener('keydown', esc) }
   })
+  // The drawing gets its size in pixels, kept in step with the frame around it. With a size in per cent the browser laid the whole
+  // tree out again — every name on every card — on any change inside it: a card carried, a hover, each frame of an animation
+  // (at 300 people that was about 20 ms a frame out of 16).
+  useLayoutEffect(() => {
+    const svg = svgRef.current, frame = panRef.current; if (!svg || !frame || typeof ResizeObserver === 'undefined') return
+    let w = 0, h = 0
+    const ro = new ResizeObserver(() => {
+      const nw = frame.clientWidth, nh = frame.clientHeight; if (!nw || !nh || (nw === w && nh === h)) return
+      const first = !w; w = nw; h = nh; svg.style.width = nw + 'px'; svg.style.height = nh + 'px'
+      if (!first) redraw(n => n + 1) // the frame changed size: the Tree is fitted again (see the effect above)
+    })
+    ro.observe(frame); return () => ro.disconnect()
+  }, [])
+  /** «Найти человека»: the camera flies to the card (close enough to read it) and the card opens */
+  const flyTo = (id: string) => {
+    const svg = svgRef.current, P = lay.pos[id]; setFinding(false); if (!svg || !P || !okView(TV.view)) { openPerson(id); return }
+    const W = svg.clientWidth - (window.innerWidth > 860 ? 400 : 0), H = svg.clientHeight, k = Math.max(TV.view.k, .9)
+    TV.pan = null; if (panRef.current) panRef.current.style.transform = ''
+    TV.view = { k, x: W / 2 - (P.x + NW / 2) * k, y: H / 2 - (P.y + P.h / 2) * k }; apply(true); openPerson(id)
+  }
+  // «/» opens the search (when nothing is being typed anywhere)
+  useEffect(() => {
+    if (dv) return
+    const key = (e: KeyboardEvent) => { const el = e.target as HTMLElement | null
+      if (e.key !== '/' || e.ctrlKey || e.metaKey || e.altKey || ui.modal || (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)))) return
+      e.preventDefault(); setFinding(true) }
+    window.addEventListener('keydown', key); return () => window.removeEventListener('keydown', key)
+  }, [])
+  // leaving the page with a card in hand puts it back
+  useEffect(() => () => { CD.cur = null; clearTimeout(G.hold as ReturnType<typeof setTimeout>); if (G.raf) { cancelAnimationFrame(G.raf); G.raf = 0 } }, [])
+  /** «Вернуть авто-расположение»: every card goes back to the place the layout gives it (the toast offers the way back) */
+  const resetPlaces = () => {
+    const was = new Map(S.people.filter(p => p.at).map(p => [p.id, p.at!] as const))
+    S.people.forEach(p => { delete p.at }); ui.treeRefit++; persist(); bump()
+    toast(t('drag.reset.done'), undefined, { act: { label: t('drag.undo'), run: () => { was.forEach((a, id) => { const q = byId(id); if (q) q.at = a }); ui.treeRefit++; persist(); bump() } } })
+  }
 
   // ---- links: marriages, then lines from the couple (or single parent) down to each child: smooth S-curves or straight steps
-  const col = familyColors(!!theme.light); const links: JSX.Element[] = [], dots: JSX.Element[] = []
+  const col = cd && keep.current ? keep.current.col : familyColors(!!theme.light); const links: JSX.Element[] = [], dots: JSX.Element[] = []
+  keep.current = cd ? { kin, col } : null
   const straight = st.lines === 'straight'
   const box = (id: string) => { const P = lay.pos[id]; return { cx: P.x + NW / 2, l: P.x, r: P.x + NW, top: P.y, bot: P.y + P.h, mid: P.top + P.rh / 2, g: P.g } }
+  /** a couple with a card moved by hand: the marriage line runs straight from one card to the other (side to side, or down from the
+   *  upper card when one stands above the other); x, y — its middle, where the year sits and the children's line starts */
+  const joint = (aId: string, bId: string) => {
+    if (!lay.pos[aId].moved && !lay.pos[bId].moved) return null
+    const A = box(aId), B = box(bId), l = A.cx < B.cx ? A : B, rr = l === A ? B : A
+    if (rr.l - l.r >= 8) { const x = (l.r + rr.l) / 2; return { d: `M${l.r} ${l.mid}C${x} ${l.mid} ${x} ${rr.mid} ${rr.l} ${rr.mid}`, x, y: (l.mid + rr.mid) / 2, side: true } }
+    const u = A.top < B.top ? A : B, dn = u === A ? B : A, y = (u.bot + dn.top) / 2
+    return { d: `M${u.cx} ${u.bot}C${u.cx} ${y} ${dn.cx} ${y} ${dn.cx} ${dn.top}`, x: (u.cx + dn.cx) / 2, y, side: false }
+  }
   // a new branch draws itself (pathLength 1 + dash offset) from the relative already in the tree towards the newcomer:
   // a new parent grows upwards from the child, a new child downwards. The first branch also carries a spark.
   const spark = { cur: null as null | { d: string; color: string; rev: boolean } }
@@ -290,21 +434,21 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
     if (A.g === B.g) {
       const l = A.cx < B.cx ? A : B, rr = A.cx < B.cx ? B : A
       // spouses not side by side (a third marriage): an arc under the cards instead of a line through someone else
-      const apart = Math.abs(lay.pos[r.a].x - lay.pos[r.b].x) > NW + PG + 1, yb = Math.max(l.bot, rr.bot)
+      const j = joint(r.a, r.b), apart = !j && Math.abs(lay.pos[r.a].x - lay.pos[r.b].x) > NW + PG + 1, yb = Math.max(l.bot, rr.bot)
       const lid = A.cx < B.cx ? r.a : r.b, rid = lid === r.a ? r.b : r.a
-      lk('m' + r.id, mcls, apart ? `M${l.cx} ${yb}C${l.cx} ${yb + 44} ${rr.cx} ${yb + 44} ${rr.cx} ${yb}` : `M${l.r} ${l.mid}H${rr.l}`, color, grows(r.a, r.b), back([lid], [rid]), [[lid], [rid]])
-      const yst = { fill: color, '--dl': dl(lid) + .6 + 's' } as React.CSSProperties, x = (l.r + rr.l) / 2
+      lk('m' + r.id, mcls, j ? j.d : apart ? `M${l.cx} ${yb}C${l.cx} ${yb + 44} ${rr.cx} ${yb + 44} ${rr.cx} ${yb}` : `M${l.r} ${l.mid}H${rr.l}`, color, grows(r.a, r.b), back([lid], [rid]), [[lid], [rid]])
+      const yst = { fill: color, '--dl': dl(lid) + .6 + 's' } as React.CSSProperties, x = j ? j.x : (l.r + rr.l) / 2, my = j ? j.y : l.mid
       // the wedding year above the line; for a couple who split up, the year it ended right under it (still above the line:
       // the children's line starts from the middle of it and goes down)
       const end = r.ex && r.to && !apart
-      if (r.from && !apart) links.push(<text key={'mt' + r.id} className="mar-yr" x={x} y={l.mid - (end ? 19 : 7)} textAnchor="middle" style={yst}>{showYear(yearOf(r.from)) || r.from}</text>)
-      if (end) links.push(<text key={'me' + r.id} className="mar-yr ex" x={x} y={l.mid - 7} textAnchor="middle" style={yst}>{showYear(yearOf(r.to)) || r.to}</text>)
-      if (r.ex) exMark(r.id, apart ? (l.cx + rr.cx) / 2 : x, apart ? yb + 33 : l.mid, color, lid)
+      if (r.from && !apart) links.push(<text key={'mt' + r.id} className="mar-yr" x={x} y={my - (end ? 19 : 7)} textAnchor="middle" style={yst}>{showYear(yearOf(r.from)) || r.from}</text>)
+      if (end) links.push(<text key={'me' + r.id} className="mar-yr ex" x={x} y={my - 7} textAnchor="middle" style={yst}>{showYear(yearOf(r.to)) || r.to}</text>)
+      if (r.ex) exMark(r.id, apart ? (l.cx + rr.cx) / 2 : x, apart ? yb + 33 : my, color, lid)
     }
     else { const my = (A.bot + B.top) / 2; lk('m' + r.id, mcls, `M${A.cx} ${A.bot}C${A.cx} ${my} ${B.cx} ${my} ${B.cx} ${B.top}`, color, grows(r.a, r.b), back([r.a], [r.b]), [[r.a], [r.b]]); if (r.ex) exMark(r.id, (A.cx + B.cx) / 2, my, color, r.a) }
   })
   // parents → child: by birth a solid line; adoptive parents a dotted one (their own line when the birth parents are in the tree too)
-  const adoptedBy = (p: string, c: string) => S.rels.some(r => r.type === 'parent' && r.adopt && r.a === p && r.b === c)
+  const adoptedBy = isAdoptive
   S.people.forEach(ch => {
     const all = parentsOf(ch.id).filter(p => lay.pos[p.id]), bio = all.filter(p => !adoptedBy(p.id, ch.id)), ad = all.filter(p => adoptedBy(p.id, ch.id))
     if (bio.length) kidLine(ch.id, bio, ''); if (ad.length) kidLine(ch.id, ad, ' adopt')
@@ -313,11 +457,21 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
     const ch = byId(chId)!, C = { x: box(ch.id).cx, y: box(ch.id).top }
     let sx: number, sy: number, y0: number
     const a = lay.pos[ps[0].id], b = ps[1] && lay.pos[ps[1].id]
-    if (b && a.g === b.g && Math.abs(a.x - b.x) < NW + PG + 2) { sx = (a.x + b.x + NW) / 2; sy = a.top + a.rh / 2; y0 = Math.max(box(ps[0].id).bot, box(ps[1].id).bot) + 6 }
-    else { const A = box(ps[0].id); sx = A.cx; sy = A.bot; y0 = sy + 6 }
-    const color = col.kin(ch.id)
+    // a couple with a card moved by hand: the children's line starts from the middle of their marriage line, wherever it runs now
+    const j = b && a.g === b.g && coupleRel(ps[0].id, ps[1].id) ? joint(ps[0].id, ps[1].id) : null
+    let one: ReturnType<typeof box> | null = null
+    if (j) { sx = j.x; sy = j.y; y0 = (j.side ? Math.max(box(ps[0].id).bot, box(ps[1].id).bot) : sy) + 6 }
+    else if (b && a.g === b.g && !a.moved && !b.moved && Math.abs(a.x - b.x) < NW + PG + 2) { sx = (a.x + b.x + NW) / 2; sy = a.top + a.rh / 2; y0 = Math.max(box(ps[0].id).bot, box(ps[1].id).bot) + 6 }
+    else { one = box(ps[0].id); sx = one.cx; sy = one.bot; y0 = sy + 6 }
+    const color = col.kin(ch.id), K = box(ch.id)
     let d: string
-    if (straight) { const bus = Math.max(y0, lay.pos[ch.id].top - 26); d = `M${sx} ${sy}V${bus}H${C.x}V${C.y}` }
+    // a child moved level with the parents or above them: the line comes to the nearest edge of the card, not down to its top
+    if ((lay.pos[ch.id].moved || a.moved || (b && b.moved)) && C.y - 8 < y0 + 10) {
+      const topY = one ? one.top : sy
+      if (K.bot < topY - 10) { sy = topY; const k = (sy - K.bot) * .55; d = `M${sx} ${sy}C${sx} ${sy - k} ${K.cx} ${K.bot + k} ${K.cx} ${K.bot}` }
+      else { const right = K.cx > sx, ex = right ? K.l : K.r, ey = (K.top + K.bot) / 2; if (one) { sx = right ? one.r : one.l; sy = (one.top + one.bot) / 2 } const k = (ex - sx) * .55; d = `M${sx} ${sy}C${sx + k} ${sy} ${ex - k} ${ey} ${ex} ${ey}` }
+    }
+    else if (straight) { const bus = Math.max(y0, lay.pos[ch.id].top - 26); d = `M${sx} ${sy}V${bus}H${C.x}V${C.y}` }
     else { const y1 = C.y - 8, k = (y1 - y0) * .55; d = `M${sx} ${sy}V${y0}C${sx} ${y0 + k} ${C.x} ${y1 - k} ${C.x} ${y1}V${C.y}` }
     lk('k' + extra + ch.id, 'kin' + extra, d, color, grows(ch.id, ...ps.map(p => p.id)), back(ps.map(p => p.id), [ch.id]), [ps.map(p => p.id), [ch.id]])
     dots.push(<circle key={'d' + extra + ch.id} className="cdot" cx={sx} cy={sy} r="3.5" fill={color} style={intro ? { '--dl': Math.min(...ps.map(p => dl(p.id))) + .3 + 's' } as React.CSSProperties : undefined} />)
@@ -346,6 +500,7 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
       {!dv && <div className="topbar">
         <h2><span>{t('nav.tree')}</span><span className="sub" id="treeSub">{S.people.length ? treeSub(S.people.length, generations()) : ''}</span></h2>
         <div className="tb-acts">
+          {S.people.length > 1 && <button className={'btn rnd tb-find' + (finding ? ' on' : '')} id="btnFind" onClick={() => setFinding(!finding)} aria-label={t('tree.find')} title={t('tree.find')} aria-expanded={finding}><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg></button>}
           <button className="btn rnd add" id="btnAddPerson" onClick={() => editPerson(null)} aria-label={t('tree.add')} title={t('tree.add')}><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg></button>
           <button className="btn rnd" id="btnShare" onClick={() => setSharing(true)} aria-label={LANG === 'en' ? 'Share' : 'Поделиться'} title={LANG === 'en' ? 'Share' : 'Поделиться'}><ShareIcon /></button>
         </div>
@@ -360,7 +515,7 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
             <radialGradient id="frGlow"><stop offset="0" stopColor="#8C96FF" stopOpacity=".5" /><stop offset="1" stopColor="#8C96FF" stopOpacity="0" /></radialGradient>
           </defs>
           <g id="treeView" ref={gRef}>
-            {title && <FlapTitle key={'ft' + (intro ? dv!.intro : 0)} word={title} cx={(lay.w || NW) / 2} y={-GH - TH + 6} maxW={Math.max(lay.w || NW, 720)} play={flapN}
+            {title && <FlapTitle key={'ft' + (intro ? dv!.intro : 0)} word={title} cx={(base.w || NW) / 2} y={-GH - TH + 6} maxW={Math.max(base.w || NW, 720)} play={flapN}
               start={intro ? Math.round(introEnd * 1000) : null} />}
             {roots.map(p => { const P = lay.pos[p.id], w = (NW - 10) / 2, y = P.top - 64; return (
               <g key={'gh' + p.id} className="ghost" data-ghost={p.id} role="button" aria-label={t('ts.ghost') + ': ' + fullName(p)}>
@@ -373,14 +528,16 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
               {scale.list.length > 1 && <line x1={scale.x} x2={scale.x} y1={scale.list[0].y} y2={scale.list[scale.list.length - 1].y} />}
               {scale.list.map(r => <g key={r.y}><circle cx={scale.x} cy={r.y} r="4" /><text x={scale.x - 14} y={r.y} dominantBaseline="central" textAnchor="end">{r.label}</text></g>)}
             </g>}
+            {cd && base.pos[cd.id] && (cd.x || cd.y || cd.ox || cd.oy) ? <rect className="home" x={base.pos[cd.id].x} y={base.pos[cd.id].y} width={NW} height={NH} rx="10" /> : null}
             {links}{dots}
             {spark.cur && <Spark key={'sp' + GROW.n} n={GROW.n} d={spark.cur.d} color={spark.cur.color} rev={spark.cur.rev} />}
-            {S.people.map(p => {
+            {(cd ? [...S.people.filter(p => p.id !== cd.id), ...S.people.filter(p => p.id === cd.id)] : S.people).map(p => {
               const P = lay.pos[p.id]; if (!P) return null; const yrs = yearsOf(p), k = kin && kin.label[p.id], isMe = !!me && me.id === p.id, look = frameOf(p)
               const art = look ? frameArt(look, 'fr' + p.id.replace(/[^A-Za-z0-9]/g, '')) : null
-              const cls = 'node' + (sel === p.id ? ' selected' : '') + (fillPercent(p) === 100 ? ' complete' : '') + (look ? ' framed' : '') + (isMe ? ' me' : '') + (growing.has(p.id) ? ' grow' : '')
+              const cls = 'node' + (sel === p.id ? ' selected' : '') + (fillPercent(p) === 100 ? ' complete' : '') + (look ? ' framed' : '') + (isMe ? ' me' : '') + (growing.has(p.id) ? ' grow' : '') + (cd && cd.id === p.id ? ' carried' + (cd.over ? ' onto' : '') : '') + (cd && cd.over === p.id ? ' aim' : '')
               return (
-                <g key={p.id} className={cls} data-id={p.id} transform={`translate(${P.x},${P.y})`} style={intro ? { '--dl': dl(p.id) + 's' } as React.CSSProperties : undefined}>
+                <g key={p.id} className={cls} data-id={p.id} transform={`translate(${P.x},${P.y})`} tabIndex={0} role="button" aria-label={fullName(p) + (k ? ', ' + k : '')}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openPerson(p.id) } }} style={intro ? { '--dl': dl(p.id) + 's' } as React.CSSProperties : undefined}>
                   <title>{fullName(p) + (k ? ' — ' + k : '')}</title>
                   <g className="nd-in">
                     {sel === p.id && <rect className="nd-glow" x="-10" y="-10" width={NW + 20} height={NH + 20} rx="18" filter="url(#ndGlow)" />}
@@ -417,7 +574,12 @@ export default function TreePage({ demo: dv, children }: { demo?: DemoView; chil
           <h3>{t('tree.empty.h')}</h3><p className="muted" style={{ maxWidth: '36ch' }}>{t('tree.empty.p')}</p>
           <button className="btn add" onClick={() => editPerson(null)}>{t('tree.add')}</button>
         </div>}
+        {finding && !dv && <TreeSearch onPick={flyTo} onClose={() => setFinding(false)} labelOf={id => kin?.label[id]} />}
+        {cd && cd.over && byId(cd.over) && byId(cd.id) && <div className="tree-drop" aria-live="polite">{t('drag.over', { a: fullName(byId(cd.id)), b: fullName(byId(cd.over)) })}</div>}
         <div className="tree-tools">
+          {/* on a phone the header has no room for a third button: the search sits with the tools */}
+          {!dv && S.people.length > 1 && <button className={'btn icon tool-find' + (finding ? ' on' : '')} title={t('tree.find')} aria-label={t('tree.find')} onClick={() => setFinding(!finding)}><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg></button>}
+          {!dv && S.people.some(p => p.at) && <button className="btn icon" title={t('drag.reset')} aria-label={t('drag.reset')} onClick={resetPlaces}><svg viewBox="0 0 24 24"><path d="M4 4v6h6" /><path d="M5.6 15a7 7 0 1 0 1.1-7.3L4 10" /></svg></button>}
           <TreeStyle />
           <button className="btn icon" title="+" onClick={() => zoomBy(1.25)}><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14" /></svg></button>
           <button className="btn icon" title="−" onClick={() => zoomBy(.8)}><svg viewBox="0 0 24 24"><path d="M5 12h14" /></svg></button>

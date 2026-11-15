@@ -6,7 +6,6 @@ import Sidebar from './components/Sidebar'
 import Toasts from './components/Toasts'
 import SkyBackground from './components/SkyBackground'
 import Onboarding from './components/Onboarding'
-import FirstRun from './components/FirstRun'
 import PersonPanel from './components/PersonPanel'
 import AddRelativeModal from './components/AddRelativeModal'
 import ShareSheet from './components/ShareSheet'
@@ -14,19 +13,24 @@ import FamilyCalendar from './components/FamilyCalendar'
 import TreePage from './pages/TreePage'
 // the Map with its world outline and borders (~230 KB) loads when it is first opened
 const MapPage = lazy(() => import('./pages/MapPage'))
-import AlbumPage from './pages/AlbumPage' // «Альбом» (former «Прогресс»: pages/ProgressPage.tsx)
-import GapsPage from './pages/GapsPage'
-import SettingsPage from './pages/SettingsPage'
-import KeeperPage from './pages/KeeperPage'
-import BookPage from './pages/BookPage'
+// The Tree is the first screen; the other pages, the demo and the first-run dialog come as separate files, so the first load is lighter.
+// They are fetched in the background a moment after the app opens (preloadPages), so switching pages does not wait for the network.
+const pages = {
+  album: () => import('./pages/AlbumPage'), // «Альбом» (former «Прогресс»: pages/ProgressPage.tsx)
+  gaps: () => import('./pages/GapsPage'), settings: () => import('./pages/SettingsPage'), keeper: () => import('./pages/KeeperPage'),
+  book: () => import('./pages/BookPage'), guide: () => import('./pages/GuidePage'),
+}
+const AlbumPage = lazy(pages.album), GapsPage = lazy(pages.gaps), SettingsPage = lazy(pages.settings), KeeperPage = lazy(pages.keeper), BookPage = lazy(pages.book), GuidePage = lazy(pages.guide)
+const DemoPage = lazy(() => import('./components/DemoPage')), FirstRun = lazy(() => import('./components/FirstRun'))
+let preloaded = false
+function preloadPages() { if (preloaded) return; preloaded = true; Object.values(pages).forEach(load => load().catch(() => { preloaded = false })) }
 import { ChapterUp, LockSheet } from './components/Chapters'
 import PreviewBar from './components/PreviewBar'
 import PageGuard from './components/PageGuard'
-import DemoPage from './components/DemoPage'
 import { openDemo, demoFromHash } from './lib/demo'
 import { screen } from './lib/analytics'
 
-const SCREEN_TITLE: Record<string, string> = { landing: 'Лендинг', demo: 'Пример древа', 'sign-in': 'Вход', start: 'Первые шаги', tree: 'Древо', map: 'Карта', album: 'Альбом', gaps: 'Заполнить пробелы', keeper: 'Хранитель', book: 'Книга семьи', settings: 'Настройки' }
+const SCREEN_TITLE: Record<string, string> = { landing: 'Лендинг', demo: 'Пример древа', 'sign-in': 'Вход', start: 'Первые шаги', tree: 'Древо', map: 'Карта', album: 'Альбом', gaps: 'Заполнить пробелы', keeper: 'Хранитель', book: 'Книга семьи', guide: 'Путеводитель', settings: 'Настройки' }
 
 export default function App() {
   useStore()
@@ -36,14 +40,16 @@ export default function App() {
   // answers from relatives («Попросить заполнить»): the number shows on «Заполнить пробелы» in the menu
   useEffect(() => { if (ui.loaded && cloud.session) refreshInbox() }, [ui.loaded, !!cloud.session])
   // a link to the demo (…/#demo=kardashian) opens it straight away
+  // the other pages are fetched once the first screen has settled
+  useEffect(() => { if (!ui.loaded) return; const h = setTimeout(preloadPages, 2500); return () => clearTimeout(h) }, [ui.loaded])
   useEffect(() => { if (ui.loaded) { const k = demoFromHash(); if (k !== null && !ui.demo) openDemo(k || undefined) } }, [ui.loaded])
   // statistics: each screen of the app is a page in Yandex Metrica (lib/analytics.ts)
   const signInNow = !ui.onboarding && ((!cloud.session && !cloud.skipped) || cloud.recovery)
-  const scr = !ui.loaded ? '' : ui.demo ? 'demo/' + ui.demo.fam : ui.onboarding ? 'landing' : signInNow ? 'sign-in' : ui.firstRun && ui.page === 'tree' ? 'start' : ({ tree: 'tree', map: 'map', progress: 'album', gaps: 'gaps', keeper: 'keeper', book: 'book', settings: 'settings' } as Record<string, string>)[ui.page]
+  const scr = !ui.loaded ? '' : ui.demo ? 'demo/' + ui.demo.fam : ui.onboarding ? 'landing' : signInNow ? 'sign-in' : ui.firstRun && ui.page === 'tree' ? 'start' : ({ tree: 'tree', map: 'map', progress: 'album', gaps: 'gaps', keeper: 'keeper', book: 'book', guide: 'guide', settings: 'settings' } as Record<string, string>)[ui.page]
   useEffect(() => { if (scr) screen(scr, SCREEN_TITLE[scr.split('/')[0]] + (ui.demo ? ' · ' + ui.demo.fam : '')) }, [scr])
   if (!ui.loaded) return null
   // «Смотреть пример древа»: the demo tree takes the whole screen, before any sign-in
-  if (ui.demo) return <><DemoPage /><Toasts /></>
+  if (ui.demo) return <><Suspense fallback={null}><DemoPage /></Suspense><Toasts /></>
   const p = ui.page
   // after the welcome landing nobody enters the tree without an account (unless they chose «without an account»)
   const signIn = !ui.onboarding && ((!cloud.session && !cloud.skipped) || cloud.recovery)
@@ -52,19 +58,22 @@ export default function App() {
   return (
     <>
       {ui.onboarding && <Onboarding />}
-      {!ui.onboarding && ui.firstRun && p === 'tree' && <FirstRun />}
+      {!ui.onboarding && ui.firstRun && p === 'tree' && <Suspense fallback={null}><FirstRun /></Suspense>}
       <SkyBackground />
       <div id="app">
         <PageGuard name="menu" small><Sidebar /></PageGuard>
         <main id="main">
           <PageGuard key={p} name={p}>
-            {p === 'tree' && <TreePage />}
-            {p === 'map' && <Suspense fallback={null}><MapPage /></Suspense>}
-            {p === 'progress' && <AlbumPage />}
-            {p === 'gaps' && <GapsPage />}
-            {p === 'keeper' && <KeeperPage />}
-            {p === 'book' && <BookPage />}
-            {p === 'settings' && <SettingsPage />}
+            <Suspense fallback={null}>
+              {p === 'tree' && <TreePage />}
+              {p === 'map' && <MapPage />}
+              {p === 'progress' && <AlbumPage />}
+              {p === 'gaps' && <GapsPage />}
+              {p === 'keeper' && <KeeperPage />}
+              {p === 'book' && <BookPage />}
+              {p === 'guide' && <GuidePage />}
+              {p === 'settings' && <SettingsPage />}
+            </Suspense>
           </PageGuard>
           <PageGuard name="panel" small resetKey={ui.panel ? ui.panel.mode + ('id' in ui.panel ? ui.panel.id : '') : ''}><PersonPanel /></PageGuard>
         </main>

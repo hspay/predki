@@ -472,7 +472,7 @@ main{position:relative;min-width:0;overflow:hidden;border-radius:var(--r-card);b
 .th-light .tree-memo .d .m{background:rgba(46,42,68,.08);color:rgba(46,42,68,.7)}
 .th-light .tree-memo .d b{color:#2E2A44}
 /* a dark tree background keeps the dark-theme text colours, even when the app itself is light */
-.tree-wrap:not(.th-light) :is(#treeSvg,.tree-memo,.tree-kin,.empty){--ink:#EEF1F7;--ink-2:#B7BFCF;--muted:#7C8698;--faint:#4B5468;--glass:rgba(255,255,255,.055);--glass-3:rgba(255,255,255,.14);--edge:rgba(255,255,255,.10);--edge-2:rgba(255,255,255,.18);--accent:#F2C879;--accent-2:#FFE0A3;--accent-ink:#1A1206;--accent-soft:rgba(242,200,121,.14);--accent-edge:rgba(242,200,121,.42);--done:#79D9A6;color:var(--ink)}
+.tree-wrap:not(.th-light) :is(#treeSvg,.tree-memo,.tree-kin,.empty){--ink:#EEF1F7;--ink-2:#B7BFCF;--muted:#7C8698;--faint:#4B5468;--glass:rgba(255,255,255,.055);--glass-2:rgba(255,255,255,.09);--glass-3:rgba(255,255,255,.14);--edge:rgba(255,255,255,.10);--edge-2:rgba(255,255,255,.18);--accent:#F2C879;--accent-2:#FFE0A3;--accent-ink:#1A1206;--accent-soft:rgba(242,200,121,.14);--accent-edge:rgba(242,200,121,.42);--done:#79D9A6;color:var(--ink)}
 .th-light .empty h3,.th-light .empty p{color:#2E2A44}
 /* pencil: tree style */
 .ts-pen.on{border-color:var(--accent-edge);color:var(--accent)}
@@ -526,12 +526,16 @@ main{position:relative;min-width:0;overflow:hidden;border-radius:var(--r-card);b
 #firstRun .fr-field input::placeholder{color:var(--faint)}
 #firstRun .fr-field input:focus{border-color:var(--accent-edge);outline:none;box-shadow:0 0 0 3px var(--accent-soft)}
 #firstRun .fr-row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-#firstRun .fr-swatches{display:flex;flex-wrap:wrap;gap:12px;padding:4px}
-#firstRun .fr-sw{width:62px;display:flex;flex-direction:column;align-items:center;gap:7px;font-size:12px;color:var(--ink-2)}
-#firstRun .fr-sw .chip{width:62px;height:78px;border-radius:14px;border:1px solid var(--edge);padding:0;transition:transform .2s var(--ease),box-shadow .2s}
+/* the styles stand in one row across the whole width, however many there are (they used to wrap: five and one on a computer, a short row on a phone) */
+#firstRun .fr-swatches{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:10px;padding:4px;max-width:470px}
+#firstRun .fr-sw{min-width:0;display:flex;flex-direction:column;align-items:center;gap:7px;font-size:12px;white-space:nowrap;color:var(--ink-2)}
+#firstRun .fr-sw .chip{width:100%;height:auto;aspect-ratio:4/5;border-radius:14px;border:1px solid var(--edge);padding:0;transition:transform .2s var(--ease),box-shadow .2s}
 #firstRun .fr-sw:hover .chip{transform:translateY(-2px)}
 #firstRun .fr-sw[aria-checked="true"]{color:var(--ink)}
 #firstRun .fr-sw[aria-checked="true"] .chip{box-shadow:0 0 0 2px var(--surface-solid),0 0 0 4px var(--accent)}
+/* keyboard focus: a ring around the swatch itself, not a box around the swatch with its name */
+#firstRun .fr-sw:focus-visible{outline:none}
+#firstRun .fr-sw:focus-visible .chip{outline:2px solid var(--accent);outline-offset:5px}
 #firstRun .fr-seg{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:4px;border-radius:16px;background:var(--well);border:1px solid var(--edge)}
 #firstRun .fr-seg button{padding:10px 6px;border-radius:12px;color:var(--ink-2);font-weight:500;transition:background .2s,color .2s}
 #firstRun .fr-seg button[aria-checked="true"]{background:var(--glass-3);color:var(--ink)}
@@ -595,9 +599,7 @@ main{position:relative;min-width:0;overflow:hidden;border-radius:var(--r-card);b
   #firstRun h1{font-size:26px}
   #firstRun .fr-steps{margin-top:18px}
   #firstRun .fr-foot .kbd{display:none}
-  #firstRun .fr-swatches{gap:10px}
-  #firstRun .fr-sw{width:48px}
-  #firstRun .fr-sw .chip{width:48px;height:58px;border-radius:12px}
+  #firstRun .fr-sw .chip{border-radius:12px}
   #firstRun .fr-parent{grid-template-columns:40px 1fr 1fr;gap:6px}
   #firstRun .fr-field input{padding:11px 12px}
   .ts-pop{right:56px;width:min(300px,calc(100vw - 96px))}
@@ -689,9 +691,9 @@ main{position:relative;min-width:0;overflow:hidden;border-radius:var(--r-card);b
   #firstRun .fr-step{gap:11px}
   #firstRun .fr-step h2{font-size:19px}
   #firstRun .hint{font-size:13px;line-height:1.45}
-  #firstRun .fr-swatches{gap:8px;flex-wrap:nowrap}
-  #firstRun .fr-sw{width:44px;font-size:10.5px;gap:5px}
-  #firstRun .fr-sw .chip{width:44px;height:52px;border-radius:11px}
+  #firstRun .fr-swatches{gap:8px}
+  #firstRun .fr-sw{font-size:11px;gap:5px}
+  #firstRun .fr-sw .chip{border-radius:11px}
   #firstRun .fr-calm{margin-top:8px;padding:9px 12px;font-size:12px}
   #firstRun .fr-foot{margin-top:10px;padding-top:10px}
 }
