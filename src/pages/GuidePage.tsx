@@ -1,8 +1,13 @@
+/// <reference types="vite/client" />
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { ui } from '../lib/core'
 import { initGuide, jumpTo } from '../lib/guide'
-import html from '../guide/content.html?raw'
+import raw from '../guide/content.html?raw'
 import '../guide/guide.css'
+
+// the guide's photos live in guide/photos; the markup names one as %photo:<file name>% and gets its address in the build here
+const PHOTOS = import.meta.glob('../guide/photos/*.webp', { eager: true, import: 'default' }) as Record<string, string>
+const html = raw.replace(/%photo:([\w-]+)%/g, (_m, name) => PHOTOS[`../guide/photos/${name}.webp`] || '')
 
 /** «Путеводитель»: FAQ, a checklist for talking to relatives and how to ask the state archives.
  *  Static markup from guide/content.html (Russian only for now), behaviour in lib/guide.ts. */

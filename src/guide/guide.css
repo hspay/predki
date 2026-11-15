@@ -4,8 +4,8 @@
    (--bg, --ink…) are the guide's own and never repaint the rest of the app. Content: guide/content.html.
    ========================================================================================================== */
 #guidePage .gd-scroll{flex:1;overflow:auto;overflow-x:hidden;position:relative;container-type:inline-size;container-name:guide}
-/* Layout: magazine reference book. Sticker-sheet hero of family-archive objects → giant condensed title → contents grid with icons →
-   sections opened by a heavy ink bar and a giant heading, short-column cards, numbered lists, pull quotes and reserved photo spreads. */
+/* Layout: magazine reference book. Split-flap title → sections opened by a heavy ink bar and a giant heading,
+   short-column cards, numbered lists, pull quotes and a couple of photos (guide/photos, wired in pages/GuidePage.tsx). */
 #guidePage{
   color-scheme:light;
   --bg:#F4F2EC; --surface:#FAF9F5; --ink:#0B1352; --ink-2:#2E3670; --muted:#5F6596;
@@ -39,13 +39,11 @@
 #guidePage a:hover{text-decoration-thickness:2px}
 #guidePage :focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
 #guidePage .wrap{max-width:1200px;margin:0 auto;padding-left:max(20px,env(safe-area-inset-left,0px));padding-right:max(20px,env(safe-area-inset-right,0px))}
-#guidePage .ic{display:block;flex:none}
 /* ---------- sticky bar ---------- */
 #guidePage .bar{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 92%,transparent);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 #guidePage .bar .wrap{display:flex;align-items:center;gap:16px;height:var(--bar)}
 #guidePage .brand{display:flex;align-items:center;gap:8px;flex:none;font:800 22px/1 var(--f-head);letter-spacing:.04em;text-transform:uppercase;color:var(--ink);text-decoration:none}
 #guidePage .brand svg{width:22px;height:22px;stroke:var(--accent);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-#guidePage .brand small{font:500 11px/1 var(--f-mono);letter-spacing:.12em;color:var(--muted);margin-left:4px}
 #guidePage .brand::after{content:"";width:1px;height:26px;margin-left:10px;background:var(--line-2)}
 #guidePage .chips{display:flex;gap:4px;overflow-x:auto;scrollbar-width:none;min-width:0;flex:1;mask-image:linear-gradient(90deg,#000 92%,transparent)}
 #guidePage .chips::-webkit-scrollbar{display:none}
@@ -54,14 +52,6 @@
 #guidePage .chips a[aria-current="true"]{background:var(--ink);color:var(--bg)}
 /* ---------- hero ---------- */
 #guidePage .hero{padding-block:96px 0;text-align:center}
-#guidePage .sheet{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px 10px;align-items:center;justify-items:center}
-#guidePage .sheet .st{width:100%;max-width:140px;aspect-ratio:1;transform:rotate(var(--r,0deg)) scale(var(--s,1));transition:transform .45s var(--ease)}
-#guidePage .sheet .st:hover{transform:rotate(calc(var(--r,0deg) * -1)) scale(calc(var(--s,1) * 1.06))}
-#guidePage .sheet .st svg{width:100%;height:100%}
-@media (prefers-reduced-motion:no-preference){
-#guidePage .sheet .st{animation:gdPop .7s var(--ease) both;animation-delay:calc(var(--i) * 45ms)}
-@keyframes gdPop{from{transform:rotate(var(--r,0deg)) scale(calc(var(--s,1) * .82)) translateY(10px)}}
-}
 #guidePage .hero h1{margin:0;line-height:0;display:flex;justify-content:center}
 #guidePage .board:focus:not(:focus-visible){outline:none}
 /* the split-flap board from the landing and the Tree title: black tiles, a hinge across the middle; a tap runs the letters again */
@@ -80,37 +70,17 @@
 #guidePage .sf-c.go .sf-fb{visibility:visible;animation:gdSfBot var(--d) ease-out var(--d) forwards}
 @keyframes gdSfTop{0%{transform:rotateX(0deg);filter:brightness(1)}100%{transform:rotateX(-90deg);filter:brightness(.55)}}
 @keyframes gdSfBot{0%{transform:rotateX(90deg);filter:brightness(1.4)}100%{transform:rotateX(0deg);filter:brightness(1)}}
-#guidePage .hero-meta{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px 24px;margin-top:22px;padding-top:14px;border-top:1px solid var(--line-2)}
-#guidePage .hero-meta p{margin:0;font-size:16px;color:var(--ink-2)}
-#guidePage .hero-meta span{font:500 12px/1.4 var(--f-mono);letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
 #guidePage .hero-sub{margin:28px auto 0;max-width:48ch;font-size:clamp(18px,2vw,22px);line-height:1.45;color:var(--ink-2)}
 #guidePage .formats{margin:28px 0 0;font:800 clamp(28px,3.4vw,44px)/1.05 var(--f-head);text-transform:uppercase;letter-spacing:.01em;max-width:30ch;text-wrap:balance}
-#guidePage .lead{margin:30px 0 0;max-width:46ch;font:400 clamp(21px,2.6vw,30px)/1.38 var(--f-body);letter-spacing:-.01em;text-wrap:pretty}
-#guidePage .lead em{font-style:normal;color:var(--accent)}
-/* ---------- contents ---------- */
-#guidePage .toc{padding-block:36px 80px}
-#guidePage .toc h2,#guidePage .kicker{font:500 12px/1 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 16px}
-#guidePage .toc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-#guidePage .toc-grid a{display:grid;grid-template-columns:56px minmax(0,1fr);gap:4px 14px;align-items:center;padding:14px 16px 14px 12px;border-radius:14px;background:var(--surface);border:1.5px solid var(--line);color:var(--ink);text-decoration:none;transition:border-color .2s,transform .25s var(--ease)}
-#guidePage .toc-grid a:hover{border-color:var(--accent);transform:translateY(-2px)}
-#guidePage .toc-grid .ic{width:56px;height:56px}
-#guidePage .toc-grid b{font:800 26px/1 var(--f-head);text-transform:uppercase;letter-spacing:.02em;align-self:center;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
-#guidePage .toc-grid small{font-size:13.5px;line-height:1.4;color:var(--muted);align-self:start}
-#guidePage .lvl{display:inline-flex;gap:3px;flex:none}
-#guidePage .lvl i{width:7px;height:7px;border-radius:2px;border:1.5px solid var(--accent)}
-#guidePage .lvl i.on{background:var(--accent)}
-#guidePage .lvl-legend{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:14px;font-size:13px;color:var(--muted)}
-#guidePage .lvl-legend span{display:inline-flex;align-items:center;gap:8px}
+#guidePage .kicker{font:500 12px/1 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:0 0 16px}
 /* ---------- section scaffolding ---------- */
 #guidePage .sec{padding-block:96px 96px;scroll-margin-top:var(--bar)}
 #guidePage .sec-head{position:relative;border-top:14px solid var(--ink);padding-top:10px;display:flex;justify-content:space-between;gap:20px;align-items:flex-start}
 #guidePage .hero h1{overflow-wrap:break-word}
 #guidePage .sec-head h2{overflow-wrap:break-word;hyphens:auto}
+/* «Й» in a heading: its breve needs room under the ink bar */
+#guidePage #names .sec-head{padding-top:clamp(16px,2.6vw,32px)}
 #guidePage .sec-head h2{margin:0;font:800 clamp(56px,10vw,128px)/.86 var(--f-head);text-transform:uppercase;letter-spacing:-.005em;text-wrap:balance;min-width:0}
-#guidePage .sec-head .badge{flex:none;display:flex;flex-direction:column;align-items:center;gap:8px;margin-top:-34px}
-#guidePage .sec-head .badge .ic{width:92px;height:92px;border-radius:50%;background:var(--surface);border:1.5px solid var(--line-2);padding:10px}
-#guidePage .sec-head .badge .lvl{padding:4px 6px;border-radius:6px;background:var(--surface)}
-#guidePage .sec-intro{margin:22px 0 0;max-width:62ch;font:400 clamp(19px,2vw,23px)/1.48 var(--f-body);color:var(--ink);text-wrap:pretty}
 #guidePage h3{margin:0 0 8px;font:800 clamp(32px,3.6vw,44px)/.95 var(--f-head);text-transform:uppercase;letter-spacing:.01em;text-wrap:balance}
 #guidePage h4{margin:0 0 6px;font:600 18px/1.3 var(--f-body);letter-spacing:-.005em}
 #guidePage p{margin:0}
@@ -119,6 +89,7 @@
 #guidePage .cols > *{min-width:0}
 #guidePage .cols p + p{margin-top:10px}
 #guidePage .muted{color:var(--muted)}
+#guidePage .nw{white-space:nowrap}
 /* numbered and plain lists */
 #guidePage ol.num,#guidePage ul.dash{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px}
 #guidePage ol.num{counter-reset:n}
@@ -135,8 +106,7 @@
 #guidePage .ladder li:nth-child(4){min-height:210px}
 #guidePage .ladder li:nth-child(5){min-height:180px}
 #guidePage .ladder li:nth-child(6){min-height:150px;background:var(--ink);color:var(--bg);border-color:var(--ink)}
-#guidePage .ladder li:nth-child(6) .step-n,#guidePage .ladder li:nth-child(6) small{color:color-mix(in srgb,var(--bg) 72%,transparent)}
-#guidePage .step-n{font:600 12px/1 var(--f-mono);letter-spacing:.1em;color:var(--muted);text-transform:uppercase;margin-top:auto}
+#guidePage .ladder li:nth-child(6) small{color:color-mix(in srgb,var(--bg) 72%,transparent)}
 #guidePage .ladder b{font:800 26px/.98 var(--f-head);text-transform:uppercase;letter-spacing:.01em}
 #guidePage .ladder small{font-size:14px;line-height:1.45;color:var(--ink-2)}
 /* glossary: archive vocabulary, the address of a document */
@@ -154,15 +124,22 @@
 #guidePage .hl{color:#0B1352;background:#FFB866;padding:.03em .16em .07em;border-radius:.07em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
 #guidePage .pull-wrap{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:40px;align-items:end}
 #guidePage .pull-wrap .pull{margin-top:0}
-/* reserved photo slots */
-#guidePage .ph{margin:0;display:flex;flex-direction:column;gap:10px;min-width:0}
-#guidePage .ph-box{position:relative;width:100%;max-width:100%;aspect-ratio:var(--ar,4/3);border-radius:14px;border:1.5px dashed var(--line-2);background:repeating-linear-gradient(135deg,var(--hatch) 0 2px,transparent 2px 12px),var(--surface);display:grid;place-items:center;overflow:hidden}
-#guidePage .ph-box .ic{width:min(34%,120px);height:auto;aspect-ratio:1;opacity:.95}
-#guidePage .ph-box span{position:absolute;left:12px;top:12px;font:500 11px/1 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);background:var(--surface);padding:6px 8px;border-radius:6px}
-#guidePage .ph figcaption{font-size:14px;line-height:1.45;color:var(--muted);max-width:60ch}
-#guidePage .ph figcaption b{color:var(--ink);font-weight:600}
-#guidePage .spread{margin-top:60px;display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1fr);gap:16px}
-#guidePage .spread .ph:last-child{--ar:3/4}
+/* photos: the picture itself, no caption (the alt text describes it) */
+#guidePage .photo{display:block;width:100%;height:auto;aspect-ratio:3/2;object-fit:cover;border-radius:14px;background:var(--surface)}
+#guidePage .stack{display:flex;flex-direction:column;gap:24px}
+#guidePage .cols.tips{margin-top:0;gap:24px}
+#guidePage .pull-wrap.shot{margin-top:64px;grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:center}
+/* two side-by-side panels (what to read on a photo) */
+#guidePage .panels{margin-top:48px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+#guidePage .panels > div{padding:26px 28px 28px;border-radius:18px;border:1.5px solid var(--line-2);min-width:0}
+#guidePage .panels h3{margin-bottom:14px}
+/* heading on the left, its content on the right; an in-app note sits under the heading (after the content on a phone) */
+#guidePage .split{margin-top:64px;padding-top:28px;border-top:1.5px solid var(--ink);display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.3fr);gap:24px 40px;align-items:start}
+#guidePage .split > h3{margin:0}
+#guidePage .split > ol{grid-column:2;grid-row:1 / span 2}
+#guidePage .split > .app{grid-column:1;grid-row:2;align-self:end}
+#guidePage .split.heritage .muted{max-width:36ch}
+#guidePage .split.heritage .legacy{margin-top:0}
 /* in-app callout */
 #guidePage .app{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border-radius:14px;background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 35%,transparent);font-size:15px;line-height:1.5}
 #guidePage .app svg{width:22px;height:22px;flex:none;margin-top:1px;stroke:var(--accent);fill:none;stroke-width:1.8}
@@ -188,15 +165,8 @@
 #guidePage .qs ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px;font-size:16px;line-height:1.45}
 #guidePage .qs li{padding-left:20px;position:relative}
 #guidePage .qs li::before{content:"?";position:absolute;left:0;top:0;font:600 14px/1.55 var(--f-mono);color:var(--accent)}
-/* tape formats */
-#guidePage .tapes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:44px}
-#guidePage .tape{padding:16px;border-radius:14px;background:var(--surface);border:1.5px solid var(--line);display:flex;flex-direction:column;gap:6px;min-width:0}
-#guidePage .tape b{font:800 28px/1 var(--f-head);text-transform:uppercase;letter-spacing:.02em}
-#guidePage .tape small{font-size:14px;line-height:1.45;color:var(--ink-2)}
-#guidePage .tape i{font:normal 500 11.5px/1.3 var(--f-mono);letter-spacing:.04em;color:var(--muted);margin-top:auto;padding-top:6px}
 /* resources */
 #guidePage .res-h{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 20px;margin-top:52px}
-#guidePage .res-h p{color:var(--muted);font-size:15px}
 #guidePage .res{margin-top:16px;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
 #guidePage .res > *{display:flex;flex-direction:column;gap:6px;padding:16px 18px;border-radius:14px;background:var(--surface);border:1.5px solid var(--line);min-width:0}
 #guidePage .res a.card{color:var(--ink);text-decoration:none;transition:border-color .2s}
@@ -206,7 +176,7 @@
 #guidePage .res .url{font:500 12px/1.3 var(--f-mono);color:var(--accent);margin-top:auto;padding-top:4px;overflow-wrap:anywhere}
 #guidePage .res .era{font:500 11.5px/1 var(--f-mono);letter-spacing:.06em;color:var(--muted);text-transform:uppercase}
 /* templates */
-#guidePage .tpl-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-top:20px}
+#guidePage .tpl-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-top:40px}
 #guidePage .tpl-tabs button{font:500 14px/1 var(--f-body);color:var(--ink-2);background:var(--surface);border:1.5px solid var(--line);padding:11px 14px;border-radius:10px;cursor:pointer}
 #guidePage .tpl-tabs button[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:var(--bg)}
 #guidePage .tpl{margin-top:10px;border-radius:16px;background:var(--surface);border:1.5px solid var(--line-2);overflow:hidden}
@@ -228,7 +198,7 @@
 /* heirs order */
 #guidePage .order{margin-top:16px;display:flex;flex-direction:column;border-top:1.5px solid var(--ink)}
 #guidePage .order div{display:grid;grid-template-columns:90px minmax(0,1fr);gap:12px;padding:11px 0;border-bottom:1px solid var(--line);font-size:15.5px;line-height:1.45}
-#guidePage .order dt,#guidePage .order span{font:600 12.5px/1.6 var(--f-mono);letter-spacing:.04em;color:var(--accent);text-transform:uppercase}
+#guidePage .order dt{font:600 12.5px/1.6 var(--f-mono);letter-spacing:.04em;color:var(--accent);text-transform:uppercase}
 #guidePage .big-num{font:800 clamp(96px,13vw,160px)/.8 var(--f-head);color:var(--accent);letter-spacing:-.02em}
 #guidePage .term{display:grid;grid-template-columns:auto minmax(0,1fr);gap:8px 26px;align-items:center;padding:26px 28px;border-radius:18px;background:var(--ink);color:var(--bg);margin-top:44px}
 #guidePage .term .big-num{color:var(--bg)}
@@ -252,40 +222,30 @@
 #guidePage .mail{display:inline-flex;align-items:center;gap:10px;margin-top:16px;font:600 16px/1 var(--f-mono);padding:12px 14px;border-radius:10px;border:1.5px solid var(--line-2);background:var(--surface);color:var(--ink);cursor:pointer}
 #guidePage .mail svg{width:16px;height:16px;stroke:var(--accent);fill:none;stroke-width:1.8}
 #guidePage .end .note{font:500 12px/1.5 var(--f-mono);letter-spacing:.04em;color:var(--muted);text-transform:uppercase;text-align:right}
-#guidePage .back{display:inline-flex;margin-top:28px;font:500 13px/1 var(--f-mono);letter-spacing:.06em;color:var(--muted);text-decoration:none}
-#guidePage .back:hover{color:var(--accent)}
-#guidePage .toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;pointer-events:none;background:var(--ink);color:var(--bg);font:500 14px/1 var(--f-body);padding:12px 16px;border-radius:10px;transition:opacity .25s,transform .25s var(--ease);z-index:40}
-#guidePage .toast.on{opacity:1;transform:translate(-50%,0)}
 /* ---------- responsive ---------- */
 @container guide (max-width:1040px){
-#guidePage .sheet{grid-template-columns:repeat(5,minmax(0,1fr))}
-#guidePage .sheet .st:nth-child(n+11){display:none}
 #guidePage .ladder{grid-template-columns:repeat(3,minmax(0,1fr))}
 #guidePage .ladder li{min-height:0!important}
 #guidePage .how{grid-template-columns:repeat(3,minmax(0,1fr))}
-#guidePage .tapes{grid-template-columns:repeat(2,minmax(0,1fr))}
 }
 @container guide (max-width:860px){
-#guidePage .toc-grid,#guidePage .res,#guidePage .qs{grid-template-columns:repeat(2,minmax(0,1fr))}
+#guidePage .res,#guidePage .qs{grid-template-columns:repeat(2,minmax(0,1fr))}
 #guidePage .cols{grid-template-columns:repeat(2,minmax(0,1fr))}
 #guidePage .gloss{grid-template-columns:1fr}
-#guidePage .pull-wrap,#guidePage .spread{grid-template-columns:1fr}
-#guidePage .spread .ph:last-child{--ar:16/10}
-#guidePage .brand small{display:none}
+#guidePage .pull-wrap,#guidePage .pull-wrap.shot,#guidePage .split,#guidePage .panels{grid-template-columns:1fr}
+#guidePage .split > ol,#guidePage .split > .app{grid-column:auto;grid-row:auto}
 }
 @container guide (max-width:620px){
 #guidePage .brand{font-size:0;gap:0}
 #guidePage .bar .wrap{gap:10px}
 #guidePage .gd-main{font-size:16px}
-#guidePage .sheet{grid-template-columns:repeat(4,minmax(0,1fr));gap:0 6px}
-#guidePage .sheet .st:nth-child(n+9){display:none}
-#guidePage .toc-grid,#guidePage .res,#guidePage .qs,#guidePage .cols,#guidePage .cols.two,#guidePage .gloss dl,#guidePage .tapes{grid-template-columns:1fr}
+#guidePage .res,#guidePage .qs,#guidePage .cols,#guidePage .cols.two,#guidePage .gloss dl{grid-template-columns:1fr}
 #guidePage .ladder,#guidePage .how{grid-template-columns:1fr}
 #guidePage .sec{padding-block:68px 68px}
 #guidePage .board{--cw:calc((100cqw - 40px - 11 * 3px) / 12);gap:3px}
-#guidePage .sec-head .badge{margin-top:-26px}
-#guidePage .sec-head .badge .ic{width:64px;height:64px;padding:7px}
 #guidePage .term{grid-template-columns:1fr;padding:22px}
+#guidePage .panels > div{padding:20px 20px 22px}
+#guidePage .split{margin-top:52px;padding-top:24px}
 #guidePage .end{grid-template-columns:1fr}
 #guidePage .end .note{text-align:left}
 #guidePage .order div{grid-template-columns:72px minmax(0,1fr)}
