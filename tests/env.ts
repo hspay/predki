@@ -15,6 +15,9 @@ g.requestAnimationFrame ??= (f: () => void) => setTimeout(f, 0)
 g.cancelAnimationFrame ??= (h: any) => clearTimeout(h)
 g.indexedDB ??= undefined
 g.Image ??= class { set src(_v: string) {} }
+// Node 20 (the version the site is built with on GitHub) has no WebSocket of its own, and the Supabase client refuses to start without one.
+// The tests never open a connection, so an empty stand-in is enough.
+g.WebSocket ??= class { close() {} send() {} addEventListener() {} removeEventListener() {} }
 // a BroadcastChannel would keep Node running after the tests
 g.BroadcastChannel = class { postMessage() {} close() {} addEventListener() {} removeEventListener() {} onmessage = null }
 export {}
