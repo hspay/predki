@@ -314,7 +314,7 @@ export function askToSignIn() { setSkipped(false); bump() }
 export function continueWithoutAccount() { goal('no_account'); setSkipped(true); bump() }
 
 // ---------- UI state ----------
-export type Page = 'tree' | 'map' | 'progress' | 'gaps' | 'keeper' | 'book' | 'guide' | 'settings' // 'ai' (Архивариус) is archived: _backup/archivist-page
+export type Page = 'tree' | 'map' | 'progress' | 'gaps' | 'keeper' | 'book' | 'guide' | 'settings' | 'calendar' // 'ai' (Архивариус) is archived: _backup/archivist-page
 export type Panel =
   | { mode: 'view'; id: string }
   | { mode: 'pet'; id: string }

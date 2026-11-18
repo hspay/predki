@@ -15,7 +15,11 @@ import { openShare, PassportIcon } from '../components/ShareSheet'
 import { FeatureIcon, LockIcon } from '../components/Chapters'
 import { GuideIcon } from '../components/GuideIcon'
 import { openGuide } from '../lib/guide'
+import { openCalendar } from '../components/FamilyCalendar'
 import { CHAPTERS, COLLECTION, FEATURE, tx, counted, current, closed, openChapter, isOpen, openedBy, collectionIds, isSkipped, plural, pending, claim } from '../lib/chapters'
+
+/** what a chapter's «opens …» chip does once the feature is open */
+const OPEN_FEATURE: Partial<Record<string, () => void>> = { calendar: openCalendar, map: () => go('map'), passport: openShare, book: () => go('book') }
 
 export default function KeeperPage() {
   const ru = LANG !== 'en', L = (r: string, e: string) => (ru ? r : e)
@@ -159,7 +163,9 @@ function Route({ cur, shut, ready }: { cur: number; shut: number; ready: boolean
             <span className="kr-d">{c ? tx(c.d) : tx(COLLECTION.d)}</span>
             <span className="kr-stk">{ids.map(id => { const d = Progress.ST[id] === 'done', sk = isSkipped(id); return <img key={id} src={stickerSrc(id)} alt="" className={d ? 'd' : sk ? 's' : ''} /> })}
               <i>{k} {L('из', 'of')} {c ? c.need : coll.length}</i></span>
-            {opens.length > 0 && <span className="kr-op">{opens.map(f => <span key={f} className={'chip' + (st === 'done' ? ' on' : '')}><FeatureIcon f={f} />{st === 'done' ? '' : L('откроет ', 'opens ')}{tx(FEATURE[f].t)}{FEATURE[f].soon ? L(' · скоро', ' · soon') : ''}</span>)}</span>}
+            {opens.length > 0 && <span className="kr-op">{opens.map(f => { const lbl = <><FeatureIcon f={f} />{st === 'done' ? '' : L('откроет ', 'opens ')}{tx(FEATURE[f].t)}{FEATURE[f].soon ? L(' · скоро', ' · soon') : ''}</>
+              const run = OPEN_FEATURE[f]
+              return isOpen(f) && run && !FEATURE[f].soon ? <button key={f} type="button" className="chip on" onClick={run}>{lbl}</button> : <span key={f} className="chip">{lbl}</span> })}</span>}
             {st === 'now' && ready && <button type="button" className="btn sm kr-claim" onClick={claim}>{i + 1 < CHAPTERS.length ? L(`Открыть главу ${i + 2}`, `Open chapter ${i + 2}`) : L('Завершить путь', 'Finish the path')}</button>}
           </div>
         </li>

@@ -107,6 +107,7 @@ export default function GapsPage() {
         <FamilyAnswers />
         {gaps.length ? <>
           <div className="gp-hero"><b className="gp-big">{midYears}</b><div className="gp-hero-r"><p>{T.lede(midYears, answerable)}</p><button type="button" className="btn wax" onClick={() => askFill(null)}><LinkIcon />{T.invite}</button><GuideLink to="talk">{LANG === 'en' ? 'How to talk with relatives' : 'Как говорить с родными'}</GuideLink></div></div>
+          <FamilyLinks />
           <div className="gp-h-row"><h3 className="gp-h gp-h-solo">{T.first}</h3>
             <span className="gp-legend" aria-hidden="true"><span><i className="k" />{T.lgKnown}</span><span><i className="g" />{T.lgGap}</span></span></div>
           <div className="gp-cards">
@@ -152,7 +153,7 @@ export default function GapsPage() {
               <div className="gp-names">{miss.noPlace.map(({ p, e }) => <Chip key={e.id} p={p} small={e.place} onClick={() => editEvent(p.id, e.id)} />)}</div></article>}
           </div>
         </>}
-        <FamilyLinks />
+        {!gaps.length && <FamilyLinks />}
       </div>
 
       {ask && <div className="gp-veil" onClick={e => { if (e.target === e.currentTarget) setAsk(null) }}>

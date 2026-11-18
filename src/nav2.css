@@ -1,0 +1,61 @@
+/* Preview «меню из четырёх разделов» (16.11.2026): sections in the menu, their parts under the open one; on the phone — four tabs with names and tabs above the page. */
+.nav2{gap:3px}
+.nav2 .subs{display:flex;flex-direction:column;gap:2px;margin:2px 0 8px 21px;padding-left:10px;border-left:1.5px solid var(--edge)}
+.nav2 button.sub{height:38px;font-size:14px;gap:10px;padding:0 10px;color:var(--ink-2)}
+.nav2 button.sub svg{width:17px;height:17px}
+.nav2 button.sub.on{background:var(--glass-3);color:var(--ink)}
+.nav2 button.sub.on svg:first-child{stroke:var(--accent)}
+.nav2 button.sec .badge,.nav2 button.sub .badge{margin-left:auto}
+@media (min-width:861px){
+  body.sb-mini .nav2 .subs{margin:2px 0 8px;padding:0;border:0}
+  body.sb-mini .nav2 button.sub{height:36px}
+}
+@media (max-width:860px){
+  .nav2 .subs{display:none}
+  .nav2 button.sec{flex:1;max-width:none;height:50px;flex-direction:column;gap:3px;justify-content:center;padding:0 2px}
+  .nav2 button.sec span{display:block;font:500 10.5px var(--f-body);letter-spacing:0}
+  .nav2 button.sec .badge{position:absolute;top:3px;left:calc(50% + 6px);margin:0;transform:none}
+  .nav2 button.sec .ch-dot{right:calc(50% - 18px);top:8px;margin:0}
+}
+
+/* the folding sign of a section with parts: up when folded, down when unfolded */
+.nav2 button.sec .chev{width:16px!important;height:16px!important;margin-left:auto;flex:none;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;opacity:.7;transition:transform .2s ease}
+.nav2 button.sec[aria-expanded="true"] .chev{transform:rotate(180deg)}
+.nav2 button.sec .badge + .chev{margin-left:8px}
+body.sb-mini .nav2 button.sec .chev{position:absolute;right:3px;bottom:5px;width:11px!important;height:11px!important;margin:0}
+@media (max-width:860px){.nav2 button.sec .chev{display:none}}
+/* «Родные»: the big number stands on the first line of the text, not on the button */
+.gp-hero{align-items:start}
+.gp-big{margin-top:.06em}
+/* Хранитель: an opened feature on the route is a button */
+.kr-op button.chip{cursor:pointer;transition:filter .15s}
+.kr-op button.chip:hover{filter:brightness(1.15)}
+.kr-op button.chip:focus-visible{outline:2px solid var(--sky);outline-offset:2px}
+/* phone: a section's parts open in a small list right above its tab */
+.sec-pop-veil{position:fixed;inset:0;z-index:60;background:rgba(4,6,26,.35);animation:popVeil .15s ease-out}
+.sec-pop{position:fixed;display:flex;flex-direction:column;gap:2px;padding:6px;border-radius:18px;background:var(--surface-2);border:1.5px solid var(--edge-2);box-shadow:0 20px 50px -18px rgba(0,0,0,.8);transform-origin:var(--tail) 100%;animation:popIn .18s cubic-bezier(.2,.8,.3,1)}
+.sec-pop::after{content:"";position:absolute;left:calc(var(--tail) - 8px);bottom:-8px;width:14px;height:14px;background:var(--surface-2);border-right:1.5px solid var(--edge-2);border-bottom:1.5px solid var(--edge-2);transform:rotate(45deg);border-radius:0 0 3px 0}
+.sec-pop button.sub{display:flex;align-items:center;gap:12px;height:48px;padding:0 14px;border-radius:12px;font:500 15.5px var(--f-body);color:var(--ink-2);text-align:left}
+.sec-pop button.sub svg{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.sec-pop button.sub.on{background:var(--glass-3);color:var(--ink)}
+.sec-pop button.sub.on svg:first-child{stroke:var(--accent)}
+.sec-pop button.sub.locked{color:var(--muted)}
+.sec-pop button.sub .lk{width:14px!important;height:14px!important;margin-left:auto}
+.sec-pop button.sub .badge{margin-left:auto;position:static;min-width:20px;height:20px;padding:0 6px;border-radius:10px;background:var(--wax);color:var(--paper);font:600 11px/20px var(--f-mono);font-style:normal;text-align:center}
+@keyframes popIn{from{opacity:0;transform:translateY(8px) scale(.94)}}
+@keyframes popVeil{from{opacity:0}}
+@media (prefers-reduced-motion:reduce){.sec-pop,.sec-pop-veil{animation:none}}
+@media (max-width:360px){.nav2 button.sec span{font-size:9.5px;letter-spacing:-.01em}}
+/* Календарь is a page now: the download button sits in the header */
+[data-page="calendar"] .topbar{display:flex;align-items:center;justify-content:space-between;gap:12px}
+[data-page="calendar"] .cal{padding-bottom:24px}
+[data-page="calendar"] .btn.cal-add{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 18px;border:0;border-radius:10px;background:var(--good);color:#06301C;font-weight:600;box-shadow:0 3px 0 #3E9C70;white-space:nowrap}
+[data-page="calendar"] .btn.cal-add svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+[data-page="calendar"] .btn.cal-add:disabled{opacity:.45}
+@media (max-width:860px){
+  [data-page="calendar"] .btn.cal-add{width:44px;padding:0;justify-content:center;border-radius:50%}
+  [data-page="calendar"] .btn.cal-add span{display:none}
+}
+/* computer: «Настройки» at the bottom of the menu, right above the chapter ring */
+.nav-foot{margin-bottom:10px}
+@media (max-width:860px){.nav-foot{display:none}}

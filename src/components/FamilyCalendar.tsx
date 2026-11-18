@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { gate } from '../lib/chapters'
-import { ui, bump, LANG, byId, avatarSmall, openPerson } from '../lib/core'
+import { ui, go, LANG, byId, avatarSmall, openPerson } from '../lib/core'
 import { familyEvents, undatedCount, downloadIcs, type CalEvent } from '../lib/calendar'
 import { kinship } from '../lib/kinship'
 import { rootPerson } from '../lib/treeLayout'
@@ -53,7 +53,7 @@ function pl(n: number, f: string[]) { const a = n % 10, b = n % 100; return f[(a
 type Platform = 'ios' | 'android' | 'desktop'
 const platform = (): Platform => /iPhone|iPad|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ? 'ios' : /Android/.test(navigator.userAgent) ? 'android' : 'desktop'
 
-export function openCalendar() { if (!gate('calendar')) return; ui.calendar = true; bump() }
+export function openCalendar() { if (!gate('calendar')) return; ui.calendar = false; go('calendar') }
 /** A calendar page with two rings and a plus. */
 export const CalendarAddIcon = () => <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.5" y="5" width="17" height="15.5" rx="3" /><path d="M3.5 10h17M8 3v4M16 3v4M12 13v5M9.5 15.5h5" /></svg>
 
@@ -65,9 +65,8 @@ export default function FamilyCalendar() {
   const events = useMemo(() => familyEvents(year), [year])
   const kin = useMemo(() => { const me = rootPerson(); return me ? kinship(me.id) : null }, [])
   const undated = useMemo(() => undatedCount(), [])
-  const close = () => { ui.calendar = false; bump() }
   useEffect(() => {
-    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (help) setHelp(null); else close() } }
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape' && help) setHelp(null) }
     addEventListener('keydown', key); return () => removeEventListener('keydown', key)
   }, [help])
 
@@ -80,23 +79,18 @@ export default function FamilyCalendar() {
   const dateOf = (d: number) => new Date(year, month, d)
   const isToday = (d: number) => +dateOf(d) === +today0, isPast = (d: number) => dateOf(d) < today0
   const line = (e: CalEvent) => T[e.kind](e.n)
-  const open = (e: CalEvent) => { ui.calendar = false; openPerson(e.id) }
+  const open = (e: CalEvent) => openPerson(e.id)
   const get = () => { downloadIcs(); setHelp(platform()) }
 
   const Avatars = ({ e }: { e: CalEvent }) => <span className="cal-av">{e.ids.map(id => { const p = byId(id); return p ? <img key={id} src={avatarSmall(p)} alt="" /> : null })}</span>
   const short = (e: CalEvent) => { if (e.kind === 'wedding') return e.title; const p = byId(e.id); return (p && p.first) || e.title }
 
   return (
-    <div className="ps-veil cal-veil" onClick={e => { if (e.target === e.currentTarget) close() }}>
-      <div className="cal" role="dialog" aria-modal="true" aria-label={T.h}>
-        <header className="cal-top">
-          <button className="ps-x" type="button" onClick={close} aria-label={T.close}><svg viewBox="0 0 16 16"><path d="M3 3l10 10M13 3 3 13" /></svg></button>
-          <div className="cal-t"><h2>{T.h}</h2><p>{T.sub(events.length)}</p></div>
-          <div className="cal-get">
-            <button className="btn cal-add" type="button" onClick={get} disabled={!events.length}><CalendarAddIcon />{T.add}</button>
-            <small>{T.what.replace('{n}', String(events.length))}</small>
-          </div>
-        </header>
+    <section className="page active" data-page="calendar">
+      <div className="topbar"><h2><span>{T.h}</span></h2>
+        <button className="btn cal-add" type="button" onClick={get} disabled={!events.length} aria-label={T.add}><CalendarAddIcon /><span>{T.add}</span></button>
+      </div>
+      <div className="scroll"><div className="cal">
 
         <div className="cal-months" role="tablist" aria-label={T.h}>
           {Array.from({ length: 12 }, (_, m) => { const n = events.filter(e => e.month === m + 1).length; return (
@@ -145,8 +139,10 @@ export default function FamilyCalendar() {
             </ul> : <p className="cal-empty">{T.empty}</p>}
             <p className="cal-lg" aria-hidden="true">{(['birth', 'memorial', 'death', 'wedding'] as const).map(k => <span key={k} className={'k-' + k}><i />{T.lg[k]}</span>)}</p>
             {undated > 0 && <p className="cal-note">{T.undated(undated)}</p>}
+            {events.length > 0 && <p className="cal-note">{T.what.replace('{n}', String(events.length))}</p>}
           </aside>
         </div>
+      </div></div>
 
         {help && <div className="cal-help-bg" onClick={e => { if (e.target === e.currentTarget) setHelp(null) }}>
           <div className="cal-help" role="dialog" aria-modal="true" aria-label={T.helpH}>
@@ -158,7 +154,6 @@ export default function FamilyCalendar() {
             <div className="cal-help-act"><button className="btn" type="button" onClick={downloadIcs}>{T.again}</button><button className="btn primary" type="button" onClick={() => setHelp(null)}>{T.ok}</button></div>
           </div>
         </div>}
-      </div>
-    </div>
+    </section>
   )
 }

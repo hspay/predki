@@ -73,6 +73,7 @@ export default function App() {
               {p === 'book' && <BookPage />}
               {p === 'guide' && <GuidePage />}
               {p === 'settings' && <SettingsPage />}
+              {p === 'calendar' && <FamilyCalendar />}
             </Suspense>
           </PageGuard>
           <PageGuard name="panel" small resetKey={ui.panel ? ui.panel.mode + ('id' in ui.panel ? ui.panel.id : '') : ''}><PersonPanel /></PageGuard>
@@ -80,7 +81,6 @@ export default function App() {
       </div>
       <AddRelativeModal />
       {ui.share && <ShareSheet />}
-      {ui.calendar && <FamilyCalendar />}
       <LockSheet />
       <ChapterUp />
       {import.meta.env.VITE_PREVIEW === '1' && <PreviewBar />}
