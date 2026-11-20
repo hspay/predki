@@ -39,7 +39,7 @@ const TX = {
     cal: ['Календарь памятных дат', 'Дни рождения, годовщины и даты свадеб в одном календаре — для iOS, Android или компьютеров.'],
     calRows: [['20', 'июн', 'Эдвард Каллен', '125 лет со дня рождения', 'm'], ['13', 'авг', 'Эдвард и Белла', 'Годовщина свадьбы · 20 лет', 'w'], ['13', 'сен', 'Белла Свон', 'День рождения · 39 лет', 'b']],
     album: 'Альбом наклеек',
-    endH: 'Начни с себя', endP: 'Остальное подскажут родные', privacy: 'Политика конфиденциальности',
+    endH: 'Начни с себя', endP: 'Остальное подскажут родные', privacy: 'Политика конфиденциальности', examples: 'Примеры древа', guide: 'Путеводитель',
     places: { lon: 'Лондон', vol: 'Вольтерра', chi: 'Чикаго', for: 'Форкс', phx: 'Финикс', col: 'Колумбус', jax: 'Джэксонвилл' },
   },
   en: {
@@ -54,7 +54,7 @@ const TX = {
     cal: ['Calendar of family dates', 'Birthdays, anniversaries and wedding dates in one calendar — for iOS, Android or computers.'],
     calRows: [['20', 'Jun', 'Edward Cullen', '125 years since birth', 'm'], ['13', 'Aug', 'Edward and Bella', 'Wedding anniversary · 20 years', 'w'], ['13', 'Sep', 'Bella Swan', 'Birthday · turns 39', 'b']],
     album: 'Sticker album',
-    endH: 'Start with yourself', endP: 'Your family will tell you the rest', privacy: 'Privacy policy',
+    endH: 'Start with yourself', endP: 'Your family will tell you the rest', privacy: 'Privacy policy', examples: 'Sample trees', guide: 'Guide',
     places: { lon: 'London', vol: 'Volterra', chi: 'Chicago', for: 'Forks', phx: 'Phoenix', col: 'Columbus', jax: 'Jacksonville' },
   },
 }
@@ -285,7 +285,7 @@ export default function Landing({ lang, hasData, onStart, onLang, onDemo }: { la
           <h2>{T.endH}</h2><p>{T.endP}</p>
           <Start big />
         </div>
-        <footer className="lp-foot"><a href="privacy.html" target="_blank" rel="noopener">{T.privacy}</a></footer>
+        <footer className="lp-foot"><a href="primery/">{T.examples}</a><a href="putevoditel/">{T.guide}</a><a href="privacy.html" target="_blank" rel="noopener">{T.privacy}</a></footer>
       </section>
     </div>
   )

@@ -30,6 +30,8 @@ onThemeChange(() => {
 
 // «Попросить заполнить»: a relative's link (?s=…) opens a light copy of the tree, without an account and without the app's own data
 const shareToken = tokenFromUrl()
+// a relative's tree is private: search engines must not index the page (robots.txt keeps them away from ?s= too)
+if (shareToken) { const m = document.createElement('meta'); m.name = 'robots'; m.content = 'noindex, nofollow'; document.head.appendChild(m) }
 if (!shareToken) initAnalytics()
 watchErrors() // uncaught errors are reported (live site only), on the relatives' page too
 ReactDOM.createRoot(document.getElementById('root')!).render(<React.StrictMode><PageGuard name={shareToken ? 'shared' : 'app'} root>{shareToken ? <Suspense fallback={null}><ShareGate token={shareToken} /></Suspense> : <App />}</PageGuard></React.StrictMode>)

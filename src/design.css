@@ -1137,3 +1137,8 @@ main{border-radius:var(--r-card);background:var(--mainbg);border-color:var(--edg
 .node:focus{outline:none}
 .node:focus-visible .card{stroke:var(--sky);stroke-width:4}
 .th-light .node:focus-visible .card{stroke:var(--ultra)}
+
+/* sign-in: the logo is a way back to the welcome page */
+#auth button.au-brand{align-self:flex-start;padding:4px 8px 4px 4px;margin:-4px 0 0 -4px;border:0;border-radius:12px;background:none;color:inherit;font:inherit;cursor:pointer;transition:background .15s}
+#auth button.au-brand:hover{background:var(--glass-2)}
+#auth button.au-brand:focus-visible{outline:2px solid var(--sky);outline-offset:2px}

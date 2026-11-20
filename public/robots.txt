@@ -1,0 +1,15 @@
+# Predki — https://predki.me
+# Everyone is welcome, search engines and AI assistants alike: the public pages are written to be read and quoted.
+# Kept out: relatives' tree links (?s=… are private family trees), sign-in returns, email templates.
+User-agent: *
+Allow: /
+Disallow: /*?s=
+Disallow: /*&s=
+Disallow: /*?code=
+Disallow: /*?token_hash=
+Disallow: /*?error=
+Disallow: /email/
+# Yandex: the same page with ad tags is still one page
+Clean-param: utm_source&utm_medium&utm_campaign&utm_content&utm_term&yclid&gclid&fbclid /
+
+Sitemap: https://predki.me/sitemap.xml

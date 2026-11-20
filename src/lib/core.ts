@@ -7,7 +7,7 @@ import { findCity } from './world'
 import { sampleData } from './sample'
 import { Progress } from './progress'
 import { sync as syncChapters, gate } from './chapters'
-import { sb, cloud, initSession, pullTree, saveTree, signOutCloud, setSkipped, deleteAccountCloud, type Row } from './cloud'
+import { sb, cloud, initSession, pullTree, saveTree, signOutCloud, setSkipped, deleteAccountCloud, type Row, isGoogleWindow } from './cloud'
 import { logProblem, setProblemContext } from './problems'
 import { merge3, same } from './merge'
 import type { FrameLook } from './frames'
@@ -679,6 +679,8 @@ export async function boot() {
   if (import.meta.env.VITE_PREVIEW === '1') { cloud.skipped = true; S.settings.onboarded = true } // only for this run: not remembered, so the usual build still asks to sign in
   setLangValue(pickedLang()); document.documentElement.lang = pickedLang()
   await initSession()
+  // the small Google window: the site that opened it takes over, this one closes (if the browser lets it, the boot just goes on)
+  if (await isGoogleWindow()) { window.close(); await new Promise(r => setTimeout(r, 400)) }
   // Sign-in is shared by all tabs of a browser: signing into another account (or out) in one tab changes it in the others too.
   sb.auth.onAuthStateChange((ev, session) => {
     const was = cloud.session?.user.id; cloud.session = session

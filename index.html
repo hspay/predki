@@ -4,32 +4,57 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="dark" />
-    <title>Predki</title>
-    <meta name="description" content="Конструктор семейного древа и архив" />
+    <title>Predki — семейное древо онлайн: составить родословную бесплатно</title>
+    <meta name="description" content="Постройте семейное древо онлайн вместе с родными: родословная, карта переездов предков, календарь памятных дат и путеводитель по архивам. Бесплатно, на русском." />
+    <meta name="keywords" content="семейное древо, генеалогическое древо, родословная, древо семьи онлайн, составить родословную, поиск предков, история семьи, конструктор семейного древа" />
+    <link rel="canonical" href="https://predki.me/" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
     <!-- link previews in Telegram, WhatsApp, VK and others -->
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Predki" />
-    <meta property="og:title" content="Predki" />
-    <meta property="og:description" content="Конструктор семейного древа и архив" />
+    <meta property="og:title" content="Predki — семейное древо онлайн" />
+    <meta property="og:description" content="Постройте древо и карту путешествий вашей семьи вместе с родными" />
     <meta property="og:url" content="https://predki.me/" />
     <meta property="og:image" content="https://predki.me/og.jpg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:image:alt" content="Predki — конструктор семейного древа и архив" />
+    <meta property="og:image:alt" content="Predki — постройте древо и карту путешествий вашей семьи" />
     <meta property="og:locale" content="ru_RU" />
     <meta name="twitter:card" content="summary_large_image" />
+    <!-- for search engines and AI assistants: what Predki is (scripts/seo.ts writes the public pages and sitemap.xml) -->
+    <script type="application/ld+json">
+    [{"@context":"https://schema.org","@type":"WebSite","@id":"https://predki.me/#site","name":"Predki","alternateName":["Предки","predki.me"],"url":"https://predki.me/","inLanguage":"ru","publisher":{"@id":"https://predki.me/#org"}},
+     {"@context":"https://schema.org","@type":"Organization","@id":"https://predki.me/#org","name":"Predki","url":"https://predki.me/","logo":"https://predki.me/apple-touch-icon.png","email":"hello@predki.me","founder":{"@type":"Person","name":"Андрей Брызгалин"}},
+     {"@context":"https://schema.org","@type":"WebApplication","name":"Predki","url":"https://predki.me/","applicationCategory":"LifestyleApplication","operatingSystem":"Web","inLanguage":"ru","isAccessibleForFree":true,"offers":{"@type":"Offer","price":"0","priceCurrency":"RUB"},
+      "description":"Конструктор семейного древа онлайн: родословная с супругами, приёмными родственниками и питомцами, карта переездов предков, календарь памятных дат, паспорт и книга семьи. Родные дополняют древо по ссылке без регистрации.",
+      "featureList":["Семейное древо онлайн","Карта жизни семьи и переездов предков","Подсказки, кого из родных спросить о пробелах","Ссылка для родных без регистрации","Календарь дней рождения и памятных дат с экспортом в телефон","Паспорт семьи и Книга семьи","Путеводитель по архивам и образцы запросов"],
+      "publisher":{"@id":"https://predki.me/#org"}}]
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=2" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png?v=2" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2" />
     <meta name="apple-mobile-web-app-title" content="Predki" />
     <meta name="theme-color" content="#07090F" />
+    <style>.pre-seo{max-width:640px;margin:0 auto;padding:56px 20px;font:16px/1.6 system-ui,sans-serif;color:#E8EAF2;opacity:0;animation:pre-seo .4s 4s forwards}.pre-seo a{color:#9CA4FF}[data-theme=light] .pre-seo{color:#0B1352}[data-theme=light] .pre-seo a{color:#2533FF}@keyframes pre-seo{to{opacity:1}}</style>
     <script>
       // pick the light or dark theme before the first paint, so the app never flashes the wrong one
       try { var a = localStorage.getItem('predki:appearance'); var t = a === 'light' ? 'light' : a === 'auto' && matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'; document.documentElement.dataset.theme = t; if (t === 'light') { document.querySelector('meta[name="theme-color"]').content = '#E8EAE5'; document.querySelector('meta[name="color-scheme"]').content = 'light' } } catch (e) {}
     </script>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root"><div class="pre-seo">
+      <h1>Predki — семейное древо онлайн</h1>
+      <p>Исследуйте историю семьи и постройте древо вместе с родными. Бесплатно.</p>
+      <ul>
+        <li><b>Древо за пару минут.</b> Родители, бабушки и дедушки, прадеды, супруги, приёмные родственники и питомцы.</li>
+        <li><b>Карта жизни семьи.</b> Переезды предков на карте и анимация по годам.</li>
+        <li><b>Пробелы вместе с семьёй.</b> Подсветим годы без записей и подскажем, кого из родных спросить. Родные дополняют древо по ссылке без регистрации.</li>
+        <li><b>Календарь памятных дат.</b> Дни рождения, годовщины и даты свадеб — с экспортом в телефон.</li>
+        <li><b>Паспорт и Книга семьи.</b> История рода одним рассказом.</li>
+        <li><b>Путеводитель.</b> Как найти предков: архивы, базы и образцы запросов в ЗАГС, госархив и ЦАМО.</li>
+      </ul>
+      <p>Примеры древа: <a href="primery/">все примеры</a>, <a href="romanovy/">древо Романовых</a>, <a href="game-of-thrones/">Таргариены и великие дома «Игры престолов»</a>, <a href="cullens/">семья Калленов</a>, <a href="kardashians/">Кардашьяны</a>. <a href="putevoditel/">Путеводитель по поиску предков</a>.</p>
+    </div></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

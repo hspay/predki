@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react'
 import { globeTile } from '../lib/globe'
-import { t, LANG, cloud, continueWithoutAccount, bump } from '../lib/core'
+import { t, LANG, cloud, ui, continueWithoutAccount, bump } from '../lib/core'
 import { signInGoogle, signInEmail, signUpEmail, resetPassword, setNewPassword, authError } from '../lib/cloud'
 import { goal } from '../lib/analytics'
 
@@ -17,7 +17,15 @@ export default function AuthScreen({ loading = false }: { loading?: boolean }) {
   const go = (m: Mode) => { setMode(m); setErr('') }
   const fail = (e: unknown) => setErr(authError(e as { message?: string }, LANG))
 
-  const google = async () => { setBusy(true); setErr(''); const { error } = await signInGoogle().catch(e => ({ error: e })); if (error) { fail(error); setBusy(false) } }
+  const google = async () => {
+    setBusy(true); setErr('')
+    const { error, popup } = await signInGoogle().catch(e => ({ error: e, popup: undefined }))
+    if (error) { fail(error); setBusy(false); return }
+    // the Google window was closed without signing in: the buttons work again
+    if (popup) { const h = setInterval(() => { if (popup.closed) { clearInterval(h); setBusy(false) } }, 500) }
+  }
+  // the logo leads back to the welcome page (it is otherwise out of reach once the browser has signed you out)
+  const toStart = () => { ui.onboarding = true; bump() }
   const submit = async (e: FormEvent) => {
     e.preventDefault(); if (busy) return; setErr('')
     const em = email.trim()
@@ -53,7 +61,7 @@ export default function AuthScreen({ loading = false }: { loading?: boolean }) {
   return (
     <div id="auth">
       <div className="au-card" role="dialog" aria-modal="true" aria-labelledby="auTitle">
-        <div className="au-brand"><span className="au-mark" dangerouslySetInnerHTML={{ __html: logo }} /><b>Predki</b></div>
+        <button type="button" className="au-brand" onClick={toStart} title={LANG === 'en' ? 'To the start page' : 'На главную'}><span className="au-mark" dangerouslySetInnerHTML={{ __html: logo }} /><b>Predki</b></button>
         <div className="au-head"><h1 id="auTitle">{head[0]}</h1><p>{head[1]}</p></div>
 
         {(mode === 'in' || mode === 'up') && <>

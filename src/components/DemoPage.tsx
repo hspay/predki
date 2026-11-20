@@ -70,7 +70,7 @@ export default function DemoPage() {
     const key = (e: KeyboardEvent) => { if (e.key === 'Escape') { if (ui.panel) closePanel(); else closeDemo() } }
     addEventListener('keydown', key); return () => removeEventListener('keydown', key)
   }, [])
-  useEffect(() => { document.title = tr(fam.title) + ' · Predki'; return () => { document.title = 'Predki' } }, [st.fam])
+  useEffect(() => { const was = document.title; document.title = tr(fam.title) + ' · Predki'; return () => { document.title = was } }, [st.fam])
 
   const n = S.people.length, g = generations()
   return (

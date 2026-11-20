@@ -80,7 +80,44 @@ export async function deleteAccountCloud(really: boolean) {
 }
 
 // ---------- sign in / up / out ----------
-export const signInGoogle = () => sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: here() } })
+/* Google sign-in on a computer happens in a small window of its own, so the site does not end up open twice
+ * (Arc, for one, used to show the site again in its little preview window after Google sent it back).
+ * Google cuts the link between the two windows, so they talk over a BroadcastChannel: the window that came back
+ * from Google asks «did one of you open me?», the site that opened it answers «yes, close», closes it and reloads
+ * already signed in. On a phone, or when the browser refuses a window, the whole tab goes to Google as before. */
+const AUTH_CH = 'predki-auth'
+/** this page is Google's answer (?code= or ?error=); read before initSession tidies the address */
+const backFromGoogle = /[?&](code|error)=/.test(location.search) && !/[?&]token_hash=/.test(location.search)
+export function signInGoogle(): Promise<{ error: unknown; popup?: Window }> {
+  const own = typeof BroadcastChannel !== 'undefined' && matchMedia('(pointer:fine)').matches
+  const W = 480, H = 640, x = Math.round(screenX + (outerWidth - W) / 2), y = Math.round(screenY + (outerHeight - H) / 2)
+  const w = own ? window.open('about:blank', 'predki-google', `popup,width=${W},height=${H},left=${x},top=${y}`) : null
+  return sb.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: here(), skipBrowserRedirect: !!w } }).then(({ data, error }) => {
+    if (error || !w) { w?.close(); return { error } }
+    w.location.href = data.url
+    waitForGoogleWindow(w)
+    return { error: null, popup: w }
+  })
+}
+function waitForGoogleWindow(w: Window) {
+  const ch = new BroadcastChannel(AUTH_CH)
+  let over = false
+  const stop = () => { if (over) return; over = true; clearInterval(tick); ch.close() }
+  ch.onmessage = e => { if (e.data?.t !== 'back') return; ch.postMessage({ t: 'close', id: e.data.id }); stop(); setTimeout(() => location.reload(), 150) }
+  // closed by hand without signing in: stop listening a little later (an answer already on its way still lands)
+  const tick = setInterval(() => { if (w.closed) { clearInterval(tick); setTimeout(stop, 1500) } }, 500)
+}
+/** In the window Google sent back: true when the site that opened it is there and has asked it to close. */
+export function isGoogleWindow(): Promise<boolean> {
+  if (!backFromGoogle || typeof BroadcastChannel === 'undefined') return Promise.resolve(false)
+  return new Promise(res => {
+    const ch = new BroadcastChannel(AUTH_CH), id = Math.random().toString(36).slice(2)
+    const done = (v: boolean) => { clearTimeout(h); ch.close(); res(v) }
+    ch.onmessage = e => { if (e.data?.t === 'close' && e.data.id === id) done(true) }
+    const h = setTimeout(() => done(false), 700)
+    ch.postMessage({ t: 'back', id })
+  })
+}
 export const signInEmail = (email: string, password: string) => sb.auth.signInWithPassword({ email, password })
 export const signUpEmail = (email: string, password: string) => sb.auth.signUp({ email, password, options: { emailRedirectTo: here() } })
 export const resetPassword = (email: string) => sb.auth.resetPasswordForEmail(email, { redirectTo: here() })
