@@ -153,13 +153,15 @@ const FOOT = `<footer class="site"><div class="wrap">
   <div class="foot-cols">
     <div><a class="brand light" href="/"><img src="/favicon.svg?v=2" alt="" width="22" height="22">Predki</a><p>Семейное древо онлайн: постройте родословную, карту переездов и календарь памятных дат вместе с родными. Бесплатно.</p></div>
     <nav aria-label="Примеры древа"><b>Примеры древа</b><a href="/romanovy/">Древо Романовых</a><a href="/game-of-thrones/">Древо «Игры престолов»</a><a href="/cullens/">Семья Калленов</a><a href="/kardashians/">Кардашьяны и Дженнеры</a></nav>
-    <nav aria-label="Полезное"><b>Полезное</b><a href="/putevoditel/">Как составить родословную</a><a href="/putevoditel/#requests">Образцы запросов в архив</a><a href="/privacy.html">Политика конфиденциальности</a><a href="mailto:hello@predki.me">hello@predki.me</a></nav>
+    <nav aria-label="Полезное"><b>Полезное</b><a href="/putevoditel/kak-sostavit-rodoslovnuyu/">Как составить родословную</a><a href="/putevoditel/">Путеводитель</a><a href="/putevoditel/proishozhdenie-familii/">Происхождение фамилии</a><a href="/putevoditel/kak-nayti-frontovika/">Как найти предка-фронтовика</a><a href="/putevoditel/semeynoe-drevo-dlya-shkoly/">Древо для школы: шаблон</a><a href="/putevoditel/#requests">Образцы запросов в архив</a><a href="/privacy.html">Политика конфиденциальности</a><a href="mailto:hello@predki.me">hello@predki.me</a></nav>
   </div>
 </div></footer>`
 
 function render(p: Page) {
   const crumbs = p.crumbs.length > 1 ? `<nav class="crumbs" aria-label="Навигация">${p.crumbs.map(([n, u], i) => i < p.crumbs.length - 1 ? `<a href="${u}">${esc(n)}</a>` : `<span aria-current="page">${esc(n)}</span>`).join(' / ')}</nav>` : ''
-  const body = tieHtml(p.body.replace('%CRUMBS%', crumbs))
+  // links inside the site are absolute (https://predki.me/…): they keep working in previews, caches and feeds
+  const absolute = (h: string) => h.replace(/href="\/(?!\/)/g, `href="${SITE}/`)
+  const body = absolute(tieHtml(p.body.replace('%CRUMBS%', crumbs)))
   const ld = [...p.jsonld, crumbsLd(p.crumbs)]
   return `<!doctype html>
 <html lang="ru">
@@ -188,9 +190,9 @@ ${p.head || ''}
 <script type="application/ld+json">${JSON.stringify(ld.length === 1 ? ld[0] : ld).replace(/</g, '\\u003c')}</script>
 </head>
 <body>
-${p.noTop ? '' : TOP}
+${p.noTop ? '' : absolute(TOP)}
 ${body}
-${p.noTop ? '' : FOOT}
+${p.noTop ? '' : absolute(FOOT)}
 ${metrica(p.url)}
 </body>
 </html>
@@ -472,6 +474,35 @@ ${endCta()}`
     jsonld: [{ '@context': 'https://schema.org', '@type': 'CollectionPage', name: 'Примеры семейного древа', inLanguage: 'ru', publisher: ORG, hasPart: ['/romanovy/', '/game-of-thrones/', '/cullens/', '/kardashians/'].map(u => ({ '@type': 'WebPage', url: SITE + u })) }, faqLd(qa)] }, '0.9')
 }
 
+// ================================================================ /putevoditel/<slug>/ — articles for search
+// One file per article in scripts/articles/: a JSON meta comment on top, the body as HTML, then <!--faq--> and <details> questions.
+interface Article { order?: number; slug: string; title: string; description: string; h1: string; lead: string; checked: string; minutes: number; body: string; qa: [string, string][] }
+const ARTICLES: Article[] = fs.readdirSync(path.join(ROOT, 'scripts/articles')).filter(f => f.endsWith('.html')).sort().map(f => {
+  const raw = fs.readFileSync(path.join(ROOT, 'scripts/articles', f), 'utf8')
+  const meta = JSON.parse(raw.match(/<!--meta([\s\S]*?)-->/)![1])
+  const [body, faq = ''] = raw.replace(/<!--meta[\s\S]*?-->/, '').split('<!--faq-->')
+  const qa = [...faq.matchAll(/<details><summary>([\s\S]*?)<\/summary><p>([\s\S]*?)<\/p><\/details>/g)].map(m => [m[1].trim(), m[2].trim()] as [string, string])
+  return { ...meta, body: body.trim(), qa }
+}).sort((a, b) => (a.order ?? 99) - (b.order ?? 99))
+const dateRu = (d: string) => { const [y, m, dd] = d.split('-'); return `${+dd} ${MON[+m - 1]} ${y}` }
+ARTICLES.forEach(a => {
+  const url = `/putevoditel/${a.slug}/`
+  const more = ARTICLES.filter(x => x.slug !== a.slug)
+  // screenshots of the app: <!--shot:file|caption--> → a tilted figure; the tilt alternates left and right
+  let n = 0
+  const shots = a.body.replace(/<!--shot:([\w-]+)\|([\s\S]*?)-->/g, (_m, f, cap) => `<figure class="shot ${n++ % 2 ? 'r' : 'l'}"><span class="frame"><img src="/putevoditel/img/${f}.webp" alt="${esc(cap.replace(/<[^>]+>/g, ''))}" width="1600" height="1000" loading="${n === 1 ? 'eager' : 'lazy'}" decoding="async"></span><figcaption>${cap}</figcaption></figure>`)
+  const body = `<section class="hero"><div class="wrap">
+  <p class="byline first"><time datetime="${a.checked}">${dateRu(a.checked)}</time> · ${plural(a.minutes, 'минута', 'минуты', 'минут')} чтения</p>
+  <h1>${esc(a.h1)}</h1><p class="lead">${esc(a.lead)}</p>
+</div></section>
+<section class="sec"><div class="wrap"><article class="article">${shots}</article></div></section>
+${a.qa.length ? faqHtml(a.qa) : ''}
+<section class="sec"><div class="wrap"><h2>Читать дальше</h2><div class="links">${more.map(x => `<a href="/putevoditel/${x.slug}/">${esc(x.h1)}</a>`).join('')}<a href="/putevoditel/">Весь путеводитель</a><a href="/putevoditel/#requests">Образцы запросов в архив</a></div></div></section>
+${endCta('Соберите историю своей семьи')}`
+  add({ url, title: a.title, description: a.description, h1: a.h1, body, crumbs: [['Predki', '/'], ['Путеводитель', '/putevoditel/'], [a.h1, url]],
+    jsonld: [{ '@context': 'https://schema.org', '@type': 'Article', headline: a.h1, description: a.description, inLanguage: 'ru', datePublished: a.checked, dateModified: a.checked, author: ORG, publisher: ORG, mainEntityOfPage: SITE + url, image: SITE + '/og.jpg' }, ...(a.qa.length ? [faqLd(a.qa)] : [])] }, '0.8')
+})
+
 // ================================================================ /putevoditel/ — the guide as a public page
 {
   const base = '/putevoditel/', dir = path.join(DIST, base)
@@ -488,7 +519,8 @@ ${endCta()}`
   }).join('\n')
   html = html.replace(/<div class="tpl-tabs"[\s\S]*?<\/div>\s*<div class="tpl" id="tpl"[\s\S]*?<\/pre>\s*<\/div>/, tplHtml)
   // a way into the app before the footer
-  html = html.replace(/<footer class="wrap end">/, `<section class="sec wrap blue" id="build"><div class="sec-head"><h2>Постройте древо</h2></div><p class="lead-in">Всё, что узнаете от родных и из архивов, сохраните в древе Predki: карта переездов, календарь памятных дат и Книга семьи соберутся сами.</p><p><a class="go-btn" href="/" data-cta="guide-end">Построить древо бесплатно</a> <a class="go-btn ghost" href="/primery/">Посмотреть примеры</a></p></section>\n<footer class="wrap end">`)
+  const artList = ARTICLES.length ? `<section class="sec wrap" id="articles"><div class="sec-head"><h2>Подробные статьи</h2></div><ul class="art-list">${ARTICLES.map(a => `<li><a href="/putevoditel/${a.slug}/"><b>${esc(a.h1)}</b><span>${esc(a.lead)}</span></a></li>`).join('')}</ul></section>\n` : ''
+  html = html.replace(/<footer class="wrap end">/, `${artList}<section class="sec wrap blue" id="build"><div class="sec-head"><h2>Постройте древо</h2></div><p class="lead-in">Всё, что узнаете от родных и из архивов, сохраните в древе Predki: карта переездов, календарь памятных дат и Книга семьи соберутся сами.</p><p><a class="go-btn" href="/" data-cta="guide-end">Построить древо бесплатно</a> <a class="go-btn ghost" href="/primery/">Посмотреть примеры</a></p></section>\n<footer class="wrap end">`)
   // FAQ for search: the questions on the page as FAQPage
   const qa: [string, string][] = [...html.matchAll(/<details><summary>([\s\S]*?)<\/summary><div class="ans">([\s\S]*?)<\/div><\/details>/g)].map(m => [m[1].trim(), m[2].replace(/<[^>]+>/g, '').trim()])
   const checked = html.match(/Проверено<br>([^<]+)</)?.[1] || ''
@@ -502,6 +534,11 @@ html,body{margin:0;background:#F4F2EC}
 #guidePage .tpl-h{margin:36px 0 12px}
 #guidePage .lead-in{max-width:720px;font-size:19px}
 #guidePage .go-btn{display:inline-flex;align-items:center;min-height:48px;padding:0 22px;border-radius:999px;background:var(--accent);color:var(--accent-ink);font:500 16px/1 var(--f-body);text-decoration:none;margin:8px 8px 0 0}
+#guidePage .art-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,340px),1fr));gap:12px}
+#guidePage .art-list a{display:flex;flex-direction:column;gap:6px;height:100%;padding:18px 20px;border-radius:14px;background:var(--surface);border:1px solid var(--line);text-decoration:none;color:var(--ink)}
+#guidePage .art-list a:hover{border-color:var(--accent)}
+#guidePage .art-list b{font:800 26px/1 var(--f-head);text-transform:uppercase;color:var(--accent)}
+#guidePage .art-list span{font-size:15px;color:var(--muted)}
 #guidePage .go-btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line-2)}
 `
   fs.writeFileSync(path.join(dir, 'guide.css'), FONT_FACES + css)
@@ -641,6 +678,50 @@ footer.site{background:var(--berlin);color:rgba(255,255,255,.72);padding:44px 0 
 footer.site a:not(.brand){color:#fff;text-decoration:none}
 footer.site a:not(.brand):hover{text-decoration:underline}
 @media(max-width:760px){.foot-cols{grid-template-columns:1fr}.facts b{font-size:40px}.sec{padding:36px 0}}
+/* articles */
+.byline{font:500 12px/1.5 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:rgba(255,255,255,.72);margin:0}
+.article{max-width:780px;font-size:18px;line-height:1.65}
+.article>.tldr{margin-bottom:28px}
+.article h2{font-size:clamp(32px,4.8vw,48px);margin:56px 0 16px;scroll-margin-top:76px}
+.article p{margin:0 0 16px}
+.article ul:not(.timeline),.article ol:not(.how):not(.myths){padding-left:22px;margin:0 0 16px}
+.article li{margin-bottom:8px}
+.toc{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 8px}
+.toc b{flex-basis:100%;font:500 12px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:2px}
+.toc a{padding:8px 14px;border-radius:999px;background:var(--card);border:1px solid var(--line);color:var(--ink);text-decoration:none;font-size:14px}
+.toc a:hover{border-color:var(--ultra);color:var(--ultra)}
+.timeline{list-style:none;margin:0 0 20px;padding:0 0 0 22px;border-left:2px solid var(--ultra)}
+.timeline li{position:relative;margin:0 0 18px}
+.timeline li::before{content:"";position:absolute;left:-29px;top:8px;width:12px;height:12px;border-radius:50%;background:var(--ultra);box-shadow:0 0 0 4px var(--paper)}
+.timeline b,.how b,.myths b{display:block;font-weight:500;color:var(--ink)}
+.timeline b{font:800 24px/1.1 var(--head);text-transform:uppercase;color:var(--ultra);margin-bottom:2px}
+.how,.myths{list-style:none;counter-reset:h;margin:0 0 20px;padding:0}
+.how li,.myths li{counter-increment:h;position:relative;padding:14px 18px 14px 64px;margin:0 0 10px;background:var(--card);border:1px solid var(--line);border-radius:14px;font-size:16px;color:var(--ink2)}
+.how li::before,.myths li::before{content:counter(h);position:absolute;left:20px;top:12px;font:800 34px/1 var(--head);color:var(--ultra)}
+.callout{background:var(--ultra);color:#fff;border-radius:14px;padding:16px 20px;font-size:16px}
+.callout a{color:#fff}
+.article table{width:100%;border-collapse:collapse;margin:0 0 20px;font-size:15px;background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;display:block;overflow-x:auto}
+.article th,.article td{text-align:left;vertical-align:top;padding:10px 14px;border-bottom:1px solid var(--line)}
+.article th{font:500 12px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);background:color-mix(in srgb,var(--ultra) 5%,var(--card))}
+.article tr:last-child td{border-bottom:0}
+.article td:first-child{font-weight:500;color:var(--ink);min-width:9em}
+.printable{margin:0 0 12px;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px}
+.tpl-svg{display:block;width:100%;max-width:560px;height:auto;margin:0 auto}
+.print-row{margin:0 0 16px}
+.print-row .btn{border:0;cursor:pointer}
+@media print{@page{size:A4;margin:8mm}body{background:#fff}.top,.hero,footer.site,script,.sec:not(:has(.printable)),.article>:not(.printable){display:none!important}.sec,.wrap{padding:0!important;margin:0!important;max-width:none}.printable{border:0;padding:0;margin:0;background:none}.tpl-svg{max-width:none;width:100%;height:calc(297mm - 16mm)}}
+.byline.first{margin:0 0 40px}
+.shot{position:relative;margin:40px 0 44px;transform:rotate(-1.2deg)}
+.shot.r{transform:rotate(1deg)}
+.shot .frame{position:relative;display:block}
+.shot .frame::before{content:"";position:absolute;inset:0;border-radius:16px;background:var(--ultra);transform:translate(12px,12px) rotate(1.6deg);z-index:0}
+.shot.r .frame::before{transform:translate(-12px,12px) rotate(-1.6deg)}
+.shot img{position:relative;z-index:1;display:block;width:100%;height:auto;border-radius:14px;box-shadow:0 0 0 1px rgba(11,19,82,.18),0 28px 56px -26px rgba(11,19,82,.55);background:#0B1352}
+.shot figcaption{position:relative;z-index:1;margin:26px 4px 0;font:500 12px/1.5 var(--mono);letter-spacing:.04em;color:var(--muted);transform:rotate(1.2deg)}
+.shot.r figcaption{transform:rotate(-1deg)}
+.shot figcaption a{color:var(--ultra)}
+@media(max-width:600px){.shot{transform:rotate(-.6deg)}.shot.r{transform:rotate(.6deg)}.shot .frame::before{transform:translate(7px,7px) rotate(1deg)}.shot.r .frame::before{transform:translate(-7px,7px) rotate(-1deg)}}
+@media(max-width:600px){.article{font-size:17px}.article td:first-child{min-width:7em}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 `
 }
